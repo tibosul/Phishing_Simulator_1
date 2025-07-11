@@ -1,0 +1,23 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36221.1 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Phishing_Simulator", "Phishing_Simulator\Phishing_Simulator.pyproj", "{D957C528-7D7D-4F85-B8DA-AF053D483674}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D957C528-7D7D-4F85-B8DA-AF053D483674}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D957C528-7D7D-4F85-B8DA-AF053D483674}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E2DC4669-3585-4170-A14F-EFDEA06E74DC}
+	EndGlobalSection
+EndGlobal
