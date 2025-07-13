@@ -1,0 +1,268 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Campaigns - Phishing Simulator{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-bullhorn"></i> Campaigns</h1>
+    <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> New Campaign
+    </a>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ stats.total or 0 }}</h4>
+                        <p class="mb-0">Total Campaigns</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-bullhorn fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ stats.active or 0 }}</h4>
+                        <p class="mb-0">Active</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-play fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ stats.draft or 0 }}</h4>
+                        <p class="mb-0">Draft</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-edit fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ stats.completed or 0 }}</h4>
+                        <p class="mb-0">Completed</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label for="search_input" class="visually-hidden">Search campaigns</label>
+                <input type="text" class="form-control" id="search_input" name="q" placeholder="Search campaigns..." value="{{ search_query }}">
+            </div>
+            <div class="col-md-3">
+                <label for="status_filter" class="visually-hidden">Filter by status</label>
+                <select class="form-select" id="status_filter" name="status" title="Filter by status">
+                    <option value="">All Statuses</option>
+                    <option value="draft" {{ 'selected' if status_filter == 'draft' }}>Draft</option>
+                    <option value="active" {{ 'selected' if status_filter == 'active' }}>Active</option>
+                    <option value="paused" {{ 'selected' if status_filter == 'paused' }}>Paused</option>
+                    <option value="completed" {{ 'selected' if status_filter == 'completed' }}>Completed</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="type_filter" class="visually-hidden">Filter by type</label>
+                <select class="form-select" id="type_filter" name="type" title="Filter by type">
+                    <option value="">All Types</option>
+                    <option value="email" {{ 'selected' if type_filter == 'email' }}>Email</option>
+                    <option value="sms" {{ 'selected' if type_filter == 'sms' }}>SMS</option>
+                    <option value="both" {{ 'selected' if type_filter == 'both' }}>Both</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Campaigns Table -->
+<div class="card">
+    <div class="card-body">
+        {% if campaigns %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Targets</th>
+                            <th>Success Rate</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for campaign in campaigns %}
+                        <tr>
+                            <td>
+                                <strong>{{ campaign.name }}</strong>
+                                {% if campaign.description %}
+                                    <br><small class="text-muted">{{ campaign.description[:50] }}{% if campaign.description|length > 50 %}...{% endif %}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ campaign.type.upper() }}</span>
+                            </td>
+                            <td>
+                                {% if campaign.status == 'active' %}
+                                    <span class="badge bg-success">{{ campaign.status.title() }}</span>
+                                {% elif campaign.status == 'draft' %}
+                                    <span class="badge bg-warning">{{ campaign.status.title() }}</span>
+                                {% elif campaign.status == 'completed' %}
+                                    <span class="badge bg-info">{{ campaign.status.title() }}</span>
+                                {% elif campaign.status == 'paused' %}
+                                    <span class="badge bg-secondary">{{ campaign.status.title() }}</span>
+                                {% else %}
+                                    <span class="badge bg-dark">{{ campaign.status.title() }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ campaign.total_targets }}</td>
+                            <td>{{ "%.1f"|format(campaign.success_rate) }}%</td>
+                            <td>{{ campaign.created_at.strftime('%Y-%m-%d') if campaign.created_at }}</td>
+                            <td>
+                                <div class="btn-group" role="group" aria-label="Campaign actions">
+                                    <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}" 
+                                       class="btn btn-sm btn-outline-primary" title="View Details">
+                                        <i class="fas fa-eye" aria-hidden="true"></i>
+                                        <span class="visually-hidden">View</span>
+                                    </a>
+                                    <a href="{{ url_for('campaigns.edit_campaign', campaign_id=campaign.id) }}" 
+                                       class="btn btn-sm btn-outline-secondary" title="Edit Campaign">
+                                        <i class="fas fa-edit" aria-hidden="true"></i>
+                                        <span class="visually-hidden">Edit</span>
+                                    </a>
+                                    {% if campaign.status == 'draft' %}
+                                        <form method="POST" action="{{ url_for('campaigns.start_campaign', campaign_id=campaign.id) }}" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Start Campaign">
+                                                <i class="fas fa-play" aria-hidden="true"></i>
+                                                <span class="visually-hidden">Start</span>
+                                            </button>
+                                        </form>
+                                    {% elif campaign.status == 'active' %}
+                                        <form method="POST" action="{{ url_for('campaigns.pause_campaign', campaign_id=campaign.id) }}" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-warning" title="Pause Campaign">
+                                                <i class="fas fa-pause" aria-hidden="true"></i>
+                                                <span class="visually-hidden">Pause</span>
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if total_pages > 1 %}
+            <nav aria-label="Campaign pagination">
+                <ul class="pagination justify-content-center mt-3">
+                    {% if page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page - 1 }}&q={{ search_query }}&status={{ status_filter }}&type={{ type_filter }}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for page_num in range(1, total_pages + 1) %}
+                        {% if page_num == page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_num }}&q={{ search_query }}&status={{ status_filter }}&type={{ type_filter }}">{{ page_num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page < total_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page + 1 }}&q={{ search_query }}&status={{ status_filter }}&type={{ type_filter }}">Next</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-bullhorn fa-3x text-muted mb-3" aria-hidden="true"></i>
+                <h5>No campaigns found</h5>
+                <p class="text-muted">Create your first campaign to get started!</p>
+                <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
+                    <i class="fas fa-plus" aria-hidden="true"></i> Create Campaign
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Quick search functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.querySelector('input[name="q"]');
+    const statusFilter = document.querySelector('select[name="status"]');
+    const typeFilter = document.querySelector('select[name="type"]');
+    
+    // Auto-submit form when filters change
+    if (statusFilter) {
+        statusFilter.addEventListener('change', function() {
+            this.form.submit();
+        });
+    }
+    
+    if (typeFilter) {
+        typeFilter.addEventListener('change', function() {
+            this.form.submit();
+        });
+    }
+    
+    // Enter key search
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                this.form.submit();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

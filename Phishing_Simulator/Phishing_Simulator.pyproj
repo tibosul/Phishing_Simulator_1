@@ -36,6 +36,7 @@
     <Compile Include="routes\targets.py" />
     <Compile Include="routes\templates.py" />
     <Compile Include="routes\webhook.py" />
+    <Compile Include="services\campaign_service.py" />
     <Compile Include="services\credential_capture.py" />
     <Compile Include="services\email_service.py" />
     <Compile Include="services\ollama_service.py" />
@@ -70,9 +71,12 @@
     <Content Include="static\js\revolut.js" />
     <Content Include="templates\admin\base.html" />
     <Content Include="templates\admin\campaigns.html" />
+    <Content Include="templates\admin\campaign_detail.html" />
     <Content Include="templates\admin\create_campaign.html" />
     <Content Include="templates\admin\dashboard.html" />
+    <Content Include="templates\admin\edit_campaign.html" />
     <Content Include="templates\admin\statistics.html" />
+    <Content Include="templates\admin\upload_targets.html" />
     <Content Include="templates\emails\revolut_promotion.html" />
     <Content Include="templates\emails\revolut_security.html" />
     <Content Include="templates\emails\revolut_update.html" />
