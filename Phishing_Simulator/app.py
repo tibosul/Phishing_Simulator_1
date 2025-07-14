@@ -28,11 +28,11 @@ from models.credential import Credential
 
 # Import route blueprints
 from routes.campaigns import bp as campaigns_bp
-from routes.dashboard import bp as dashboard_bp
-from routes.targets import bp as targets_bp
-from routes.templates import bp as templates_bp
-from routes.webhook import bp as webhook_bp
-from routes.fake_revolut import bp as fake_revolut_bp
+# from routes.dashboard import bp as dashboard_bp  # TODO: Create this
+# from routes.targets import bp as targets_bp      # TODO: Create this  
+# from routes.templates import bp as templates_bp  # TODO: Create this
+# from routes.webhook import bp as webhook_bp      # TODO: Create this
+# from routes.fake_revolut import bp as fake_revolut_bp  # TODO: Create this
 
 # Import services
 from services.campaign_service import CampaignService
@@ -119,25 +119,25 @@ def init_extensions(app):
 def register_blueprints(app):
     """Înregistrează toate blueprint-urile"""
     
-    # Dashboard (pagina principală)
-    app.register_blueprint(dashboard_bp, url_prefix='/admin')
+    # Dashboard (pagina principală) - TODO: Create this blueprint
+    # app.register_blueprint(dashboard_bp, url_prefix='/admin')
     
     # Campaigns management
     app.register_blueprint(campaigns_bp, url_prefix='/admin/campaigns')
     
-    # Targets management  
-    app.register_blueprint(targets_bp, url_prefix='/admin/targets')
+    # Targets management - TODO: Create this blueprint
+    # app.register_blueprint(targets_bp, url_prefix='/admin/targets')
     
-    # Templates management
-    app.register_blueprint(templates_bp, url_prefix='/admin/templates')
+    # Templates management - TODO: Create this blueprint
+    # app.register_blueprint(templates_bp, url_prefix='/admin/templates')
     
-    # Webhook endpoints pentru tracking
-    app.register_blueprint(webhook_bp, url_prefix='/webhook')
+    # Webhook endpoints pentru tracking - TODO: Create this blueprint
+    # app.register_blueprint(webhook_bp, url_prefix='/webhook')
     
-    # Site-ul fake Revolut
-    app.register_blueprint(fake_revolut_bp, url_prefix='/revolut')
+    # Site-ul fake Revolut - TODO: Create this blueprint
+    # app.register_blueprint(fake_revolut_bp, url_prefix='/revolut')
     
-    app.logger.info("All blueprints registered successfully")
+    app.logger.info("Available blueprints registered successfully")
 
 
 def register_error_handlers(app):
@@ -230,12 +230,19 @@ def register_cli_commands(app):
         print("Data export not implemented yet")
 
 
+# ===== CREAREA APLICAȚIEI =====
+
+# Creează aplicația
+app = create_app()
+
+
 # ===== ROUTE-URI PRINCIPALE =====
 
 @app.route('/')
 def index():
     """Pagina principală - redirectează la dashboard"""
-    return redirect(url_for('dashboard.index'))
+    # TODO: Create dashboard blueprint, for now show simple message
+    return "<h1>Phishing Simulator</h1><p>Admin panel coming soon...</p><p><a href='/health'>Health Check</a> | <a href='/api/stats'>API Stats</a></p>"
 
 
 @app.route('/health')
@@ -326,17 +333,6 @@ def after_request(response):
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
     
     return response
-
-
-# ===== CREAREA APLICAȚIEI =====
-
-# Creează aplicația
-app = create_app()
-
-# Înregistrează route-urile principale (pentru compatibilitate cu blueprint-urile)
-app.add_url_rule('/', 'index', index)
-app.add_url_rule('/health', 'health_check', health_check)
-app.add_url_rule('/api/stats', 'api_stats', api_stats)
 
 
 if __name__ == '__main__':
