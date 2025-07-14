@@ -67,6 +67,9 @@
     <Content Include="routes\__init__.py" />
     <Content Include="static\css\admin.css" />
     <Content Include="static\css\revolut.css" />
+    <Content Include="static\images\revolut_features.jpg" />
+    <Content Include="static\images\revolut_iban_hero.jpg" />
+    <Content Include="static\images\revolut_referral_hero.jpg" />
     <Content Include="static\js\admin.js" />
     <Content Include="static\js\revolut.js" />
     <Content Include="templates\admin\base.html" />
