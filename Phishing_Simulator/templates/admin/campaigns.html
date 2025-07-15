@@ -1,0 +1,545 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Campaigns{% endblock %}
+
+{% block breadcrumb %}
+<ul class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+    <li class="breadcrumb-item active">Campaigns</li>
+</ul>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h1 class="h3 mb-3">
+            <i class="bi bi-envelope-paper me-2"></i>
+            Campaigns Management
+        </h1>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
+            <i class="bi bi-plus"></i> Create New Campaign
+        </a>
+    </div>
+</div>
+
+<!-- Quick Stats Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card stats-card border-left-primary">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Campaigns
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ stats.total or 0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-envelope-paper fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card stats-card border-left-success">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Active
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ stats.active or 0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-play-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card stats-card border-left-warning">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Draft
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ stats.draft or 0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-file-earmark fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card stats-card border-left-info">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Completed
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ stats.completed or 0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Search & Filters</h6>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('campaigns.list_campaigns') }}">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="search" class="form-label">Search Campaigns</label>
+                    <input type="text" class="form-control" id="search" name="q"
+                           value="{{ search_query or '' }}" placeholder="Campaign name or description">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="status_filter" class="form-label">Status</label>
+                    <select class="form-select" id="status_filter" name="status">
+                        <option value="">All Statuses</option>
+                        <option value="draft" {% if status_filter= ='draft' %}selected{% endif %}>Draft</option>
+                        <option value="active" {% if status_filter= ='active' %}selected{% endif %}>Active</option>
+                        <option value="paused" {% if status_filter= ='paused' %}selected{% endif %}>Paused</option>
+                        <option value="completed" {% if status_filter= ='completed' %}selected{% endif %}>Completed</option>
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="type_filter" class="form-label">Type</label>
+                    <select class="form-select" id="type_filter" name="type">
+                        <option value="">All Types</option>
+                        <option value="email" {% if type_filter= ='email' %}selected{% endif %}>Email</option>
+                        <option value="sms" {% if type_filter= ='sms' %}selected{% endif %}>SMS</option>
+                        <option value="both" {% if type_filter= ='both' %}selected{% endif %}>Both</option>
+                    </select>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Campaigns Table -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+        <h6 class="m-0 font-weight-bold text-primary">Campaigns List</h6>
+        <div class="dropdown">
+            <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-three-dots"></i> Actions
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#"><i class="bi bi-download me-2"></i>Export All</a></li>
+                <li><a class="dropdown-item" href="#"><i class="bi bi-archive me-2"></i>Archive Selected</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if campaigns %}
+        <div class="table-responsive">
+            <table class="table table-bordered" width="100%" cellspacing="0">
+                        <th width="5%">
+                            <label for="selectAll" class="visually-hidden">Select All Campaigns</label>
+                            <input type="checkbox" class="form-check-input" id="selectAll" title="Select All Campaigns">
+                        </th>
+                            <input type="checkbox" class="form-check-input" id="selectAll">
+                        </th>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Targets</th>
+                        <th>Success Rate</th>
+                        <th>Created</th>
+                        <th width="15%">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                            <label for="campaign-checkbox-{{ campaign.id }}" class="visually-hidden">Select Campaign {{ campaign.name }}</label>
+                            <input type="checkbox" class="form-check-input campaign-checkbox" id="campaign-checkbox-{{ campaign.id }}" value="{{ campaign.id }}" title="Select Campaign {{ campaign.name }}">
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="form-check-input campaign-checkbox" value="{{ campaign.id }}">
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div>
+                                    <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}"
+                                       class="font-weight-bold text-decoration-none">
+                                        {{ campaign.name }}
+                                    </a>
+                                    {% if campaign.description %}
+                                    <div class="small text-muted">{{ campaign.description[:50] }}{% if campaign.description|length > 50 %}...{% endif %}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if campaign.type == 'email' %}primary{% elif campaign.type == 'sms' %}info{% else %}secondary{% endif %}">
+                                {{ campaign.type|upper }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if campaign.status == 'active' %}success{% elif campaign.status == 'draft' %}warning{% elif campaign.status == 'paused' %}danger{% else %}secondary{% endif %}">
+                                {{ campaign.status|title }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="font-weight-bold">{{ campaign.total_targets }}</span>
+                            {% if campaign.total_targets > 0 %}
+                            <div class="small text-muted">
+                                <i class="bi bi-cursor me-1"></i>{{ campaign.total_clicks }} clicks
+                            </div>
+                            {% endif %}
+                                <div class="progress custom-progress-width">
+                                    <div class="progress-bar bg-{% if campaign.success_rate > 20 %}success{% elif campaign.success_rate > 10 %}warning{% else %}danger{% endif %} custom-progress-bar-width"
+                                         data-success-rate="{{ campaign.success_rate }}"></div>
+                                </div>
+                                <div class="progress" style="width: 60px; height: 8px;">
+                                    <div class="progress-bar bg-{% if campaign.success_rate > 20 %}success{% elif campaign.success_rate > 10 %}warning{% else %}danger{% endif %}"
+                                         style="width: {{ campaign.success_rate }}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="small">
+                                {{ campaign.created_at.strftime('%m/%d/%Y') if campaign.created_at else 'N/A' }}
+                                <div class="text-muted">{{ campaign.created_at.strftime('%H:%M') if campaign.created_at else '' }}</div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}"
+                                   class="btn btn-sm btn-outline-primary" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{{ url_for('campaigns.edit_campaign', campaign_id=campaign.id) }}"
+                                   class="btn btn-sm btn-outline-secondary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+
+                                {% if campaign.status == 'draft' %}
+                                <form method="POST" action="{{ url_for('campaigns.start_campaign', campaign_id=campaign.id) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Start Campaign">
+                                        <i class="bi bi-play"></i>
+                                    </button>
+                                </form>
+                                {% elif campaign.status == 'active' %}
+                                <form method="POST" action="{{ url_for('campaigns.pause_campaign', campaign_id=campaign.id) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Pause Campaign">
+                                        <i class="bi bi-pause"></i>
+                                    </button>
+                                </form>
+                                {% elif campaign.status == 'paused' %}
+                                <form method="POST" action="{{ url_for('campaigns.start_campaign', campaign_id=campaign.id) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Resume Campaign">
+                                        <i class="bi bi-play"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-danger dropdown-toggle" data-bs-toggle="dropdown" title="More Actions">
+                                        <i class="bi bi-three-dots"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" href="{{ url_for('campaigns.upload_targets', campaign_id=campaign.id) }}">
+                                                <i class="bi bi-upload me-2"></i>Upload Targets
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="{{ url_for('campaigns.export_campaign', campaign_id=campaign.id) }}">
+                                                <i class="bi bi-download me-2"></i>Export Data
+                                            <a class="dropdown-item text-danger" href="#" onclick="deleteCampaign({{ campaign.id }}, '{{ campaign.name|escape }}'); return false;" title="Delete Campaign">
+                                                <i class="bi bi-trash me-2"></i>Delete
+                                            </a>
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="#" onclick="deleteCampaign({{ campaign.id }}, '{{ campaign.name }}')">
+                                                <i class="bi bi-trash me-2"></i>Delete
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+            <ul class="pagination justify-content-center">
+                <!-- Pagination items are all <li> elements, so this is valid -->
+                <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('campaigns.list_campaigns', page=page-1, q=search_query, status=status_filter, type=type_filter) }}">Previous</a>
+                </li>
+            <ul class="pagination justify-content-center">
+                <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('campaigns.list_campaigns', page=page-1, q=search_query, status=status_filter, type=type_filter) }}">Previous</a>
+                </li>
+
+                {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                <li class="page-item active">
+                    <span class="page-link">{{ p }}</span>
+                </li>
+                {% elif p <= 3 or p >= total_pages - 2 or (p >= page - 1 and p <= page + 1) %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('campaigns.list_campaigns', page=p, q=search_query, status=status_filter, type=type_filter) }}">{{ p }}</a>
+                </li>
+                {% elif p == 4 and page > 6 %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+                {% elif p == total_pages - 3 and page < total_pages - 5 %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+                {% endif %}
+                {% endfor %}
+
+                <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('campaigns.list_campaigns', page=page+1, q=search_query, status=status_filter, type=type_filter) }}">Next</a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox display-1 text-muted"></i>
+            <h4 class="mt-3 text-muted">No campaigns found</h4>
+            <p class="text-muted">
+                {% if search_query or status_filter or type_filter %}
+                No campaigns match your search criteria. <a href="{{ url_for('campaigns.list_campaigns') }}">Clear filters</a>
+                {% else %}
+                Get started by creating your first phishing campaign.
+                {% endif %}
+            </p>
+            <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
+                <i class="bi bi-plus"></i> Create First Campaign
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Campaign Modal -->
+                <button type="button" class="btn-close" data-bs-dismiss="modal" title="Close"></button>
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Campaign</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the campaign <strong id="campaignNameToDelete"></strong>?</p>
+                <p class="text-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    This action cannot be undone. All targets, tracking data, and captured credentials will be permanently deleted.
+                </p>
+                <div class="mb-3">
+                    <label for="confirmDelete" class="form-label">Type <strong>DELETE</strong> to confirm:</label>
+                    <input type="text" class="form-control" id="confirmDelete" placeholder="DELETE">
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="forceDelete">
+                    <label class="form-check-label" for="forceDelete">
+                        Force delete (even if campaign is active)
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn" disabled>Delete Campaign</button>
+            </div>
+        </div>
+{% block scripts %}
+<style>
+    .custom-progress-width {
+        width: 60px;
+        height: 8px;
+    }
+    .custom-progress-bar-width {
+        min-width: 0;
+    }
+    .visually-hidden {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        padding: 0 !important;
+        margin: -1px !important;
+        overflow: hidden !important;
+        clip: rect(0,0,0,0) !important;
+        border: 0 !important;
+    }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set progress bar width from data attribute
+    document.querySelectorAll('.custom-progress-bar-width').forEach(function(bar) {
+        var rate = bar.getAttribute('data-success-rate');
+        if (rate !== null) {
+            bar.style.width = rate + '%';
+        }
+    });
+    // Select all functionality
+    document.getElementById('selectAll').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.campaign-checkbox');
+        checkboxes.forEach(checkbox => checkbox.checked = this.checked);
+    });
+
+    // Delete campaign functionality
+    let campaignToDelete = null;
+
+    window.deleteCampaign = function(campaignId, campaignName) {
+        campaignToDelete = campaignId;
+        document.getElementById('campaignNameToDelete').textContent = campaignName;
+        document.getElementById('confirmDelete').value = '';
+        document.getElementById('forceDelete').checked = false;
+        document.getElementById('confirmDeleteBtn').disabled = true;
+
+        const modal = new bootstrap.Modal(document.getElementById('deleteCampaignModal'));
+        modal.show();
+    };
+
+    // Enable delete button only when "DELETE" is typed
+    document.getElementById('confirmDelete').addEventListener('input', function() {
+        const deleteBtn = document.getElementById('confirmDeleteBtn');
+        deleteBtn.disabled = this.value !== 'DELETE';
+    });
+
+    // Handle delete confirmation
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        if (campaignToDelete) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/campaigns/${campaignToDelete}/delete`;
+
+            const confirmInput = document.createElement('input');
+            confirmInput.type = 'hidden';
+            confirmInput.name = 'confirm';
+            confirmInput.value = 'DELETE';
+            form.appendChild(confirmInput);
+
+            if (document.getElementById('forceDelete').checked) {
+                const forceInput = document.createElement('input');
+                forceInput.type = 'hidden';
+                forceInput.name = 'force';
+                forceInput.value = 'on';
+                form.appendChild(forceInput);
+            }
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+    });
+
+    // Auto-submit search form with delay
+    let searchTimeout;
+    document.getElementById('search').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            this.form.submit();
+        }, 500);
+    });
+});
+</script>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Select all functionality
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.campaign-checkbox');
+    checkboxes.forEach(checkbox => checkbox.checked = this.checked);
+});
+
+// Delete campaign functionality
+let campaignToDelete = null;
+
+function deleteCampaign(campaignId, campaignName) {
+    campaignToDelete = campaignId;
+    document.getElementById('campaignNameToDelete').textContent = campaignName;
+    document.getElementById('confirmDelete').value = '';
+    document.getElementById('forceDelete').checked = false;
+    document.getElementById('confirmDeleteBtn').disabled = true;
+
+    const modal = new bootstrap.Modal(document.getElementById('deleteCampaignModal'));
+    modal.show();
+}
+
+// Enable delete button only when "DELETE" is typed
+document.getElementById('confirmDelete').addEventListener('input', function() {
+    const deleteBtn = document.getElementById('confirmDeleteBtn');
+    deleteBtn.disabled = this.value !== 'DELETE';
+});
+
+// Handle delete confirmation
+document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+    if (campaignToDelete) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/admin/campaigns/${campaignToDelete}/delete`;
+
+        const confirmInput = document.createElement('input');
+        confirmInput.type = 'hidden';
+        confirmInput.name = 'confirm';
+        confirmInput.value = 'DELETE';
+        form.appendChild(confirmInput);
+
+        if (document.getElementById('forceDelete').checked) {
+            const forceInput = document.createElement('input');
+            forceInput.type = 'hidden';
+            forceInput.name = 'force';
+            forceInput.value = 'on';
+            form.appendChild(forceInput);
+        }
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+});
+
+// Auto-submit search form with delay
+let searchTimeout;
+document.getElementById('search').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        this.form.submit();
+    }, 500);
+});
+</script>
+{% endblock %}

@@ -1,11 +1,11 @@
 /**
  * Admin Interface JavaScript - Phishing Simulator
- * Handles all frontend interactions for the admin panel
+ * FIXED: Updated API endpoints to match new routes
  */
 
 class AdminInterface {
     constructor() {
-        this.apiBase = '/admin';
+        this.apiBase = '/admin/api';  // FIXED: Changed from '/admin' to '/admin/api'
         this.realTimeEnabled = false;
         this.realTimeInterval = null;
         this.charts = {};
@@ -38,7 +38,7 @@ class AdminInterface {
 
         // Real-time panel toggle
         window.toggleRealTimePanel = () => this.toggleRealTimePanel();
-        
+
         // Export data function
         window.exportData = () => this.exportData();
 
@@ -59,9 +59,10 @@ class AdminInterface {
      */
     async loadQuickStats() {
         try {
+            // FIXED: Updated endpoint path
             const response = await fetch(`${this.apiBase}/stats`);
             const data = await response.json();
-            
+
             if (data.error) {
                 document.getElementById('quick-stats').textContent = 'Error loading stats';
                 return;
@@ -72,15 +73,21 @@ class AdminInterface {
             const emailsSent = stats.emails_sent || 0;
             const clicks = stats.clicks || 0;
 
-            document.getElementById('quick-stats').innerHTML = 
-                `${totalEvents} events, ${emailsSent} emails, ${clicks} clicks today`;
+            const quickStatsElement = document.getElementById('quick-stats');
+            if (quickStatsElement) {
+                quickStatsElement.innerHTML =
+                    `${totalEvents} events, ${emailsSent} emails, ${clicks} clicks today`;
+            }
 
             // Update sidebar counters
             this.updateSidebarCounters(data);
-            
+
         } catch (error) {
             console.error('Error loading quick stats:', error);
-            document.getElementById('quick-stats').textContent = 'Stats unavailable';
+            const quickStatsElement = document.getElementById('quick-stats');
+            if (quickStatsElement) {
+                quickStatsElement.textContent = 'Stats unavailable';
+            }
         }
     }
 
@@ -105,9 +112,10 @@ class AdminInterface {
      */
     async initNotifications() {
         try {
+            // FIXED: Updated endpoint path
             const response = await fetch(`${this.apiBase}/realtime`);
             const data = await response.json();
-            
+
             if (data.events && data.events.length > 0) {
                 this.updateNotifications(data.events.slice(0, 5)); // Last 5 events
             }
@@ -122,12 +130,14 @@ class AdminInterface {
     updateNotifications(events) {
         const dropdown = document.getElementById('notifications-dropdown');
         const counter = document.getElementById('notification-count');
-        
+
         if (!dropdown) return;
 
         // Update counter
-        counter.textContent = events.length;
-        counter.style.display = events.length > 0 ? 'inline' : 'none';
+        if (counter) {
+            counter.textContent = events.length;
+            counter.style.display = events.length > 0 ? 'inline' : 'none';
+        }
 
         // Clear existing notifications
         dropdown.innerHTML = '<li><h6 class="dropdown-header">Recent Activity</h6></li>';
@@ -141,7 +151,7 @@ class AdminInterface {
         events.forEach(event => {
             const timeAgo = this.formatTimeAgo(new Date(event.timestamp));
             const icon = this.getEventIcon(event.event_type);
-            
+
             dropdown.innerHTML += `
                 <li>
                     <a class="dropdown-item" href="#" onclick="AdminInterface.viewEvent('${event.id}')">
@@ -176,8 +186,10 @@ class AdminInterface {
      */
     toggleRealTimePanel() {
         const panel = document.getElementById('realtime-panel');
+        if (!panel) return;
+
         const isOpen = panel.classList.contains('open');
-        
+
         if (isOpen) {
             panel.classList.remove('open');
             this.realTimeEnabled = false;
@@ -196,9 +208,10 @@ class AdminInterface {
         if (!content) return;
 
         try {
+            // FIXED: Updated endpoint path
             const response = await fetch(`${this.apiBase}/realtime`);
             const data = await response.json();
-            
+
             if (data.events && data.events.length > 0) {
                 content.innerHTML = '';
                 data.events.slice(0, 20).forEach(event => {
@@ -232,7 +245,9 @@ class AdminInterface {
      */
     toggleSidebar() {
         const sidebar = document.getElementById('sidebar-nav');
-        sidebar.classList.toggle('show');
+        if (sidebar) {
+            sidebar.classList.toggle('show');
+        }
     }
 
     /**
@@ -240,11 +255,12 @@ class AdminInterface {
      */
     async exportData() {
         this.showLoading();
-        
+
         try {
+            // FIXED: Updated endpoint path
             const response = await fetch(`${this.apiBase}/export`);
             const data = await response.json();
-            
+
             if (data.error) {
                 this.showToast('Export failed: ' + data.error, 'error');
                 return;
@@ -260,7 +276,7 @@ class AdminInterface {
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
-            
+
             this.showToast('Data exported successfully!', 'success');
         } catch (error) {
             console.error('Export error:', error);
@@ -290,7 +306,7 @@ class AdminInterface {
 
             if (data.success) {
                 this.showToast(data.message || 'Operation successful!', 'success');
-                
+
                 // Redirect if specified
                 if (data.redirect) {
                     window.location.href = data.redirect;
@@ -314,9 +330,10 @@ class AdminInterface {
      */
     async checkSystemHealth() {
         try {
-            const response = await fetch(`${this.apiBase}/health`);
+            // FIXED: Updated endpoint path - health check is directly under /admin/
+            const response = await fetch('/admin/health');
             const data = await response.json();
-            
+
             const healthStatus = document.getElementById('health-status');
             if (healthStatus) {
                 if (data.status === 'healthy') {
@@ -342,17 +359,17 @@ class AdminInterface {
      */
     setupAutoRefresh() {
         const autoRefreshElements = document.querySelectorAll('[data-auto-refresh]');
-        
+
         autoRefreshElements.forEach(element => {
             const interval = parseInt(element.dataset.autoRefresh) || 30000;
             const url = element.dataset.refreshUrl;
-            
+
             if (url) {
                 setInterval(async () => {
                     try {
                         const response = await fetch(url);
                         const data = await response.json();
-                        
+
                         if (element.dataset.refreshType === 'text') {
                             element.textContent = data.value || data;
                         } else if (element.dataset.refreshType === 'html') {
@@ -369,7 +386,7 @@ class AdminInterface {
     /**
      * Utility functions
      */
-    
+
     formatTimeAgo(date) {
         const now = new Date();
         const diff = now - date;
@@ -439,7 +456,7 @@ class AdminInterface {
         // Create toast element
         const toastId = 'toast-' + Date.now();
         const bgClass = type === 'success' ? 'bg-success' : type === 'error' ? 'bg-danger' : 'bg-info';
-        
+
         const toastHtml = `
             <div class="toast ${bgClass} text-white" id="${toastId}" role="alert">
                 <div class="toast-header ${bgClass} text-white border-0">
@@ -454,7 +471,7 @@ class AdminInterface {
         `;
 
         container.insertAdjacentHTML('beforeend', toastHtml);
-        
+
         // Initialize and show toast
         const toastElement = document.getElementById(toastId);
         const toast = new bootstrap.Toast(toastElement, { autohide: true, delay: 5000 });
@@ -478,7 +495,7 @@ class AdminInterface {
     /**
      * API helper methods
      */
-    
+
     async apiCall(endpoint, options = {}) {
         const defaultOptions = {
             headers: {
@@ -488,11 +505,11 @@ class AdminInterface {
         };
 
         const response = await fetch(endpoint, { ...defaultOptions, ...options });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         return await response.json();
     }
 
@@ -523,7 +540,7 @@ class AdminInterface {
     /**
      * Chart utilities
      */
-    
+
     createChart(canvasId, config) {
         const canvas = document.getElementById(canvasId);
         if (!canvas) return null;
@@ -548,7 +565,7 @@ class AdminInterface {
     /**
      * Static utility methods
      */
-    
+
     static viewEvent(eventId) {
         // Handle event viewing
         console.log('Viewing event:', eventId);
