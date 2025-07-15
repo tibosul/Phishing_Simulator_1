@@ -9,8 +9,8 @@ import logging
 import csv
 import io
 
-# Crearea Blueprint-ului pentru targets
-bp = Blueprint('targets', __name__)
+# FIXED: Added url_prefix='/admin/targets' to match app.py registration
+bp = Blueprint('targets', __name__, url_prefix='/admin/targets')
 logger = logging.getLogger(__name__)
 
 

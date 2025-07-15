@@ -11,7 +11,7 @@ from utils.validators import ValidationError
 from utils.helpers import get_client_ip, log_security_event
 import logging
 
-# Crearea Blueprint-ului pentru campanii
+# FIXED: Added url_prefix='/admin/campaigns' to match app.py registration
 bp = Blueprint('campaigns', __name__, url_prefix='/admin/campaigns')
 
 
@@ -463,7 +463,7 @@ def complete_campaign(campaign_id):
 
 # === API ENDPOINTS ===
 
-@bp.route('/api/campaigns')
+@bp.route('/api')
 def api_list_campaigns():
     """
     API endpoint pentru listarea campaniilor (pentru AJAX)
@@ -491,7 +491,7 @@ def api_list_campaigns():
         return jsonify({'error': 'Error loading campaigns'}), 500
 
 
-@bp.route('/api/campaigns/<int:campaign_id>/stats')
+@bp.route('/api/<int:campaign_id>/stats')
 def api_campaign_stats(campaign_id):
     """
     API endpoint pentru statisticile unei campanii (pentru grafice)

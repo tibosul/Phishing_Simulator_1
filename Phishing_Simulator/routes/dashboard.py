@@ -99,6 +99,7 @@ def index():
             'total': mobile_events + desktop_events
         }
         
+        # FIXED: Return HTML template instead of JSON
         return render_template('admin/dashboard.html',
                              dashboard_stats=dashboard_stats,
                              active_campaigns=active_campaigns,
@@ -126,10 +127,11 @@ def index():
                              error_message="Error loading dashboard data")
 
 
-@bp.route('/stats')
-def quick_stats():
+# API ENDPOINTS (păstrăm pentru AJAX calls)
+@bp.route('/api/stats')
+def api_quick_stats():
     """
-    Quick stats pentru sidebar sau widgets
+    Quick stats pentru sidebar sau widgets - AJAX endpoint
     
     Returns:
         JSON: Statistici rapide
@@ -242,6 +244,7 @@ def analytics():
         # Password analysis
         password_analysis = credential_service.get_campaign_credential_analysis(None)
         
+        # FIXED: Return HTML template instead of JSON
         return render_template('admin/analytics.html',
                              daily_activity=daily_activity,
                              campaign_performance=campaign_performance,
@@ -258,10 +261,10 @@ def analytics():
                              error_message="Error loading analytics data")
 
 
-@bp.route('/realtime')
-def realtime():
+@bp.route('/api/realtime')
+def api_realtime():
     """
-    Live feed cu activitatea în timp real
+    Live feed cu activitatea în timp real - AJAX endpoint
     
     Returns:
         JSON: Evenimente recente
@@ -346,10 +349,10 @@ def health_check():
         }), 500
 
 
-@bp.route('/export')
-def export_all_data():
+@bp.route('/api/export')
+def api_export_all_data():
     """
-    Export complet al tuturor datelor pentru backup
+    Export complet al tuturor datelor pentru backup - AJAX endpoint
     
     Returns:
         JSON: Toate datele din sistem
@@ -379,10 +382,10 @@ def export_all_data():
         return jsonify({'error': 'Export failed'}), 500
 
 
-@bp.route('/search')
-def search():
+@bp.route('/api/search')
+def api_search():
     """
-    Search global prin toate datele
+    Search global prin toate datele - AJAX endpoint
     
     Query params:
     - q: query string

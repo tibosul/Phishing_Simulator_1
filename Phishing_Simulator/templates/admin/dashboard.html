@@ -1,0 +1,254 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Dashboard</li>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h3 mb-3">
+            <i class="bi bi-speedometer2 me-2"></i>
+            Dashboard Overview
+        </h1>
+    </div>
+</div>
+
+<!-- Quick Stats Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card border-left-primary">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Campaigns
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ dashboard_stats.totals.campaigns or 0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-envelope-paper fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card border-left-success">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Active Campaigns
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ dashboard_stats.totals.active_campaigns or 0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-play-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card border-left-info">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Total Targets
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ dashboard_stats.totals.targets or 0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-people fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card border-left-warning">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Credentials Captured
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ dashboard_stats.totals.credentials or 0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-shield-exclamation fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Row -->
+<div class="row">
+    <!-- Recent Campaigns -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Campaigns</h6>
+                <a href="{{ url_for('campaigns.list_campaigns') }}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus"></i> View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_campaigns %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Targets</th>
+                                    <th>Success Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for campaign in recent_campaigns %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}">
+                                            {{ campaign.name }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ campaign.type }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if campaign.status == 'active' %}success{% elif campaign.status == 'draft' %}warning{% else %}secondary{% endif %}">
+                                            {{ campaign.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ campaign.total_targets }}</td>
+                                    <td>{{ "%.1f"|format(campaign.success_rate) }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox display-4 text-muted"></i>
+                        <p class="text-muted mt-2">No campaigns yet</p>
+                        <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
+                            <i class="bi bi-plus"></i> Create First Campaign
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Activity</h6>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% if recent_activity %}
+                    {% for event in recent_activity %}
+                    <div class="d-flex align-items-center border-bottom py-2">
+                        <div class="me-3">
+                            <i class="bi bi-{% if event.event_type == 'email_sent' %}envelope{% elif event.event_type == 'link_clicked' %}cursor{% elif event.event_type == 'credentials_entered' %}shield-exclamation{% else %}activity{% endif %} text-primary"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="small font-weight-bold">
+                                {{ event.event_type.replace('_', ' ').title() }}
+                            </div>
+                            <div class="small text-muted">
+                                {% if event.target %}{{ event.target.email }}{% else %}Unknown{% endif %}
+                                • {{ event.timestamp.strftime('%H:%M') }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-activity display-4 text-muted"></i>
+                        <p class="text-muted mt-2">No recent activity</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Password Strength Distribution -->
+{% if password_strength_stats %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Password Strength Distribution</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for strength, count in password_strength_stats.items() %}
+                    <div class="col-md-2">
+                        <div class="text-center">
+                            <div class="h4 mb-0 font-weight-bold text-{% if strength == 'very_weak' or strength == 'weak' %}danger{% elif strength == 'medium' %}warning{% else %}success{% endif %}">
+                                {{ count }}
+                            </div>
+                            <div class="small text-muted">{{ strength.replace('_', ' ').title() }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Error Message -->
+{% if error_message %}
+<div class="row">
+    <div class="col-12">
+        <div class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            {{ error_message }}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh dashboard data every 30 seconds
+setInterval(function() {
+    // Only refresh if user is active
+    if (document.hasFocus()) {
+        fetch('/admin/api/stats')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Dashboard stats updated:', data);
+                // Update stats here if needed
+            })
+            .catch(error => console.log('Stats update failed:', error));
+    }
+}, 30000);
+</script>
+{% endblock %}
