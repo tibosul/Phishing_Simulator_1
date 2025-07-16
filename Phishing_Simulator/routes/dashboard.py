@@ -304,6 +304,8 @@ def health_check():
     - Database connectivity
     - Services status
     - Basic stats
+    
+    Returnează HTML pentru browser requests, JSON pentru AJAX requests
     """
     try:
         # Test database
@@ -338,15 +340,45 @@ def health_check():
             }
         }
         
-        return jsonify(health_data)
+        # Check if this is an AJAX request
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+           'application/json' in request.headers.get('Accept', ''):
+            return jsonify(health_data)
+        
+        # Return HTML template for browser requests
+        return render_template('admin/health.html', health_data=health_data)
         
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
-        return jsonify({
+        error_data = {
             'status': 'unhealthy',
             'timestamp': datetime.utcnow().isoformat(),
-            'error': str(e)
-        }), 500
+            'error': str(e),
+            'database': 'disconnected',
+            'statistics': {
+                'campaigns': 0,
+                'targets': 0,
+                'recent_activity': 0
+            },
+            'services': {
+                'tracking': 'error',
+                'email': 'error',
+                'sms': 'error',
+                'credential_capture': 'error'
+            },
+            'client_info': {
+                'ip': get_client_ip(),
+                'user_agent': request.headers.get('User-Agent', 'Unknown')
+            }
+        }
+        
+        # Check if this is an AJAX request
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+           'application/json' in request.headers.get('Accept', ''):
+            return jsonify(error_data), 500
+        
+        # Return HTML template with error for browser requests
+        return render_template('admin/health.html', health_data=error_data), 500
 
 
 @bp.route('/api/export')
