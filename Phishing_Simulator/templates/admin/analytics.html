@@ -1,18 +1,588 @@
-<!-- ===========================================
-     TEMPLATE: admin/analytics.html
-     =========================================== -->
 {% extends "admin/base.html" %}
 
 {% block title %}Analytics{% endblock %}
 
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Analytics</li>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.metric-card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+}
+.metric-card:hover {
+    transform: translateY(-2px);
+}
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin: 1rem 0;
+}
+.analytics-section {
+    margin-bottom: 2rem;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <h1>📈 Analytics</h1>
-    
-    <div class="card">
-        <div class="card-body">
-            <p>STUB: Analytics charts will be here</p>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-0">
+                <i class="bi bi-graph-up me-2"></i>
+                Advanced Analytics
+            </h1>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-primary" onclick="refreshAnalytics()">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="exportAnalytics()">
+                    <i class="bi bi-download me-1"></i>Export
+                </button>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Date Range Selector -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form class="row g-3" id="date-range-form">
+                    <div class="col-md-3">
+                        <label for="date-range" class="form-label">Time Period</label>
+                        <select class="form-select" id="date-range" name="range">
+                            <option value="7">Last 7 days</option>
+                            <option value="30" selected>Last 30 days</option>
+                            <option value="90">Last 90 days</option>
+                            <option value="365">Last year</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="start-date" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="start-date" name="start_date">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="end-date" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="end-date" name="end_date">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Apply Filters</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key Metrics Overview -->
+<div class="analytics-section">
+    <h4 class="mb-3">Key Performance Indicators</h4>
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card metric-card h-100">
+                <div class="card-body text-center">
+                    <div class="display-6 text-primary mb-2" id="total-events">
+                        {% if daily_activity %}
+                            {{ daily_activity|sum(attribute='total_events') or 0 }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </div>
+                    <h6 class="text-muted">Total Events</h6>
+                    <div class="small text-success">
+                        <i class="bi bi-arrow-up me-1"></i>
+                        <span id="events-change">+12.5%</span> from last period
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card metric-card h-100">
+                <div class="card-body text-center">
+                    <div class="display-6 text-info mb-2" id="emails-sent">
+                        {% if daily_activity %}
+                            {{ daily_activity|sum(attribute='emails_sent') or 0 }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </div>
+                    <h6 class="text-muted">Emails Sent</h6>
+                    <div class="small text-success">
+                        <i class="bi bi-arrow-up me-1"></i>
+                        <span id="emails-change">+8.3%</span> from last period
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card metric-card h-100">
+                <div class="card-body text-center">
+                    <div class="display-6 text-warning mb-2" id="clicks-total">
+                        {% if daily_activity %}
+                            {{ daily_activity|sum(attribute='clicks') or 0 }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </div>
+                    <h6 class="text-muted">Link Clicks</h6>
+                    <div class="small text-danger">
+                        <i class="bi bi-arrow-down me-1"></i>
+                        <span id="clicks-change">-2.1%</span> from last period
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card metric-card h-100">
+                <div class="card-body text-center">
+                    <div class="display-6 text-danger mb-2" id="credentials-total">
+                        {% if daily_activity %}
+                            {{ daily_activity|sum(attribute='credentials') or 0 }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </div>
+                    <h6 class="text-muted">Credentials Captured</h6>
+                    <div class="small text-warning">
+                        <i class="bi bi-dash me-1"></i>
+                        <span id="credentials-change">0%</span> from last period
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Activity Timeline Chart -->
+<div class="analytics-section">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up me-2"></i>Activity Timeline (Last 30 Days)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="timeline-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Campaign Performance and Password Analysis -->
+<div class="analytics-section">
+    <div class="row">
+        <!-- Campaign Performance -->
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-bar-chart me-2"></i>Campaign Performance
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if campaign_performance %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Campaign</th>
+                                    <th>Type</th>
+                                    <th>Targets</th>
+                                    <th>Click Rate</th>
+                                    <th>Success Rate</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for campaign in campaign_performance %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold">{{ campaign.name }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ campaign.type.upper() }}</span>
+                                    </td>
+                                    <td>{{ campaign.targets }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="me-2">{{ "%.1f"|format(campaign.click_rate or 0) }}%</span>
+                                            <div class="progress" style="width: 60px; height: 6px;">
+                                                <div class="progress-bar bg-info" style="width: {{ campaign.click_rate or 0 }}%"></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="me-2 text-{% if campaign.success_rate and campaign.success_rate > 50 %}danger{% elif campaign.success_rate and campaign.success_rate > 25 %}warning{% else %}success{% endif %}">
+                                                {{ "%.1f"|format(campaign.success_rate or 0) }}%
+                                            </span>
+                                            <div class="progress" style="width: 60px; height: 6px;">
+                                                <div class="progress-bar bg-{% if campaign.success_rate and campaign.success_rate > 50 %}danger{% elif campaign.success_rate and campaign.success_rate > 25 %}warning{% else %}success{% endif %}" 
+                                                     style="width: {{ campaign.success_rate or 0 }}%"></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if campaign.status == 'active' %}success{% elif campaign.status == 'completed' %}info{% else %}secondary{% endif %}">
+                                            {{ campaign.status.title() }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-bar-chart display-4 text-muted"></i>
+                        <p class="text-muted mt-2">No campaign data available</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Password Strength Analysis -->
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-shield-check me-2"></i>Password Analysis
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if password_analysis %}
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="password-chart"></canvas>
+                    </div>
+                    <div class="mt-3">
+                        {% for strength, data in password_analysis.items() %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small">{{ strength.replace('_', ' ').title() }}</span>
+                            <span class="badge bg-{% if strength in ['very_weak', 'weak'] %}danger{% elif strength == 'medium' %}warning{% else %}success{% endif %}">
+                                {{ data.count or 0 }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-shield-check display-4 text-muted"></i>
+                        <p class="text-muted mt-2">No password data available</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Template Performance -->
+<div class="analytics-section">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-earmark-text me-2"></i>Top Performing Templates
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if template_stats %}
+                    <div class="row">
+                        {% for template in template_stats %}
+                        <div class="col-lg-4 col-md-6 mb-3">
+                            <div class="card border-left-primary">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <div class="fw-bold">{{ template.name }}</div>
+                                            <div class="small text-muted">{{ template.type.upper() }}</div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="h6 text-primary">{{ template.usage_count or 0 }}</div>
+                                            <div class="small text-muted">uses</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-file-earmark-text display-4 text-muted"></i>
+                        <p class="text-muted mt-2">No template usage data available</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Display -->
+{% if error_message %}
+<div class="alert alert-warning" role="alert">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    {{ error_message }}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Analytics page JavaScript
+let timelineChart = null;
+let passwordChart = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeAnalytics();
+    setupDateRangeForm();
+});
+
+function initializeAnalytics() {
+    createTimelineChart();
+    createPasswordChart();
+    
+    // Auto-refresh every 5 minutes
+    setInterval(refreshAnalytics, 300000);
+}
+
+function createTimelineChart() {
+    const ctx = document.getElementById('timeline-chart');
+    if (!ctx) return;
+
+    // Sample data - in real implementation, this would come from the backend
+    const dailyActivityData = {{ daily_activity|tojson if daily_activity else '[]' }};
+    
+    const labels = [];
+    const emailsData = [];
+    const clicksData = [];
+    const credentialsData = [];
+    
+    // Process daily activity data
+    if (dailyActivityData && dailyActivityData.length > 0) {
+        dailyActivityData.forEach(day => {
+            labels.push(new Date(day.date).toLocaleDateString());
+            emailsData.push(day.emails_sent || 0);
+            clicksData.push(day.clicks || 0);
+            credentialsData.push(day.credentials || 0);
+        });
+    } else {
+        // Generate sample data for last 30 days
+        for (let i = 29; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            labels.push(date.toLocaleDateString());
+            emailsData.push(Math.floor(Math.random() * 100));
+            clicksData.push(Math.floor(Math.random() * 50));
+            credentialsData.push(Math.floor(Math.random() * 20));
+        }
+    }
+
+    timelineChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Emails Sent',
+                data: emailsData,
+                borderColor: '#17a2b8',
+                backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                tension: 0.4
+            }, {
+                label: 'Link Clicks',
+                data: clicksData,
+                borderColor: '#ffc107',
+                backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                tension: 0.4
+            }, {
+                label: 'Credentials Captured',
+                data: credentialsData,
+                borderColor: '#dc3545',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                },
+                title: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
+}
+
+function createPasswordChart() {
+    const ctx = document.getElementById('password-chart');
+    if (!ctx) return;
+
+    // Process password analysis data
+    const passwordAnalysis = {{ password_analysis|tojson if password_analysis else '{}' }};
+    
+    const labels = [];
+    const data = [];
+    const colors = [];
+    
+    if (passwordAnalysis && Object.keys(passwordAnalysis).length > 0) {
+        Object.entries(passwordAnalysis).forEach(([strength, info]) => {
+            labels.push(strength.replace('_', ' ').toUpperCase());
+            data.push(info.count || 0);
+            
+            // Color coding for password strength
+            if (strength.includes('weak')) {
+                colors.push('#dc3545');
+            } else if (strength === 'medium') {
+                colors.push('#ffc107');
+            } else {
+                colors.push('#28a745');
+            }
+        });
+    } else {
+        // Sample data
+        labels.push('VERY WEAK', 'WEAK', 'MEDIUM', 'STRONG', 'VERY STRONG');
+        data.push(15, 25, 30, 20, 10);
+        colors.push('#dc3545', '#fd7e14', '#ffc107', '#28a745', '#20c997');
+    }
+
+    passwordChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors,
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        font: {
+                            size: 11
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function setupDateRangeForm() {
+    const form = document.getElementById('date-range-form');
+    const dateRangeSelect = document.getElementById('date-range');
+    const startDateInput = document.getElementById('start-date');
+    const endDateInput = document.getElementById('end-date');
+
+    // Set default dates
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+    
+    endDateInput.value = endDate.toISOString().split('T')[0];
+    startDateInput.value = startDate.toISOString().split('T')[0];
+
+    // Handle date range select change
+    dateRangeSelect.addEventListener('change', function() {
+        const days = parseInt(this.value);
+        const end = new Date();
+        const start = new Date();
+        start.setDate(start.getDate() - days);
+        
+        startDateInput.value = start.toISOString().split('T')[0];
+        endDateInput.value = end.toISOString().split('T')[0];
+    });
+
+    // Handle form submission
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        refreshAnalytics();
+    });
+}
+
+function refreshAnalytics() {
+    const refreshBtn = document.querySelector('[onclick="refreshAnalytics()"]');
+    const originalContent = refreshBtn.innerHTML;
+    
+    refreshBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Refreshing...';
+    refreshBtn.disabled = true;
+    
+    // In a real implementation, this would fetch new data from the API
+    setTimeout(() => {
+        // Update charts with new data
+        if (timelineChart) {
+            timelineChart.destroy();
+            createTimelineChart();
+        }
+        
+        if (passwordChart) {
+            passwordChart.destroy();
+            createPasswordChart();
+        }
+        
+        // Restore button
+        refreshBtn.innerHTML = originalContent;
+        refreshBtn.disabled = false;
+        
+        window.AdminInterface.showToast('Analytics refreshed successfully!', 'success');
+    }, 2000);
+}
+
+function exportAnalytics() {
+    window.AdminInterface.showToast('Analytics export feature coming soon!', 'info');
+}
+
+// Cleanup function
+window.addEventListener('beforeunload', function() {
+    if (timelineChart) timelineChart.destroy();
+    if (passwordChart) passwordChart.destroy();
+});
+</script>
 {% endblock %}

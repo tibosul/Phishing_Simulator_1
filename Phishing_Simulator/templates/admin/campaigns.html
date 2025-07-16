@@ -1,32 +1,565 @@
-<!-- ===========================================
-     TEMPLATE: admin/campaigns.html
-     =========================================== -->
 {% extends "admin/base.html" %}
 
 {% block title %}Campaigns{% endblock %}
 
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Campaigns</li>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <h1>📧 Campaigns List</h1>
-    
-    <div class="card">
-        <div class="card-header">
-            <h5>All Campaigns</h5>
-            <a href="/admin/campaigns/create" class="btn btn-primary">Create Campaign</a>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-0">
+                <i class="bi bi-envelope-paper me-2"></i>
+                Campaign Management
+            </h1>
+            <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Create Campaign
+            </a>
         </div>
-        <div class="card-body">
-            <p>STUB: Campaigns list will be here</p>
-            
-            {% if campaigns %}
-                <ul>
-                    {% for campaign in campaigns %}
-                    <li>{{ campaign.name }} - {{ campaign.status }}</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>No campaigns found.</p>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+{% if stats %}
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card stats-card border-left-primary h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Campaigns</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total or 0 }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-collection fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card stats-card border-left-success h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Active</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.active or 0 }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-play-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card stats-card border-left-warning h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Draft</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.draft or 0 }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-file-earmark fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card stats-card border-left-info h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Completed</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.completed or 0 }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Search and Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="search" class="form-label">Search Campaigns</label>
+                        <input type="text" class="form-control" id="search" name="q" value="{{ q or '' }}" placeholder="Search by name or description...">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status-filter" class="form-label">Status</label>
+                        <select class="form-select" id="status-filter" name="status">
+                            <option value="">All Statuses</option>
+                            <option value="draft" {% if status == 'draft' %}selected{% endif %}>Draft</option>
+                            <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+                            <option value="paused" {% if status == 'paused' %}selected{% endif %}>Paused</option>
+                            <option value="completed" {% if status == 'completed' %}selected{% endif %}>Completed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="type-filter" class="form-label">Type</label>
+                        <select class="form-select" id="type-filter" name="type">
+                            <option value="">All Types</option>
+                            <option value="email" {% if type == 'email' %}selected{% endif %}>Email</option>
+                            <option value="sms" {% if type == 'sms' %}selected{% endif %}>SMS</option>
+                            <option value="both" {% if type == 'both' %}selected{% endif %}>Both</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-1"></i>Search
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Campaigns Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Campaigns List</h6>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshCampaigns()">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                    <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus"></i> New Campaign
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if campaigns %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="campaigns-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">
+                                    <input type="checkbox" class="form-check-input" id="select-all" title="Select all campaigns">
+                                </th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Targets</th>
+                                <th scope="col">Success Rate</th>
+                                <th scope="col">Created</th>
+                                <th scope="col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for campaign in campaigns %}
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="form-check-input campaign-checkbox" value="{{ campaign.id }}" title="Select campaign">
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div>
+                                            <div class="fw-bold">
+                                                <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}" class="text-decoration-none">
+                                                    {{ campaign.name }}
+                                                </a>
+                                            </div>
+                                            {% if campaign.description %}
+                                            <div class="small text-muted">{{ campaign.description[:100] }}{% if campaign.description|length > 100 %}...{% endif %}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-{% if campaign.type == 'email' %}envelope{% elif campaign.type == 'sms' %}phone{% else %}collection{% endif %} me-1"></i>
+                                        {{ campaign.type.title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if campaign.status == 'active' %}success{% elif campaign.status == 'draft' %}secondary{% elif campaign.status == 'paused' %}warning{% elif campaign.status == 'completed' %}info{% else %}dark{% endif %}">
+                                        <i class="bi bi-{% if campaign.status == 'active' %}play-circle{% elif campaign.status == 'draft' %}file-earmark{% elif campaign.status == 'paused' %}pause-circle{% elif campaign.status == 'completed' %}check-circle{% else %}question-circle{% endif %} me-1"></i>
+                                        {{ campaign.status.title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <span class="me-2">{{ campaign.total_targets or 0 }}</span>
+                                        {% if campaign.total_targets > 0 %}
+                                        <div class="progress" style="width: 60px; height: 6px;">
+                                            <div class="progress-bar bg-primary" style="width: {{ ((campaign.targets_contacted or 0) / campaign.total_targets * 100)|round(1) }}%"></div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% if campaign.total_targets > 0 %}
+                                    <small class="text-muted">{{ campaign.targets_contacted or 0 }} contacted</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if campaign.success_rate is not none %}
+                                    <div class="d-flex align-items-center">
+                                        <span class="me-2 fw-bold text-{% if campaign.success_rate > 50 %}danger{% elif campaign.success_rate > 25 %}warning{% else %}success{% endif %}">
+                                            {{ "%.1f"|format(campaign.success_rate) }}%
+                                        </span>
+                                        <div class="progress" style="width: 40px; height: 6px;">
+                                            <div class="progress-bar bg-{% if campaign.success_rate > 50 %}danger{% elif campaign.success_rate > 25 %}warning{% else %}success{% endif %}" 
+                                                 style="width: {{ campaign.success_rate }}%"></div>
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="text-muted">{{ campaign.created_at.strftime('%Y-%m-%d') if campaign.created_at else 'Unknown' }}</span>
+                                    <div class="small text-muted">{{ campaign.created_at.strftime('%H:%M') if campaign.created_at else '' }}</div>
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}" 
+                                           class="btn btn-sm btn-outline-primary" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('campaigns.edit_campaign', campaign_id=campaign.id) }}" 
+                                           class="btn btn-sm btn-outline-secondary" title="Edit Campaign">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        {% if campaign.status == 'draft' %}
+                                        <button type="button" class="btn btn-sm btn-outline-success" 
+                                                onclick="startCampaign({{ campaign.id }})" title="Start Campaign">
+                                            <i class="bi bi-play"></i>
+                                        </button>
+                                        {% elif campaign.status == 'active' %}
+                                        <button type="button" class="btn btn-sm btn-outline-warning" 
+                                                onclick="pauseCampaign({{ campaign.id }})" title="Pause Campaign">
+                                            <i class="bi bi-pause"></i>
+                                        </button>
+                                        {% endif %}
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                <i class="bi bi-three-dots"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="{{ url_for('campaigns.export_campaign', campaign_id=campaign.id) }}">
+                                                    <i class="bi bi-download me-2"></i>Export
+                                                </a></li>
+                                                <li><a class="dropdown-item" href="#" onclick="cloneCampaign({{ campaign.id }})">
+                                                    <i class="bi bi-files me-2"></i>Clone
+                                                </a></li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteCampaign({{ campaign.id }}, '{{ campaign.name }}')">
+                                                    <i class="bi bi-trash me-2"></i>Delete
+                                                </a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Bulk Actions Bar -->
+                <div class="bulk-actions-bar d-none p-3 bg-light border-top">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted"><span id="selected-count">0</span> campaigns selected</span>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-outline-success" onclick="bulkStart()">
+                                <i class="bi bi-play me-1"></i>Start Selected
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="bulkPause()">
+                                <i class="bi bi-pause me-1"></i>Pause Selected
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="bulkDelete()">
+                                <i class="bi bi-trash me-1"></i>Delete Selected
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {% else %}
+                <!-- Empty State -->
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox display-1 text-muted mb-3"></i>
+                    <h5 class="text-muted">No campaigns found</h5>
+                    <p class="text-muted mb-4">
+                        {% if q or status or type %}
+                        No campaigns match your search criteria. Try adjusting your filters.
+                        {% else %}
+                        Get started by creating your first phishing simulation campaign.
+                        {% endif %}
+                    </p>
+                    {% if not q and not status and not type %}
+                    <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Create Your First Campaign
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('campaigns.list_campaigns') }}" class="btn btn-outline-primary me-2">
+                        <i class="bi bi-arrow-left me-1"></i>Clear Filters
+                    </a>
+                    <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Create Campaign
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Pagination -->
+            {% if campaigns and total_pages > 1 %}
+            <div class="card-footer">
+                <nav aria-label="Campaigns pagination">
+                    <ul class="pagination pagination-sm justify-content-center mb-0">
+                        {% if page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page - 1 }}{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if type %}&type={{ type }}{% endif %}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for p in range(1, total_pages + 1) %}
+                            {% if p == page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ p }}</span>
+                            </li>
+                            {% elif p <= 2 or p >= total_pages - 1 or (p >= page - 2 and p <= page + 2) %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ p }}{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if type %}&type={{ type }}{% endif %}">{{ p }}</a>
+                            </li>
+                            {% elif p == 3 or p == total_pages - 2 %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page < total_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page + 1 }}{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if type %}&type={{ type }}{% endif %}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                <div class="text-center mt-2">
+                    <small class="text-muted">
+                        Page {{ page }} of {{ total_pages }} ({{ total_campaigns }} total campaigns)
+                    </small>
+                </div>
+            </div>
             {% endif %}
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Campaign management JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCampaignsList();
+});
+
+function initializeCampaignsList() {
+    // Select all checkbox functionality
+    const selectAllCheckbox = document.getElementById('select-all');
+    const campaignCheckboxes = document.querySelectorAll('.campaign-checkbox');
+    const bulkActionsBar = document.querySelector('.bulk-actions-bar');
+    const selectedCountSpan = document.getElementById('selected-count');
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            campaignCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkActionsBar();
+        });
+    }
+
+    campaignCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActionsBar);
+    });
+
+    function updateBulkActionsBar() {
+        const selectedCheckboxes = document.querySelectorAll('.campaign-checkbox:checked');
+        const selectedCount = selectedCheckboxes.length;
+
+        if (selectedCountSpan) {
+            selectedCountSpan.textContent = selectedCount;
+        }
+
+        if (bulkActionsBar) {
+            if (selectedCount > 0) {
+                bulkActionsBar.classList.remove('d-none');
+            } else {
+                bulkActionsBar.classList.add('d-none');
+            }
+        }
+
+        // Update select all checkbox state
+        if (selectAllCheckbox) {
+            if (selectedCount === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (selectedCount === campaignCheckboxes.length) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+                selectAllCheckbox.checked = false;
+            }
+        }
+    }
+}
+
+function refreshCampaigns() {
+    window.location.reload();
+}
+
+function startCampaign(campaignId) {
+    if (confirm('Are you sure you want to start this campaign?')) {
+        fetch(`/admin/campaigns/${campaignId}/start`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.AdminInterface.showToast('Campaign started successfully!', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                window.AdminInterface.showToast(data.error || 'Failed to start campaign', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            window.AdminInterface.showToast('Network error occurred', 'error');
+        });
+    }
+}
+
+function pauseCampaign(campaignId) {
+    if (confirm('Are you sure you want to pause this campaign?')) {
+        fetch(`/admin/campaigns/${campaignId}/pause`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.AdminInterface.showToast('Campaign paused successfully!', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                window.AdminInterface.showToast(data.error || 'Failed to pause campaign', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            window.AdminInterface.showToast('Network error occurred', 'error');
+        });
+    }
+}
+
+function deleteCampaign(campaignId, campaignName) {
+    if (confirm(`Are you sure you want to delete the campaign "${campaignName}"? This action cannot be undone.`)) {
+        fetch(`/admin/campaigns/${campaignId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.AdminInterface.showToast('Campaign deleted successfully!', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                window.AdminInterface.showToast(data.error || 'Failed to delete campaign', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            window.AdminInterface.showToast('Network error occurred', 'error');
+        });
+    }
+}
+
+function cloneCampaign(campaignId) {
+    if (confirm('Are you sure you want to clone this campaign?')) {
+        window.AdminInterface.showToast('Campaign cloning feature coming soon!', 'info');
+    }
+}
+
+function bulkStart() {
+    const selectedIds = getSelectedCampaignIds();
+    if (selectedIds.length === 0) return;
+
+    if (confirm(`Start ${selectedIds.length} selected campaigns?`)) {
+        window.AdminInterface.showToast('Bulk start feature coming soon!', 'info');
+    }
+}
+
+function bulkPause() {
+    const selectedIds = getSelectedCampaignIds();
+    if (selectedIds.length === 0) return;
+
+    if (confirm(`Pause ${selectedIds.length} selected campaigns?`)) {
+        window.AdminInterface.showToast('Bulk pause feature coming soon!', 'info');
+    }
+}
+
+function bulkDelete() {
+    const selectedIds = getSelectedCampaignIds();
+    if (selectedIds.length === 0) return;
+
+    if (confirm(`Delete ${selectedIds.length} selected campaigns? This action cannot be undone.`)) {
+        window.AdminInterface.showToast('Bulk delete feature coming soon!', 'info');
+    }
+}
+
+function getSelectedCampaignIds() {
+    return Array.from(document.querySelectorAll('.campaign-checkbox:checked'))
+        .map(checkbox => parseInt(checkbox.value));
+}
+
+// Auto-refresh campaigns every 60 seconds
+window.refreshData = function() {
+    // Only refresh if user is on the campaigns page and not actively interacting
+    if (document.hasFocus() && 
+        !document.querySelector('.dropdown-menu.show') && 
+        !document.querySelector('.modal.show')) {
+        
+        // Preserve current URL parameters
+        window.location.reload();
+    }
+};
+
+setInterval(window.refreshData, 60000);
+</script>
 {% endblock %}

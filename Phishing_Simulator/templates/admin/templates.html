@@ -1,32 +1,374 @@
-<!-- ===========================================
-     TEMPLATE: admin/templates.html
-     =========================================== -->
 {% extends "admin/base.html" %}
 
 {% block title %}Templates{% endblock %}
 
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Templates</li>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <h1>📝 Email Templates</h1>
-    
-    <div class="card">
-        <div class="card-header">
-            <h5>All Templates</h5>
-            <a href="/admin/templates/create" class="btn btn-primary">Create Template</a>
-        </div>
-        <div class="card-body">
-            <p>STUB: Templates list will be here</p>
-            
-            {% if templates %}
-                <ul>
-                    {% for template in templates %}
-                    <li>{{ template.name }} - {{ template.type }}</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>No templates found.</p>
-            {% endif %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-0">
+                <i class="bi bi-file-earmark-text me-2"></i>
+                Template Management
+            </h1>
+            <a href="{{ url_for('templates.create_template') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Create Template
+            </a>
         </div>
     </div>
 </div>
+
+<!-- Template Categories Tabs -->
+<div class="row mb-4">
+    <div class="col-12">
+        <ul class="nav nav-tabs" id="templateTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" 
+                        type="button" role="tab" aria-controls="all" aria-selected="true">
+                    <i class="bi bi-collection me-1"></i>All Templates
+                    {% if templates %}<span class="badge bg-secondary ms-1">{{ templates|length }}</span>{% endif %}
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="email-tab" data-bs-toggle="tab" data-bs-target="#email" 
+                        type="button" role="tab" aria-controls="email" aria-selected="false">
+                    <i class="bi bi-envelope me-1"></i>Email Templates
+                    {% if templates %}<span class="badge bg-secondary ms-1">{{ templates|selectattr("type", "equalto", "email")|list|length }}</span>{% endif %}
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="sms-tab" data-bs-toggle="tab" data-bs-target="#sms" 
+                        type="button" role="tab" aria-controls="sms" aria-selected="false">
+                    <i class="bi bi-phone me-1"></i>SMS Templates
+                    {% if templates %}<span class="badge bg-secondary ms-1">{{ templates|selectattr("type", "equalto", "sms")|list|length }}</span>{% endif %}
+                </button>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="search" class="form-label">Search Templates</label>
+                        <input type="text" class="form-control" id="search" name="q" value="{{ q or '' }}" placeholder="Search by name, subject, or content...">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="category-filter" class="form-label">Category</label>
+                        <select class="form-select" id="category-filter" name="category">
+                            <option value="">All Categories</option>
+                            <option value="phishing" {% if category == 'phishing' %}selected{% endif %}>Phishing</option>
+                            <option value="security" {% if category == 'security' %}selected{% endif %}>Security Alert</option>
+                            <option value="social" {% if category == 'social' %}selected{% endif %}>Social Engineering</option>
+                            <option value="business" {% if category == 'business' %}selected{% endif %}>Business</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="difficulty-filter" class="form-label">Difficulty</label>
+                        <select class="form-select" id="difficulty-filter" name="difficulty">
+                            <option value="">All Levels</option>
+                            <option value="easy" {% if difficulty == 'easy' %}selected{% endif %}>Easy</option>
+                            <option value="medium" {% if difficulty == 'medium' %}selected{% endif %}>Medium</option>
+                            <option value="hard" {% if difficulty == 'hard' %}selected{% endif %}>Hard</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-1"></i>Search
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tab Content -->
+<div class="tab-content" id="templateTabContent">
+    <!-- All Templates Tab -->
+    <div class="tab-pane fade show active" id="all" role="tabpanel" aria-labelledby="all-tab">
+        {% if templates %}
+        <div class="row">
+            {% for template in templates %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card template-card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-{% if template.type == 'email' %}primary{% else %}info{% endif %}">
+                                <i class="bi bi-{% if template.type == 'email' %}envelope{% else %}phone{% endif %} me-1"></i>
+                                {{ template.type.upper() }}
+                            </span>
+                            {% if template.difficulty_level %}
+                            <span class="badge bg-{% if template.difficulty_level == 'easy' %}success{% elif template.difficulty_level == 'medium' %}warning{% else %}danger{% endif %} ms-1">
+                                {{ template.difficulty_level.title() }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('templates.view_template', template_id=template.id) }}">
+                                    <i class="bi bi-eye me-2"></i>View Details
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('templates.edit_template', template_id=template.id) }}">
+                                    <i class="bi bi-pencil me-2"></i>Edit
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('templates.test_template', template_id=template.id) }}">
+                                    <i class="bi bi-play me-2"></i>Test
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="cloneTemplate({{ template.id }})">
+                                    <i class="bi bi-files me-2"></i>Clone
+                                </a></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteTemplate({{ template.id }}, '{{ template.name }}')">
+                                    <i class="bi bi-trash me-2"></i>Delete
+                                </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <a href="{{ url_for('templates.view_template', template_id=template.id) }}" class="text-decoration-none">
+                                {{ template.name }}
+                            </a>
+                        </h6>
+                        {% if template.subject %}
+                        <p class="card-text small text-muted mb-2">
+                            <strong>Subject:</strong> {{ template.subject[:50] }}{% if template.subject|length > 50 %}...{% endif %}
+                        </p>
+                        {% endif %}
+                        {% if template.description %}
+                        <p class="card-text small">{{ template.description[:100] }}{% if template.description|length > 100 %}...{% endif %}</p>
+                        {% endif %}
+                        
+                        <!-- Template Stats -->
+                        <div class="row text-center mt-3">
+                            <div class="col-4">
+                                <div class="small text-muted">Uses</div>
+                                <div class="fw-bold">{{ template.usage_count or 0 }}</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="small text-muted">Success Rate</div>
+                                <div class="fw-bold text-{% if template.success_rate and template.success_rate > 50 %}danger{% elif template.success_rate and template.success_rate > 25 %}warning{% else %}success{% endif %}">
+                                    {% if template.success_rate %}{{ "%.1f"|format(template.success_rate) }}%{% else %}N/A{% endif %}
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="small text-muted">Status</div>
+                                <div class="fw-bold text-{% if template.is_active %}success{% else %}muted{% endif %}">
+                                    {% if template.is_active %}Active{% else %}Inactive{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                Updated {{ template.updated_at.strftime('%Y-%m-%d') if template.updated_at else 'Never' }}
+                            </small>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('templates.view_template', template_id=template.id) }}" 
+                                   class="btn btn-sm btn-outline-primary" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{{ url_for('templates.edit_template', template_id=template.id) }}" 
+                                   class="btn btn-sm btn-outline-secondary" title="Edit Template">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{{ url_for('templates.test_template', template_id=template.id) }}" 
+                                   class="btn btn-sm btn-outline-success" title="Test Template">
+                                    <i class="bi bi-play"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-5">
+            <i class="bi bi-file-earmark-text display-1 text-muted mb-3"></i>
+            <h5 class="text-muted">No templates found</h5>
+            <p class="text-muted mb-4">
+                {% if q or category or difficulty %}
+                No templates match your search criteria. Try adjusting your filters.
+                {% else %}
+                Create your first phishing simulation template to get started.
+                {% endif %}
+            </p>
+            {% if not q and not category and not difficulty %}
+            <a href="{{ url_for('templates.create_template') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Create Your First Template
+            </a>
+            {% else %}
+            <a href="{{ url_for('templates.list_templates') }}" class="btn btn-outline-primary me-2">
+                <i class="bi bi-arrow-left me-1"></i>Clear Filters
+            </a>
+            <a href="{{ url_for('templates.create_template') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Create Template
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Email Templates Tab -->
+    <div class="tab-pane fade" id="email" role="tabpanel" aria-labelledby="email-tab">
+        <div class="row">
+            {% for template in templates if template.type == 'email' %}
+            <!-- Same template card structure as above, filtered for email -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card template-card h-100">
+                    <div class="card-header">
+                        <span class="badge bg-primary">
+                            <i class="bi bi-envelope me-1"></i>EMAIL
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="card-title">{{ template.name }}</h6>
+                        {% if template.subject %}
+                        <p class="card-text small text-muted">
+                            <strong>Subject:</strong> {{ template.subject[:50] }}{% if template.subject|length > 50 %}...{% endif %}
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- SMS Templates Tab -->
+    <div class="tab-pane fade" id="sms" role="tabpanel" aria-labelledby="sms-tab">
+        <div class="row">
+            {% for template in templates if template.type == 'sms' %}
+            <!-- Same template card structure as above, filtered for SMS -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card template-card h-100">
+                    <div class="card-header">
+                        <span class="badge bg-info">
+                            <i class="bi bi-phone me-1"></i>SMS
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="card-title">{{ template.name }}</h6>
+                        <p class="card-text small">{{ template.content[:100] if template.content else 'No content' }}{% if template.content and template.content|length > 100 %}...{% endif %}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Template management JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    initializeTemplatesList();
+});
+
+function initializeTemplatesList() {
+    // Auto-refresh templates every 60 seconds
+    setInterval(function() {
+        if (document.hasFocus() && 
+            !document.querySelector('.dropdown-menu.show') && 
+            !document.querySelector('.modal.show')) {
+            // Could refresh data via AJAX instead of full reload
+            console.log('Templates auto-refresh - skipped for better UX');
+        }
+    }, 60000);
+}
+
+function cloneTemplate(templateId) {
+    if (confirm('Are you sure you want to clone this template?')) {
+        fetch(`/admin/templates/${templateId}/clone`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.AdminInterface.showToast('Template cloned successfully!', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                window.AdminInterface.showToast(data.error || 'Failed to clone template', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            window.AdminInterface.showToast('Network error occurred', 'error');
+        });
+    }
+}
+
+function deleteTemplate(templateId, templateName) {
+    if (confirm(`Are you sure you want to delete the template "${templateName}"? This action cannot be undone.`)) {
+        fetch(`/admin/templates/${templateId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.AdminInterface.showToast('Template deleted successfully!', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                window.AdminInterface.showToast(data.error || 'Failed to delete template', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            window.AdminInterface.showToast('Network error occurred', 'error');
+        });
+    }
+}
+
+// Tab persistence
+function saveActiveTab() {
+    const activeTab = document.querySelector('.nav-link.active');
+    if (activeTab) {
+        localStorage.setItem('activeTemplateTab', activeTab.id);
+    }
+}
+
+function restoreActiveTab() {
+    const savedTab = localStorage.getItem('activeTemplateTab');
+    if (savedTab) {
+        const tab = document.getElementById(savedTab);
+        if (tab) {
+            tab.click();
+        }
+    }
+}
+
+// Save tab state when switching
+document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+    tab.addEventListener('shown.bs.tab', saveActiveTab);
+});
+
+// Restore tab state on load
+restoreActiveTab();
+</script>
 {% endblock %}
