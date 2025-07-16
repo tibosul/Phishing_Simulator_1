@@ -1,22 +1,516 @@
-<!-- ===========================================
-     TEMPLATE: admin/targets.html
-     =========================================== -->
 {% extends "admin/base.html" %}
 
 {% block title %}Targets{% endblock %}
 
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Targets</li>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <h1>🎯 All Targets</h1>
-    
-    <div class="card">
-        <div class="card-header">
-            <h5>Target List</h5>
-            <a href="/admin/targets/create" class="btn btn-primary">Add Target</a>
-        </div>
-        <div class="card-body">
-            <p>STUB: Targets list will be here</p>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-0">
+                <i class="bi bi-people me-2"></i>
+                Target Management
+            </h1>
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('targets.create_target') }}" class="btn btn-primary">
+                    <i class="bi bi-person-plus me-2"></i>Add Target
+                </a>
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#import-modal">
+                    <i class="bi bi-upload me-2"></i>Import CSV
+                </button>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Quick Stats -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card stats-card border-left-primary h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Targets</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ targets|length if targets else 0 }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-people fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card stats-card border-left-success h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Contacted</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {% if targets %}
+                                {{ targets|selectattr("email_sent", "equalto", true)|list|length + targets|selectattr("sms_sent", "equalto", true)|list|length }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-envelope-check fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card stats-card border-left-warning h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Clicked Links</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ targets|selectattr("clicked_link", "equalto", true)|list|length if targets else 0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-cursor fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card stats-card border-left-danger h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Compromised</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ targets|selectattr("entered_credentials", "equalto", true)|list|length if targets else 0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-shield-exclamation fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="search" class="form-label">Search Targets</label>
+                        <input type="text" class="form-control" id="search" name="q" value="{{ q or '' }}" placeholder="Search by name, email, or company...">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="campaign-filter" class="form-label">Campaign</label>
+                        <select class="form-select" id="campaign-filter" name="campaign">
+                            <option value="">All Campaigns</option>
+                            <!-- Campaign options would be populated from backend -->
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status-filter" class="form-label">Status</label>
+                        <select class="form-select" id="status-filter" name="status">
+                            <option value="">All Statuses</option>
+                            <option value="contacted">Contacted</option>
+                            <option value="clicked">Clicked</option>
+                            <option value="compromised">Compromised</option>
+                            <option value="pending">Pending</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-1"></i>Search
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Targets Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Targets List</h6>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshTargets()">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="exportTargets()">
+                        <i class="bi bi-download"></i> Export
+                    </button>
+                    <a href="{{ url_for('targets.create_target') }}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus"></i> New Target
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if targets %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="targets-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">
+                                    <input type="checkbox" class="form-check-input" id="select-all" title="Select all targets">
+                                </th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Email</th>
+                                <th scope="col">Company</th>
+                                <th scope="col">Campaign</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Last Activity</th>
+                                <th scope="col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for target in targets %}
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="form-check-input target-checkbox" value="{{ target.id }}" title="Select target">
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm me-3">
+                                            <div class="avatar-title bg-primary text-white rounded-circle">
+                                                {{ (target.first_name[:1] if target.first_name else 'U') + (target.last_name[:1] if target.last_name else '') }}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold">
+                                                <a href="{{ url_for('targets.view_target', target_id=target.id) }}" class="text-decoration-none">
+                                                    {{ target.first_name or '' }} {{ target.last_name or '' }}
+                                                </a>
+                                            </div>
+                                            {% if target.position %}
+                                            <div class="small text-muted">{{ target.position }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <a href="mailto:{{ target.email }}" class="text-decoration-none">{{ target.email }}</a>
+                                    {% if target.phone %}
+                                    <div class="small text-muted">{{ target.phone }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ target.company or 'N/A' }}
+                                    {% if target.department %}
+                                    <div class="small text-muted">{{ target.department }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if target.campaign %}
+                                    <a href="{{ url_for('campaigns.view_campaign', campaign_id=target.campaign.id) }}" class="badge bg-secondary text-decoration-none">
+                                        {{ target.campaign.name }}
+                                    </a>
+                                    {% else %}
+                                    <span class="text-muted">No campaign</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if target.entered_credentials %}
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-shield-exclamation me-1"></i>Compromised
+                                    </span>
+                                    {% elif target.clicked_link %}
+                                    <span class="badge bg-warning">
+                                        <i class="bi bi-cursor me-1"></i>Clicked
+                                    </span>
+                                    {% elif target.email_sent or target.sms_sent %}
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-envelope-check me-1"></i>Contacted
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-clock me-1"></i>Pending
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if target.last_seen %}
+                                    <span class="text-muted">{{ target.last_seen.strftime('%Y-%m-%d %H:%M') }}</span>
+                                    {% else %}
+                                    <span class="text-muted">Never</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('targets.view_target', target_id=target.id) }}" 
+                                           class="btn btn-sm btn-outline-primary" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="mailto:{{ target.email }}" 
+                                           class="btn btn-sm btn-outline-secondary" title="Send Email">
+                                            <i class="bi bi-envelope"></i>
+                                        </a>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                <i class="bi bi-three-dots"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="{{ url_for('targets.view_target', target_id=target.id) }}">
+                                                    <i class="bi bi-eye me-2"></i>View Profile
+                                                </a></li>
+                                                <li><a class="dropdown-item" href="#" onclick="editTarget({{ target.id }})">
+                                                    <i class="bi bi-pencil me-2"></i>Edit
+                                                </a></li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item" href="#" onclick="sendTestEmail({{ target.id }})">
+                                                    <i class="bi bi-envelope me-2"></i>Send Test Email
+                                                </a></li>
+                                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteTarget({{ target.id }}, '{{ target.email }}')">
+                                                    <i class="bi bi-trash me-2"></i>Delete
+                                                </a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Bulk Actions Bar -->
+                <div class="bulk-actions-bar d-none p-3 bg-light border-top">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted"><span id="selected-count">0</span> targets selected</span>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="bulkAddToCampaign()">
+                                <i class="bi bi-plus me-1"></i>Add to Campaign
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="bulkExport()">
+                                <i class="bi bi-download me-1"></i>Export Selected
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="bulkDelete()">
+                                <i class="bi bi-trash me-1"></i>Delete Selected
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {% else %}
+                <!-- Empty State -->
+                <div class="text-center py-5">
+                    <i class="bi bi-people display-1 text-muted mb-3"></i>
+                    <h5 class="text-muted">No targets found</h5>
+                    <p class="text-muted mb-4">
+                        {% if q or campaign or status %}
+                        No targets match your search criteria. Try adjusting your filters.
+                        {% else %}
+                        Start building your target list by adding individual targets or importing from CSV.
+                        {% endif %}
+                    </p>
+                    {% if not q and not campaign and not status %}
+                    <div class="btn-group" role="group">
+                        <a href="{{ url_for('targets.create_target') }}" class="btn btn-primary">
+                            <i class="bi bi-person-plus me-2"></i>Add Your First Target
+                        </a>
+                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#import-modal">
+                            <i class="bi bi-upload me-2"></i>Import from CSV
+                        </button>
+                    </div>
+                    {% else %}
+                    <a href="{{ url_for('targets.list_targets') }}" class="btn btn-outline-primary me-2">
+                        <i class="bi bi-arrow-left me-1"></i>Clear Filters
+                    </a>
+                    <a href="{{ url_for('targets.create_target') }}" class="btn btn-primary">
+                        <i class="bi bi-person-plus me-2"></i>Add Target
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal fade" id="import-modal" tabindex="-1" aria-labelledby="import-modal-label" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="import-modal-label">Import Targets from CSV</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="import-form" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="csv-file" class="form-label">Select CSV File</label>
+                        <input type="file" class="form-control" id="csv-file" name="csv_file" accept=".csv" required>
+                        <div class="form-text">
+                            CSV should include columns: first_name, last_name, email, company, position, phone, department
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="campaign-select" class="form-label">Assign to Campaign (Optional)</label>
+                        <select class="form-select" id="campaign-select" name="campaign_id">
+                            <option value="">No campaign</option>
+                            <!-- Campaign options would be populated from backend -->
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="importTargets()">Import Targets</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Target management JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    initializeTargetsList();
+});
+
+function initializeTargetsList() {
+    // Select all checkbox functionality
+    const selectAllCheckbox = document.getElementById('select-all');
+    const targetCheckboxes = document.querySelectorAll('.target-checkbox');
+    const bulkActionsBar = document.querySelector('.bulk-actions-bar');
+    const selectedCountSpan = document.getElementById('selected-count');
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            targetCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkActionsBar();
+        });
+    }
+
+    targetCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActionsBar);
+    });
+
+    function updateBulkActionsBar() {
+        const selectedCheckboxes = document.querySelectorAll('.target-checkbox:checked');
+        const selectedCount = selectedCheckboxes.length;
+
+        if (selectedCountSpan) {
+            selectedCountSpan.textContent = selectedCount;
+        }
+
+        if (bulkActionsBar) {
+            if (selectedCount > 0) {
+                bulkActionsBar.classList.remove('d-none');
+            } else {
+                bulkActionsBar.classList.add('d-none');
+            }
+        }
+
+        // Update select all checkbox state
+        if (selectAllCheckbox) {
+            if (selectedCount === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (selectedCount === targetCheckboxes.length) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+                selectAllCheckbox.checked = false;
+            }
+        }
+    }
+}
+
+function refreshTargets() {
+    window.location.reload();
+}
+
+function exportTargets() {
+    window.AdminInterface.showToast('Export functionality coming soon!', 'info');
+}
+
+function editTarget(targetId) {
+    window.AdminInterface.showToast('Edit target functionality coming soon!', 'info');
+}
+
+function sendTestEmail(targetId) {
+    if (confirm('Send a test email to this target?')) {
+        window.AdminInterface.showToast('Test email functionality coming soon!', 'info');
+    }
+}
+
+function deleteTarget(targetId, targetEmail) {
+    if (confirm(`Are you sure you want to delete the target "${targetEmail}"? This action cannot be undone.`)) {
+        window.AdminInterface.showToast('Delete target functionality coming soon!', 'info');
+    }
+}
+
+function bulkAddToCampaign() {
+    const selectedIds = getSelectedTargetIds();
+    if (selectedIds.length === 0) return;
+
+    window.AdminInterface.showToast('Bulk add to campaign functionality coming soon!', 'info');
+}
+
+function bulkExport() {
+    const selectedIds = getSelectedTargetIds();
+    if (selectedIds.length === 0) return;
+
+    window.AdminInterface.showToast('Bulk export functionality coming soon!', 'info');
+}
+
+function bulkDelete() {
+    const selectedIds = getSelectedTargetIds();
+    if (selectedIds.length === 0) return;
+
+    if (confirm(`Delete ${selectedIds.length} selected targets? This action cannot be undone.`)) {
+        window.AdminInterface.showToast('Bulk delete functionality coming soon!', 'info');
+    }
+}
+
+function getSelectedTargetIds() {
+    return Array.from(document.querySelectorAll('.target-checkbox:checked'))
+        .map(checkbox => parseInt(checkbox.value));
+}
+
+function importTargets() {
+    const form = document.getElementById('import-form');
+    const formData = new FormData(form);
+    
+    window.AdminInterface.showToast('CSV import functionality coming soon!', 'info');
+    
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('import-modal'));
+    modal.hide();
+}
+
+// Auto-refresh targets every 60 seconds
+window.refreshData = function() {
+    if (document.hasFocus() && 
+        !document.querySelector('.dropdown-menu.show') && 
+        !document.querySelector('.modal.show')) {
+        
+        console.log('Targets auto-refresh - would refresh data here');
+    }
+};
+
+setInterval(window.refreshData, 60000);
+</script>
 {% endblock %}
