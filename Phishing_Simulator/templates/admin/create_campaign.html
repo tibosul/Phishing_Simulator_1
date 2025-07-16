@@ -1,43 +1,448 @@
-<!-- ===========================================
-     TEMPLATE: admin/create_campaign.html
-     =========================================== -->
 {% extends "admin/base.html" %}
 
 {% block title %}Create Campaign{% endblock %}
 
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('campaigns.list_campaigns') }}">Campaigns</a></li>
+<li class="breadcrumb-item active">Create Campaign</li>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <h1>➕ Create Campaign</h1>
-    
-    <div class="card">
-        <div class="card-header">
-            <h5>New Campaign</h5>
-        </div>
-        <div class="card-body">
-            <form method="POST">
-                <div class="mb-3">
-                    <label class="form-label">Campaign Name</label>
-                    <input type="text" class="form-control" name="name" required placeholder="Enter campaign name" title="Campaign Name">
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label" for="campaign-type">Type</label>
-                    <select class="form-control" name="type" id="campaign-type" title="Type">
-                        <option value="email">Email</option>
-                        <option value="sms">SMS</option>
-                        <option value="both">Both</option>
-                    </select>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Description</label>
-                    <textarea class="form-control" name="description" title="Description" placeholder="Enter campaign description"></textarea>
-                </div>
-                
-                <button type="submit" class="btn btn-primary">Create</button>
-                <a href="/admin/campaigns/" class="btn btn-secondary">Cancel</a>
-            </form>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-0">
+                <i class="bi bi-plus-circle me-2"></i>
+                Create New Campaign
+            </h1>
+            <a href="{{ url_for('campaigns.list_campaigns') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Campaigns
+            </a>
         </div>
     </div>
 </div>
+
+<form method="POST" id="campaign-form" novalidate>
+    <div class="row">
+        <!-- Main Form -->
+        <div class="col-lg-8">
+            <!-- Basic Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>Basic Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label" for="campaign-name">Campaign Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="campaign-name" name="name" required 
+                                       placeholder="Enter a descriptive campaign name" 
+                                       value="{{ request.form.name if request.form.name else '' }}">
+                                <div class="invalid-feedback">Campaign name is required</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label" for="campaign-type">Campaign Type <span class="text-danger">*</span></label>
+                                <select class="form-select" name="type" id="campaign-type" required>
+                                    <option value="">Select Type</option>
+                                    <option value="email" {% if request.form.type == 'email' %}selected{% endif %}>
+                                        📧 Email Campaign
+                                    </option>
+                                    <option value="sms" {% if request.form.type == 'sms' %}selected{% endif %}>
+                                        📱 SMS Campaign
+                                    </option>
+                                    <option value="both" {% if request.form.type == 'both' %}selected{% endif %}>
+                                        🔄 Multi-channel (Email + SMS)
+                                    </option>
+                                </select>
+                                <div class="invalid-feedback">Please select a campaign type</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="campaign-description">Description</label>
+                        <textarea class="form-control" id="campaign-description" name="description" rows="3" 
+                                  placeholder="Describe the purpose and goals of this campaign">{{ request.form.description if request.form.description else '' }}</textarea>
+                        <div class="form-text">Provide details about the campaign objectives and target audience</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Template Selection -->
+            <div class="card mb-4" id="template-section">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-file-earmark-text me-2"></i>Template Selection
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="email-template-section">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label" for="email-template">Email Template</label>
+                                <select class="form-select" id="email-template" name="email_template_id">
+                                    <option value="">Select email template</option>
+                                    {% if templates %}
+                                        {% for template in templates %}
+                                            {% if template.type == 'email' %}
+                                            <option value="{{ template.id }}" {% if request.form.email_template_id == template.id|string %}selected{% endif %}>
+                                                {{ template.name }}
+                                            </option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                                <div class="form-text">
+                                    <a href="{{ url_for('templates.create_template') }}" target="_blank">Create new template</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label" for="sender-name">Sender Name</label>
+                                <input type="text" class="form-control" id="sender-name" name="sender_name" 
+                                       placeholder="Your Company Security Team" 
+                                       value="{{ request.form.sender_name if request.form.sender_name else '' }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row" id="sms-template-section" style="display: none;">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label" for="sms-template">SMS Template</label>
+                                <select class="form-select" id="sms-template" name="sms_template_id">
+                                    <option value="">Select SMS template</option>
+                                    {% if templates %}
+                                        {% for template in templates %}
+                                            {% if template.type == 'sms' %}
+                                            <option value="{{ template.id }}" {% if request.form.sms_template_id == template.id|string %}selected{% endif %}>
+                                                {{ template.name }}
+                                            </option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label" for="sender-phone">Sender Phone (Optional)</label>
+                                <input type="text" class="form-control" id="sender-phone" name="sender_phone" 
+                                       placeholder="+1234567890" 
+                                       value="{{ request.form.sender_phone if request.form.sender_phone else '' }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Template Preview -->
+                    <div id="template-preview" class="mt-3" style="display: none;">
+                        <h6>Template Preview:</h6>
+                        <div class="border rounded p-3 bg-light">
+                            <div id="preview-content">Select a template to see preview</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Options -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-gear me-2"></i>Advanced Options
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="track-opens" name="track_opens" checked>
+                                <label class="form-check-label" for="track-opens">
+                                    <i class="bi bi-envelope-open me-1"></i>Track Email Opens
+                                </label>
+                                <div class="form-text">Monitor when recipients open emails</div>
+                            </div>
+
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="track-clicks" name="track_clicks" checked>
+                                <label class="form-check-label" for="track-clicks">
+                                    <i class="bi bi-cursor me-1"></i>Track Link Clicks
+                                </label>
+                                <div class="form-text">Monitor when recipients click links</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="capture-credentials" name="capture_credentials" checked>
+                                <label class="form-check-label" for="capture-credentials">
+                                    <i class="bi bi-shield-exclamation me-1"></i>Capture Credentials
+                                </label>
+                                <div class="form-text">Collect submitted credentials for analysis</div>
+                            </div>
+
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="auto-start" name="auto_start">
+                                <label class="form-check-label" for="auto-start">
+                                    <i class="bi bi-play-circle me-1"></i>Auto-start Campaign
+                                </label>
+                                <div class="form-text">Start campaign immediately after creation</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Campaign Preview -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-eye me-2"></i>Campaign Summary
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted">Campaign Name:</small>
+                        <div id="preview-name" class="fw-bold">Not specified</div>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Type:</small>
+                        <div id="preview-type">Not specified</div>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Templates:</small>
+                        <div id="preview-templates">None selected</div>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Tracking Options:</small>
+                        <div id="preview-tracking">
+                            <small class="badge bg-success me-1">Opens</small>
+                            <small class="badge bg-success me-1">Clicks</small>
+                            <small class="badge bg-success">Credentials</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Help & Tips -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-lightbulb me-2"></i>Tips & Best Practices
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="small">
+                        <div class="mb-2">
+                            <i class="bi bi-check-circle text-success me-1"></i>
+                            Use descriptive campaign names for easy identification
+                        </div>
+                        <div class="mb-2">
+                            <i class="bi bi-check-circle text-success me-1"></i>
+                            Test templates before launching campaigns
+                        </div>
+                        <div class="mb-2">
+                            <i class="bi bi-check-circle text-success me-1"></i>
+                            Enable all tracking options for comprehensive analytics
+                        </div>
+                        <div class="mb-2">
+                            <i class="bi bi-check-circle text-success me-1"></i>
+                            Review target list before starting the campaign
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('campaigns.list_campaigns') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Cancel
+                        </a>
+                        <div>
+                            <button type="button" class="btn btn-outline-primary me-2" id="save-draft">
+                                <i class="bi bi-file-earmark me-2"></i>Save as Draft
+                            </button>
+                            <button type="submit" class="btn btn-primary" id="create-campaign">
+                                <i class="bi bi-plus-circle me-2"></i>Create Campaign
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCampaignForm();
+});
+
+function initializeCampaignForm() {
+    const campaignForm = document.getElementById('campaign-form');
+    const campaignType = document.getElementById('campaign-type');
+    const emailTemplateSection = document.getElementById('email-template-section');
+    const smsTemplateSection = document.getElementById('sms-template-section');
+    
+    // Form elements for preview
+    const campaignName = document.getElementById('campaign-name');
+    const emailTemplate = document.getElementById('email-template');
+    const smsTemplate = document.getElementById('sms-template');
+    
+    // Preview elements
+    const previewName = document.getElementById('preview-name');
+    const previewType = document.getElementById('preview-type');
+    const previewTemplates = document.getElementById('preview-templates');
+    
+    // Show/hide template sections based on campaign type
+    campaignType.addEventListener('change', function() {
+        const type = this.value;
+        
+        if (type === 'email') {
+            emailTemplateSection.style.display = 'block';
+            smsTemplateSection.style.display = 'none';
+        } else if (type === 'sms') {
+            emailTemplateSection.style.display = 'none';
+            smsTemplateSection.style.display = 'block';
+        } else if (type === 'both') {
+            emailTemplateSection.style.display = 'block';
+            smsTemplateSection.style.display = 'block';
+        } else {
+            emailTemplateSection.style.display = 'none';
+            smsTemplateSection.style.display = 'none';
+        }
+        
+        updatePreview();
+    });
+
+    // Update preview when form changes
+    campaignName.addEventListener('input', updatePreview);
+    campaignType.addEventListener('change', updatePreview);
+    emailTemplate.addEventListener('change', updatePreview);
+    smsTemplate.addEventListener('change', updatePreview);
+
+    function updatePreview() {
+        // Update campaign name
+        previewName.textContent = campaignName.value || 'Not specified';
+        
+        // Update campaign type
+        const typeText = campaignType.options[campaignType.selectedIndex].text;
+        previewType.textContent = typeText || 'Not specified';
+        
+        // Update templates
+        let templatesText = '';
+        if (campaignType.value === 'email' || campaignType.value === 'both') {
+            const emailText = emailTemplate.options[emailTemplate.selectedIndex].text;
+            if (emailTemplate.value) {
+                templatesText += `Email: ${emailText}`;
+            }
+        }
+        if (campaignType.value === 'sms' || campaignType.value === 'both') {
+            const smsText = smsTemplate.options[smsTemplate.selectedIndex].text;
+            if (smsTemplate.value) {
+                if (templatesText) templatesText += '<br>';
+                templatesText += `SMS: ${smsText}`;
+            }
+        }
+        previewTemplates.innerHTML = templatesText || 'None selected';
+    }
+
+    // Form validation
+    campaignForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (validateForm()) {
+            // Show loading state
+            const submitBtn = document.getElementById('create-campaign');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Creating...';
+            submitBtn.disabled = true;
+            
+            // Submit form
+            setTimeout(() => {
+                campaignForm.submit();
+            }, 500);
+        }
+    });
+
+    // Save as draft
+    document.getElementById('save-draft').addEventListener('click', function() {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'save_as_draft';
+        input.value = 'true';
+        campaignForm.appendChild(input);
+        
+        campaignForm.submit();
+    });
+
+    function validateForm() {
+        let isValid = true;
+        
+        // Validate campaign name
+        if (!campaignName.value.trim()) {
+            campaignName.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            campaignName.classList.remove('is-invalid');
+        }
+        
+        // Validate campaign type
+        if (!campaignType.value) {
+            campaignType.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            campaignType.classList.remove('is-invalid');
+        }
+        
+        // Show validation feedback
+        if (!isValid) {
+            window.AdminInterface.showToast('Please fix the errors in the form', 'error');
+        }
+        
+        return isValid;
+    }
+
+    // Initialize preview
+    updatePreview();
+}
+
+// Template preview functionality
+function previewTemplate(templateId, type) {
+    if (!templateId) return;
+    
+    // In a real implementation, this would fetch template content via AJAX
+    const previewDiv = document.getElementById('template-preview');
+    const previewContent = document.getElementById('preview-content');
+    
+    previewDiv.style.display = 'block';
+    previewContent.innerHTML = `
+        <div class="spinner-border spinner-border-sm me-2"></div>
+        Loading ${type} template preview...
+    `;
+    
+    // Simulate loading
+    setTimeout(() => {
+        previewContent.innerHTML = `
+            <strong>Preview for Template ID ${templateId}:</strong><br>
+            <em>Template content would be displayed here...</em>
+        `;
+    }, 1000);
+}
+</script>
 {% endblock %}
