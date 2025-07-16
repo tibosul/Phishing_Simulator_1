@@ -1,26 +1,775 @@
-﻿<!-- ===========================================
+<!-- ===========================================
      TEMPLATE: admin/upload_targets.html
      =========================================== -->
 {% extends "admin/base.html" %}
 
 {% block title %}Upload Targets{% endblock %}
 
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('targets.list_targets') }}">Targets</a></li>
+<li class="breadcrumb-item active">Upload Targets</li>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.upload-zone {
+    border: 2px dashed #007bff;
+    border-radius: 10px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+.upload-zone:hover {
+    border-color: #0056b3;
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+}
+.upload-zone.dragover {
+    border-color: #28a745;
+    background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+}
+.upload-zone.error {
+    border-color: #dc3545;
+    background: linear-gradient(135deg, #ffeaea 0%, #ffcdd2 100%);
+}
+.file-info {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+.preview-table {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+}
+.mapping-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+}
+.field-mapping {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+.validation-error {
+    background: #fff5f5;
+    border: 1px solid #fed7d7;
+    color: #c53030;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+.validation-warning {
+    background: #fffbf0;
+    border: 1px solid #fed7aa;
+    color: #c05621;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+.step-indicator {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+.step {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    margin: 0 0.5rem;
+    border-radius: 20px;
+    background: #e9ecef;
+    color: #6c757d;
+    font-weight: 500;
+}
+.step.active {
+    background: #007bff;
+    color: white;
+}
+.step.completed {
+    background: #28a745;
+    color: white;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <h1>📤 Upload Targets</h1>
-    
-    <div class="card">
-        <div class="card-body">
-            <p>STUB: Upload targets form will be here</p>
-            
-            <form method="POST" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label class="form-label" for="csv_file_input">CSV File</label>
-                    <input type="file" class="form-control" id="csv_file_input" name="csv_file" accept=".csv" title="Upload CSV file" placeholder="Choose CSV file">
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step active" id="step1">
+                <i class="bi bi-upload me-2"></i>1. Upload File
+            </div>
+            <div class="step" id="step2">
+                <i class="bi bi-arrow-left-right me-2"></i>2. Map Fields
+            </div>
+            <div class="step" id="step3">
+                <i class="bi bi-check-circle me-2"></i>3. Validate & Import
+            </div>
+        </div>
+
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-cloud-upload me-2"></i>Bulk Upload Targets from CSV
+                </h6>
+            </div>
+            <div class="card-body">
+                <!-- Step 1: File Upload -->
+                <div id="uploadStep" class="step-content">
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <!-- Campaign Selection -->
+                        <div class="mb-4">
+                            <label for="campaign_id" class="form-label fw-bold">
+                                Select Campaign <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select form-select-lg" id="campaign_id" name="campaign_id" required>
+                                <option value="">Choose a campaign...</option>
+                                {% for campaign in campaigns %}
+                                <option value="{{ campaign.id }}" 
+                                        data-type="{{ campaign.type }}" 
+                                        data-status="{{ campaign.status }}">
+                                    {{ campaign.name }} ({{ campaign.type|title }} - {{ campaign.status|title }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Select the campaign these targets will be associated with</div>
+                        </div>
+
+                        <!-- File Upload Zone -->
+                        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('csvFile').click()">
+                            <div id="uploadContent">
+                                <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #007bff;"></i>
+                                <h5 class="mt-3">Drop your CSV file here</h5>
+                                <p class="text-muted">or click to browse files</p>
+                                <p class="small text-muted">
+                                    Supported formats: .csv, .txt<br>
+                                    Maximum file size: 10MB
+                                </p>
+                            </div>
+                            <input type="file" id="csvFile" name="csv_file" accept=".csv,.txt" style="display: none;">
+                        </div>
+
+                        <!-- File Information -->
+                        <div id="fileInfo" class="file-info" style="display: none;">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1"><i class="bi bi-file-earmark-text me-2"></i><span id="fileName"></span></h6>
+                                    <small class="text-muted">
+                                        Size: <span id="fileSize"></span> | 
+                                        Rows: <span id="rowCount"></span> | 
+                                        Columns: <span id="columnCount"></span>
+                                    </small>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearFile()">
+                                    <i class="bi bi-trash"></i> Remove
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Continue Button -->
+                    <div class="text-end mt-4">
+                        <button type="button" class="btn btn-primary btn-lg" id="continueBtn" onclick="proceedToMapping()" disabled>
+                            <i class="bi bi-arrow-right me-2"></i>Continue to Field Mapping
+                        </button>
+                    </div>
                 </div>
-                <button type="submit" class="btn btn-primary">Upload</button>
-            </form>
+
+                <!-- Step 2: Field Mapping -->
+                <div id="mappingStep" class="step-content" style="display: none;">
+                    <div class="mapping-section">
+                        <h6 class="fw-bold mb-3">
+                            <i class="bi bi-arrow-left-right me-2"></i>Map CSV Columns to Target Fields
+                        </h6>
+                        <p class="text-muted mb-4">
+                            Match your CSV columns with the target fields. Email is required, all other fields are optional.
+                        </p>
+
+                        <div id="fieldMappings">
+                            <!-- Field mappings will be generated dynamically -->
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <button type="button" class="btn btn-outline-secondary me-2" onclick="backToUpload()">
+                            <i class="bi bi-arrow-left me-2"></i>Back
+                        </button>
+                        <button type="button" class="btn btn-primary btn-lg" onclick="proceedToValidation()">
+                            <i class="bi bi-arrow-right me-2"></i>Continue to Validation
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Preview & Validation -->
+                <div id="validationStep" class="step-content" style="display: none;">
+                    <h6 class="fw-bold mb-3">
+                        <i class="bi bi-check-circle me-2"></i>Validate and Preview Import
+                    </h6>
+
+                    <!-- Validation Summary -->
+                    <div id="validationSummary" class="mb-4">
+                        <!-- Will be populated with validation results -->
+                    </div>
+
+                    <!-- Preview Table -->
+                    <div class="preview-table">
+                        <table class="table table-sm table-striped" id="previewTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Email</th>
+                                    <th>First Name</th>
+                                    <th>Last Name</th>
+                                    <th>Company</th>
+                                    <th>Phone</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Preview data will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="text-end mt-4">
+                        <button type="button" class="btn btn-outline-secondary me-2" onclick="backToMapping()">
+                            <i class="bi bi-arrow-left me-2"></i>Back to Mapping
+                        </button>
+                        <button type="button" class="btn btn-success btn-lg" id="importBtn" onclick="importTargets()">
+                            <i class="bi bi-check-circle me-2"></i>Import Targets
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Section -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-lightbulb text-warning me-2"></i>CSV Upload Guidelines
+                </h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Required Columns:</strong>
+                        <ul class="small">
+                            <li><code>email</code> - Valid email address (required)</li>
+                            <li>First row should contain column headers</li>
+                            <li>UTF-8 encoding recommended</li>
+                        </ul>
+                        <strong>Optional Columns:</strong>
+                        <ul class="small mb-0">
+                            <li><code>first_name</code> - Target's first name</li>
+                            <li><code>last_name</code> - Target's last name</li>
+                            <li><code>company</code> - Company name</li>
+                            <li><code>position</code> - Job title/position</li>
+                            <li><code>phone</code> - Phone number</li>
+                            <li><code>notes</code> - Additional notes</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>CSV Format Example:</strong>
+                        <pre class="bg-light p-2 rounded small">email,first_name,last_name,company
+john.doe@company.com,John,Doe,Acme Corp
+jane.smith@company.com,Jane,Smith,Acme Corp</pre>
+                        <strong>Tips:</strong>
+                        <ul class="small mb-0">
+                            <li>Column names are case-insensitive</li>
+                            <li>Duplicates will be detected and skipped</li>
+                            <li>Invalid emails will be highlighted</li>
+                            <li>Maximum 1000 targets per upload</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Import Progress Modal -->
+<div class="modal fade" id="importModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-upload me-2"></i>Importing Targets
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p>Processing your CSV file...</p>
+                <div class="progress">
+                    <div class="progress-bar" id="importProgress" style="width: 0%"></div>
+                </div>
+                <small class="text-muted mt-2 d-block" id="importStatus">Preparing import...</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let csvData = [];
+let csvHeaders = [];
+let fieldMappings = {};
+
+// File upload handling
+document.getElementById('csvFile').addEventListener('change', handleFileSelect);
+
+// Drag and drop functionality
+const uploadZone = document.getElementById('uploadZone');
+
+uploadZone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    this.classList.add('dragover');
+});
+
+uploadZone.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    this.classList.remove('dragover');
+});
+
+uploadZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    this.classList.remove('dragover');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        handleFile(files[0]);
+    }
+});
+
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+        handleFile(file);
+    }
+}
+
+function handleFile(file) {
+    // Validate file type
+    if (!file.name.toLowerCase().endsWith('.csv') && !file.name.toLowerCase().endsWith('.txt')) {
+        showError('Please select a CSV or TXT file');
+        return;
+    }
+    
+    // Validate file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+        showError('File size must be less than 10MB');
+        return;
+    }
+    
+    // Read file
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            parseCSV(e.target.result, file);
+        } catch (error) {
+            showError('Error reading file: ' + error.message);
+        }
+    };
+    reader.readAsText(file);
+}
+
+function parseCSV(csvText, file) {
+    // Simple CSV parser (you might want to use a library like Papa Parse for production)
+    const lines = csvText.split('\n').filter(line => line.trim());
+    
+    if (lines.length < 2) {
+        showError('CSV file must have at least a header row and one data row');
+        return;
+    }
+    
+    // Parse headers
+    csvHeaders = lines[0].split(',').map(header => header.trim().replace(/"/g, ''));
+    
+    // Parse data
+    csvData = [];
+    for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(value => value.trim().replace(/"/g, ''));
+        const row = {};
+        csvHeaders.forEach((header, index) => {
+            row[header] = values[index] || '';
+        });
+        csvData.push(row);
+    }
+    
+    // Show file info
+    showFileInfo(file, csvData.length, csvHeaders.length);
+    
+    // Enable continue button
+    document.getElementById('continueBtn').disabled = false;
+    
+    // Clear any previous errors
+    uploadZone.classList.remove('error');
+}
+
+function showFileInfo(file, rowCount, columnCount) {
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileSize').textContent = formatFileSize(file.size);
+    document.getElementById('rowCount').textContent = rowCount;
+    document.getElementById('columnCount').textContent = columnCount;
+    document.getElementById('fileInfo').style.display = 'block';
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function clearFile() {
+    document.getElementById('csvFile').value = '';
+    document.getElementById('fileInfo').style.display = 'none';
+    document.getElementById('continueBtn').disabled = true;
+    csvData = [];
+    csvHeaders = [];
+}
+
+function showError(message) {
+    uploadZone.classList.add('error');
+    alert(message); // Replace with better error handling
+}
+
+// Step navigation
+function proceedToMapping() {
+    if (!document.getElementById('campaign_id').value) {
+        alert('Please select a campaign first');
+        return;
+    }
+    
+    if (csvData.length === 0) {
+        alert('Please upload a CSV file first');
+        return;
+    }
+    
+    showStep(2);
+    generateFieldMappings();
+}
+
+function proceedToValidation() {
+    if (!validateMappings()) {
+        return;
+    }
+    
+    showStep(3);
+    validateAndPreview();
+}
+
+function backToUpload() {
+    showStep(1);
+}
+
+function backToMapping() {
+    showStep(2);
+}
+
+function showStep(stepNumber) {
+    // Hide all steps
+    document.querySelectorAll('.step-content').forEach(step => {
+        step.style.display = 'none';
+    });
+    
+    // Update step indicators
+    document.querySelectorAll('.step').forEach((step, index) => {
+        step.classList.remove('active', 'completed');
+        if (index + 1 < stepNumber) {
+            step.classList.add('completed');
+        } else if (index + 1 === stepNumber) {
+            step.classList.add('active');
+        }
+    });
+    
+    // Show current step
+    const stepContents = ['uploadStep', 'mappingStep', 'validationStep'];
+    document.getElementById(stepContents[stepNumber - 1]).style.display = 'block';
+}
+
+function generateFieldMappings() {
+    const targetFields = [
+        { key: 'email', label: 'Email Address', required: true },
+        { key: 'first_name', label: 'First Name', required: false },
+        { key: 'last_name', label: 'Last Name', required: false },
+        { key: 'company', label: 'Company', required: false },
+        { key: 'position', label: 'Position/Title', required: false },
+        { key: 'phone', label: 'Phone Number', required: false },
+        { key: 'notes', label: 'Notes', required: false }
+    ];
+    
+    let mappingsHTML = '';
+    
+    targetFields.forEach(field => {
+        const suggestedColumn = findBestMatch(field.key, csvHeaders);
+        
+        mappingsHTML += `
+            <div class="field-mapping">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">
+                            ${field.label}
+                            ${field.required ? '<span class="text-danger">*</span>' : ''}
+                        </label>
+                    </div>
+                    <div class="col-md-6">
+                        <select class="form-select" name="${field.key}" data-field="${field.key}" ${field.required ? 'required' : ''}>
+                            <option value="">-- Select Column --</option>
+                            ${csvHeaders.map(header => 
+                                `<option value="${header}" ${header === suggestedColumn ? 'selected' : ''}>${header}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        ${field.required ? '<span class="badge bg-danger">Required</span>' : '<span class="badge bg-secondary">Optional</span>'}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    document.getElementById('fieldMappings').innerHTML = mappingsHTML;
+}
+
+function findBestMatch(fieldKey, headers) {
+    const variations = {
+        'email': ['email', 'e-mail', 'mail', 'Email', 'EMAIL'],
+        'first_name': ['first_name', 'firstName', 'first name', 'fname', 'First Name'],
+        'last_name': ['last_name', 'lastName', 'last name', 'lname', 'Last Name'],
+        'company': ['company', 'organization', 'org', 'Company', 'COMPANY'],
+        'position': ['position', 'title', 'job title', 'Position', 'Title'],
+        'phone': ['phone', 'telephone', 'mobile', 'Phone', 'PHONE'],
+        'notes': ['notes', 'comments', 'Notes', 'Comments']
+    };
+    
+    const possibleMatches = variations[fieldKey] || [fieldKey];
+    
+    for (let match of possibleMatches) {
+        if (headers.includes(match)) {
+            return match;
+        }
+    }
+    
+    return null;
+}
+
+function validateMappings() {
+    // Get all field mappings
+    const mappingSelects = document.querySelectorAll('#fieldMappings select');
+    fieldMappings = {};
+    
+    mappingSelects.forEach(select => {
+        if (select.value) {
+            fieldMappings[select.dataset.field] = select.value;
+        }
+    });
+    
+    // Check if email is mapped
+    if (!fieldMappings.email) {
+        alert('Email field mapping is required');
+        return false;
+    }
+    
+    return true;
+}
+
+function validateAndPreview() {
+    const validTargets = [];
+    const errors = [];
+    const warnings = [];
+    
+    csvData.forEach((row, index) => {
+        const target = {};
+        const rowErrors = [];
+        
+        // Map fields
+        Object.keys(fieldMappings).forEach(field => {
+            const csvColumn = fieldMappings[field];
+            target[field] = row[csvColumn] || '';
+        });
+        
+        // Validate email
+        if (!target.email) {
+            rowErrors.push('Missing email');
+        } else if (!validateEmail(target.email)) {
+            rowErrors.push('Invalid email format');
+        }
+        
+        // Validate phone (if provided)
+        if (target.phone && !validatePhone(target.phone)) {
+            warnings.push(`Row ${index + 1}: Invalid phone format`);
+        }
+        
+        if (rowErrors.length === 0) {
+            validTargets.push({ ...target, rowNumber: index + 1 });
+        } else {
+            errors.push(`Row ${index + 1}: ${rowErrors.join(', ')}`);
+        }
+    });
+    
+    // Show validation summary
+    showValidationSummary(validTargets.length, errors, warnings);
+    
+    // Show preview
+    showPreview(validTargets.slice(0, 50)); // Show first 50 rows
+    
+    // Enable/disable import button
+    document.getElementById('importBtn').disabled = validTargets.length === 0;
+}
+
+function showValidationSummary(validCount, errors, warnings) {
+    let summaryHTML = `
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card border-success">
+                    <div class="card-body text-center">
+                        <h4 class="text-success">${validCount}</h4>
+                        <small>Valid Targets</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-danger">
+                    <div class="card-body text-center">
+                        <h4 class="text-danger">${errors.length}</h4>
+                        <small>Errors</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-warning">
+                    <div class="card-body text-center">
+                        <h4 class="text-warning">${warnings.length}</h4>
+                        <small>Warnings</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    if (errors.length > 0) {
+        summaryHTML += `
+            <div class="validation-error mt-3">
+                <strong>Errors found:</strong>
+                <ul class="mb-0 mt-2">
+                    ${errors.slice(0, 10).map(error => `<li>${error}</li>`).join('')}
+                    ${errors.length > 10 ? `<li>... and ${errors.length - 10} more errors</li>` : ''}
+                </ul>
+            </div>
+        `;
+    }
+    
+    if (warnings.length > 0) {
+        summaryHTML += `
+            <div class="validation-warning mt-3">
+                <strong>Warnings:</strong>
+                <ul class="mb-0 mt-2">
+                    ${warnings.slice(0, 5).map(warning => `<li>${warning}</li>`).join('')}
+                    ${warnings.length > 5 ? `<li>... and ${warnings.length - 5} more warnings</li>` : ''}
+                </ul>
+            </div>
+        `;
+    }
+    
+    document.getElementById('validationSummary').innerHTML = summaryHTML;
+}
+
+function showPreview(targets) {
+    const tbody = document.querySelector('#previewTable tbody');
+    tbody.innerHTML = '';
+    
+    targets.forEach(target => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${target.rowNumber}</td>
+            <td>${target.email}</td>
+            <td>${target.first_name || '-'}</td>
+            <td>${target.last_name || '-'}</td>
+            <td>${target.company || '-'}</td>
+            <td>${target.phone || '-'}</td>
+            <td><span class="badge bg-success">Valid</span></td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+}
+
+function validatePhone(phone) {
+    const re = /^[+]?[0-9\s\-\(\)\.]{7,20}$/;
+    return re.test(phone);
+}
+
+function importTargets() {
+    const modal = new bootstrap.Modal(document.getElementById('importModal'));
+    modal.show();
+    
+    // Prepare form data
+    const formData = new FormData();
+    formData.append('campaign_id', document.getElementById('campaign_id').value);
+    formData.append('field_mappings', JSON.stringify(fieldMappings));
+    formData.append('csv_data', JSON.stringify(csvData));
+    
+    // Simulate progress (replace with actual API call)
+    let progress = 0;
+    const progressBar = document.getElementById('importProgress');
+    const statusText = document.getElementById('importStatus');
+    
+    const interval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress >= 100) {
+            progress = 100;
+            clearInterval(interval);
+            
+            // Simulate completion
+            setTimeout(() => {
+                modal.hide();
+                alert('Targets imported successfully!');
+                window.location.href = "{{ url_for('targets.list_targets') }}";
+            }, 1000);
+        }
+        
+        progressBar.style.width = progress + '%';
+        statusText.textContent = `Processing... ${Math.round(progress)}%`;
+    }, 200);
+    
+    // Here you would make the actual API call to import the targets
+    /*
+    fetch('/admin/targets/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        modal.hide();
+        if (data.success) {
+            alert(`Successfully imported ${data.imported} targets`);
+            window.location.href = "{{ url_for('targets.list_targets') }}";
+        } else {
+            alert('Error importing targets: ' + data.error);
+        }
+    })
+    .catch(error => {
+        modal.hide();
+        alert('Error importing targets: ' + error.message);
+    });
+    */
+}
+</script>
 {% endblock %}

@@ -3,24 +3,639 @@
      =========================================== -->
 {% extends "admin/base.html" %}
 
-{% block title %}Edit Campaign{% endblock %}
+{% block title %}Edit Campaign - {{ campaign.name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('campaigns.list_campaigns') }}">Campaigns</a></li>
+<li class="breadcrumb-item"><a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}">{{ campaign.name }}</a></li>
+<li class="breadcrumb-item active">Edit</li>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.form-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid #007bff;
+}
+.form-section h6 {
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #dee2e6;
+}
+.required-field::after {
+    content: " *";
+    color: #dc3545;
+}
+.campaign-type-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    height: 100%;
+}
+.campaign-type-card:hover {
+    border-color: #007bff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+.campaign-type-card.selected {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+    box-shadow: 0 4px 12px rgba(0,123,255,0.15);
+}
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+.status-draft { background: #6c757d; }
+.status-active { background: #28a745; }
+.status-paused { background: #ffc107; }
+.status-completed { background: #17a2b8; }
+.switch-container {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+}
+.char-counter {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <h1>✏️ Edit Campaign</h1>
-    
-    <div class="card">
-        <div class="card-body">
-            <p>STUB: Edit campaign form will be here</p>
-            
-            <form method="POST">
-                <div class="mb-3">
-                    <label class="form-label">Campaign Name</label>
-                    <input type="text" class="form-control" name="name" value="Test Campaign" title="Campaign Name" placeholder="Enter campaign name">
+<div class="row">
+    <div class="col-lg-9 mx-auto">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3">
+                <i class="bi bi-pencil-square text-primary me-2"></i>
+                Edit Campaign
+            </h1>
+            <div class="d-flex align-items-center">
+                <span class="status-indicator status-{{ campaign.status }}"></span>
+                <span class="badge bg-{% if campaign.status == 'active' %}success{% elif campaign.status == 'paused' %}warning{% elif campaign.status == 'completed' %}info{% else %}secondary{% endif %} me-2">
+                    {{ campaign.status|title }}
+                </span>
+                <small class="text-muted">
+                    Created: {{ campaign.created_at.strftime('%Y-%m-%d') if campaign.created_at }}
+                </small>
+            </div>
+        </div>
+
+        <div class="card shadow">
+            <div class="card-body">
+                <form method="POST" id="editCampaignForm" novalidate>
+                    {{ csrf_token() if csrf_token }}
+                    
+                    <!-- Basic Information -->
+                    <div class="form-section">
+                        <h6><i class="bi bi-info-circle me-2"></i>Basic Information</h6>
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <label for="name" class="form-label required-field">Campaign Name</label>
+                                <input type="text" class="form-control form-control-lg" id="name" name="name" 
+                                       value="{{ campaign.name }}" required maxlength="100" 
+                                       placeholder="Enter campaign name">
+                                <div class="form-text">A descriptive name for this phishing campaign</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Campaign ID</label>
+                                <input type="text" class="form-control form-control-lg" value="{{ campaign.id }}" disabled>
+                                <div class="form-text">Unique campaign identifier</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" 
+                                      maxlength="500" placeholder="Describe the purpose and scope of this campaign">{{ campaign.description or '' }}</textarea>
+                            <div class="d-flex justify-content-between">
+                                <div class="form-text">Optional description for campaign documentation</div>
+                                <small class="char-counter" id="descCounter">{{ (campaign.description|length) if campaign.description else 0 }}/500</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campaign Type -->
+                    <div class="form-section">
+                        <h6><i class="bi bi-send me-2"></i>Campaign Type</h6>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card campaign-type-card {% if campaign.type == 'email' %}selected{% endif %}" 
+                                     onclick="selectCampaignType('email')">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-envelope-fill text-primary mb-2" style="font-size: 2rem;"></i>
+                                        <h6 class="card-title">Email Only</h6>
+                                        <p class="card-text small text-muted">Send phishing emails to targets</p>
+                                        <input type="radio" name="type" value="email" 
+                                               {% if campaign.type == 'email' %}checked{% endif %} class="d-none">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card campaign-type-card {% if campaign.type == 'sms' %}selected{% endif %}" 
+                                     onclick="selectCampaignType('sms')">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-phone-fill text-success mb-2" style="font-size: 2rem;"></i>
+                                        <h6 class="card-title">SMS Only</h6>
+                                        <p class="card-text small text-muted">Send phishing SMS messages</p>
+                                        <input type="radio" name="type" value="sms" 
+                                               {% if campaign.type == 'sms' %}checked{% endif %} class="d-none">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card campaign-type-card {% if campaign.type == 'both' %}selected{% endif %}" 
+                                     onclick="selectCampaignType('both')">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-envelope-plus-fill text-warning mb-2" style="font-size: 2rem;"></i>
+                                        <h6 class="card-title">Email + SMS</h6>
+                                        <p class="card-text small text-muted">Multi-vector phishing campaign</p>
+                                        <input type="radio" name="type" value="both" 
+                                               {% if campaign.type == 'both' %}checked{% endif %} class="d-none">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info mt-3">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Note:</strong> Changing the campaign type will affect which templates can be used and what contact information is required for targets.
+                        </div>
+                    </div>
+
+                    <!-- Campaign Settings -->
+                    <div class="form-section">
+                        <h6><i class="bi bi-gear me-2"></i>Campaign Settings</h6>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="switch-container">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="auto_start" name="auto_start" 
+                                               {% if campaign.auto_start %}checked{% endif %}>
+                                        <label class="form-check-label fw-bold" for="auto_start">
+                                            Auto-start Campaign
+                                        </label>
+                                        <div class="form-text">
+                                            Automatically start sending when targets are added
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="switch-container">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="track_opens" name="track_opens" 
+                                               {% if campaign.track_opens %}checked{% endif %}>
+                                        <label class="form-check-label fw-bold" for="track_opens">
+                                            Track Email Opens
+                                        </label>
+                                        <div class="form-text">
+                                            Monitor when emails are opened (email campaigns only)
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="switch-container">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="track_clicks" name="track_clicks" 
+                                               {% if campaign.track_clicks %}checked{% endif %}>
+                                        <label class="form-check-label fw-bold" for="track_clicks">
+                                            Track Link Clicks
+                                        </label>
+                                        <div class="form-text">
+                                            Monitor when targets click on phishing links
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campaign Statistics (Read-only) -->
+                    <div class="form-section">
+                        <h6><i class="bi bi-bar-chart me-2"></i>Campaign Statistics</h6>
+                        
+                        <div class="row text-center">
+                            <div class="col-md-3">
+                                <div class="card border-primary">
+                                    <div class="card-body">
+                                        <h4 class="text-primary mb-0">{{ campaign.total_targets }}</h4>
+                                        <small class="text-muted">Total Targets</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-info">
+                                    <div class="card-body">
+                                        <h4 class="text-info mb-0">{{ campaign.total_clicks }}</h4>
+                                        <small class="text-muted">Link Clicks</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-warning">
+                                    <div class="card-body">
+                                        <h4 class="text-warning mb-0">{{ "%.1f"|format(campaign.click_rate) }}%</h4>
+                                        <small class="text-muted">Click Rate</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-danger">
+                                    <div class="card-body">
+                                        <h4 class="text-danger mb-0">{{ campaign.total_credentials }}</h4>
+                                        <small class="text-muted">Credentials Captured</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if campaign.started_at %}
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <i class="bi bi-play-circle me-1"></i>Started
+                                        </h6>
+                                        <p class="card-text">{{ campaign.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% if campaign.ended_at %}
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <i class="bi bi-stop-circle me-1"></i>Ended
+                                        </h6>
+                                        <p class="card-text">{{ campaign.ended_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="row">
+                        <div class="col-md-3">
+                            <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}" 
+                               class="btn btn-secondary w-100">
+                                <i class="bi bi-arrow-left me-2"></i>Cancel
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="button" class="btn btn-outline-primary w-100" onclick="previewChanges()">
+                                <i class="bi bi-eye me-2"></i>Preview
+                            </button>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="button" class="btn btn-outline-danger w-100" onclick="confirmDelete()">
+                                <i class="bi bi-trash me-2"></i>Delete
+                            </button>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary w-100" id="saveBtn">
+                                <i class="bi bi-check-circle me-2"></i>Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Quick Actions Card -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-lightning text-warning me-2"></i>Quick Actions
+                </h6>
+                <div class="row">
+                    <div class="col-md-3">
+                        <a href="{{ url_for('targets.list_targets', campaign_id=campaign.id) }}" 
+                           class="btn btn-outline-primary w-100 mb-2">
+                            <i class="bi bi-people me-1"></i>Manage Targets
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}#analytics" 
+                           class="btn btn-outline-info w-100 mb-2">
+                            <i class="bi bi-graph-up me-1"></i>View Analytics
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}#export" 
+                           class="btn btn-outline-success w-100 mb-2">
+                            <i class="bi bi-download me-1"></i>Export Data
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        {% if campaign.status == 'draft' %}
+                        <button class="btn btn-success w-100 mb-2" onclick="startCampaign()">
+                            <i class="bi bi-play me-1"></i>Start Campaign
+                        </button>
+                        {% elif campaign.status == 'active' %}
+                        <button class="btn btn-warning w-100 mb-2" onclick="pauseCampaign()">
+                            <i class="bi bi-pause me-1"></i>Pause Campaign
+                        </button>
+                        {% elif campaign.status == 'paused' %}
+                        <button class="btn btn-success w-100 mb-2" onclick="resumeCampaign()">
+                            <i class="bi bi-play me-1"></i>Resume Campaign
+                        </button>
+                        {% endif %}
+                    </div>
                 </div>
-                <button type="submit" class="btn btn-primary">Save</button>
-            </form>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="bi bi-exclamation-triangle text-danger me-2"></i>Delete Campaign
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the campaign "<strong>{{ campaign.name }}</strong>"?</p>
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone. All associated targets, tracking data, and captured credentials will be permanently deleted.
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="confirmDelete">
+                    <label class="form-check-label" for="confirmDelete">
+                        I understand that this action is permanent and cannot be undone
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn" onclick="deleteCampaign()" disabled>
+                    <i class="bi bi-trash me-1"></i>Delete Campaign
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="previewModalLabel">
+                    <i class="bi bi-eye me-2"></i>Preview Changes
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="previewContent">
+                <!-- Preview content will be populated here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="saveChanges()">
+                    <i class="bi bi-check-circle me-1"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Character counter for description
+document.getElementById('description').addEventListener('input', function() {
+    const current = this.value.length;
+    const max = 500;
+    const counter = document.getElementById('descCounter');
+    
+    counter.textContent = `${current}/${max}`;
+    
+    if (current > max * 0.9) {
+        counter.style.color = '#dc3545';
+    } else if (current > max * 0.7) {
+        counter.style.color = '#ffc107';
+    } else {
+        counter.style.color = '#6c757d';
+    }
+});
+
+// Campaign type selection
+function selectCampaignType(type) {
+    // Clear all selections
+    document.querySelectorAll('.campaign-type-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    // Select the clicked type
+    const selectedCard = document.querySelector(`input[value="${type}"]`).closest('.campaign-type-card');
+    selectedCard.classList.add('selected');
+    
+    // Check the radio button
+    document.querySelector(`input[value="${type}"]`).checked = true;
+    
+    // Update tracking options visibility
+    updateTrackingOptions(type);
+}
+
+function updateTrackingOptions(type) {
+    const trackOpensContainer = document.getElementById('track_opens').closest('.switch-container');
+    
+    if (type === 'sms') {
+        trackOpensContainer.style.opacity = '0.5';
+        document.getElementById('track_opens').disabled = true;
+    } else {
+        trackOpensContainer.style.opacity = '1';
+        document.getElementById('track_opens').disabled = false;
+    }
+}
+
+// Delete confirmation
+document.getElementById('confirmDelete').addEventListener('change', function() {
+    document.getElementById('confirmDeleteBtn').disabled = !this.checked;
+});
+
+function confirmDelete() {
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+function deleteCampaign() {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = "{{ url_for('campaigns.delete_campaign', campaign_id=campaign.id) }}";
+    
+    // Add CSRF token if available
+    {% if csrf_token %}
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = '{{ csrf_token() }}';
+    form.appendChild(csrfInput);
+    {% endif %}
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Preview changes
+function previewChanges() {
+    const formData = new FormData(document.getElementById('editCampaignForm'));
+    
+    const preview = {
+        name: formData.get('name') || '{{ campaign.name }}',
+        description: formData.get('description') || 'No description',
+        type: formData.get('type') || '{{ campaign.type }}',
+        auto_start: formData.get('auto_start') === 'on',
+        track_opens: formData.get('track_opens') === 'on',
+        track_clicks: formData.get('track_clicks') === 'on'
+    };
+    
+    const previewHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Basic Information</h6>
+                <p><strong>Name:</strong> ${preview.name}</p>
+                <p><strong>Type:</strong> ${preview.type.charAt(0).toUpperCase() + preview.type.slice(1)}</p>
+                <p><strong>Description:</strong> ${preview.description}</p>
+            </div>
+            <div class="col-md-6">
+                <h6>Settings</h6>
+                <p><strong>Auto-start:</strong> ${preview.auto_start ? 'Enabled' : 'Disabled'}</p>
+                <p><strong>Track Opens:</strong> ${preview.track_opens ? 'Enabled' : 'Disabled'}</p>
+                <p><strong>Track Clicks:</strong> ${preview.track_clicks ? 'Enabled' : 'Disabled'}</p>
+            </div>
+        </div>
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            These changes will be applied when you save the campaign.
+        </div>
+    `;
+    
+    document.getElementById('previewContent').innerHTML = previewHTML;
+    const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+    modal.show();
+}
+
+// Form submission
+document.getElementById('editCampaignForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    saveChanges();
+});
+
+function saveChanges() {
+    const saveBtn = document.getElementById('saveBtn');
+    const originalContent = saveBtn.innerHTML;
+    
+    // Show loading state
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+    saveBtn.disabled = true;
+    
+    // Submit the form
+    document.getElementById('editCampaignForm').submit();
+}
+
+// Campaign control actions
+function startCampaign() {
+    if (confirm('Are you sure you want to start this campaign? Phishing emails/SMS will be sent to all targets.')) {
+        fetch("{{ url_for('campaigns.start_campaign', campaign_id=campaign.id) }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error starting campaign: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error starting campaign');
+        });
+    }
+}
+
+function pauseCampaign() {
+    if (confirm('Are you sure you want to pause this campaign?')) {
+        fetch("{{ url_for('campaigns.pause_campaign', campaign_id=campaign.id) }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error pausing campaign: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error pausing campaign');
+        });
+    }
+}
+
+function resumeCampaign() {
+    if (confirm('Are you sure you want to resume this campaign?')) {
+        // Similar to startCampaign but with resume endpoint
+        alert('Resume functionality would be implemented here');
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Set initial tracking options state based on campaign type
+    updateTrackingOptions('{{ campaign.type }}');
+    
+    // Form validation
+    const form = document.getElementById('editCampaignForm');
+    form.addEventListener('input', function() {
+        const nameField = document.getElementById('name');
+        const saveBtn = document.getElementById('saveBtn');
+        
+        // Basic validation
+        const isValid = nameField.value.trim().length >= 3;
+        saveBtn.disabled = !isValid;
+        
+        if (nameField.value.trim().length < 3 && nameField.value.length > 0) {
+            nameField.classList.add('is-invalid');
+        } else {
+            nameField.classList.remove('is-invalid');
+        }
+    });
+});
+</script>
 {% endblock %}

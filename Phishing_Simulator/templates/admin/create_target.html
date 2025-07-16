@@ -5,22 +5,470 @@
 
 {% block title %}Create Target{% endblock %}
 
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('targets.list_targets') }}">Targets</a></li>
+<li class="breadcrumb-item active">Create Target</li>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.form-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.form-section h6 {
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #dee2e6;
+}
+.input-group-text {
+    background-color: #e9ecef;
+    border-color: #ced4da;
+}
+.required-field::after {
+    content: " *";
+    color: #dc3545;
+}
+.char-counter {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+.validation-feedback {
+    display: none;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+.validation-feedback.show {
+    display: block;
+}
+.is-valid + .validation-feedback.valid {
+    color: #28a745;
+}
+.is-invalid + .validation-feedback.invalid {
+    color: #dc3545;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <h1>➕ Create Target</h1>
-    
-    <div class="card">
-        <div class="card-body">
-            <p>STUB: Create target form will be here</p>
-            
-            <form method="POST">
-                <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    <input type="email" class="form-control" name="email" required title="Enter target email address" placeholder="Enter email address">
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-person-plus me-2"></i>Create New Target
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="createTargetForm" novalidate>
+                    {{ csrf_token() if csrf_token }}
+                    
+                    <!-- Campaign Selection -->
+                    <div class="form-section">
+                        <h6><i class="bi bi-envelope-paper me-2"></i>Campaign Assignment</h6>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <label for="campaign_id" class="form-label required-field">Select Campaign</label>
+                                <select class="form-select form-select-lg" id="campaign_id" name="campaign_id" required>
+                                    <option value="">Choose a campaign...</option>
+                                    {% for campaign in campaigns %}
+                                    <option value="{{ campaign.id }}" 
+                                            data-type="{{ campaign.type }}" 
+                                            data-status="{{ campaign.status }}"
+                                            {% if campaign.status != 'active' %}class="text-muted"{% endif %}>
+                                        {{ campaign.name }} 
+                                        ({{ campaign.type|title }} - {{ campaign.status|title }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="validation-feedback"></div>
+                                <div class="form-text">Select the campaign this target will be associated with</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <div class="form-section">
+                        <h6><i class="bi bi-envelope me-2"></i>Contact Information</h6>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <label for="email" class="form-label required-field">Email Address</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                    <input type="email" class="form-control form-control-lg" id="email" name="email" 
+                                           required maxlength="254" placeholder="Enter email address"
+                                           aria-describedby="emailHelp">
+                                </div>
+                                <div class="validation-feedback"></div>
+                                <div id="emailHelp" class="form-text">Primary contact method for this target</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="phone" class="form-label">Phone Number</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                                    <input type="tel" class="form-control" id="phone" name="phone" 
+                                           maxlength="20" placeholder="+1-555-0123"
+                                           pattern="[+]?[0-9\s\-\(\)\.]{7,20}">
+                                </div>
+                                <div class="validation-feedback"></div>
+                                <div class="form-text">For SMS campaigns (optional)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Personal Information -->
+                    <div class="form-section">
+                        <h6><i class="bi bi-person me-2"></i>Personal Information</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="first_name" class="form-label">First Name</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" 
+                                       maxlength="50" placeholder="John">
+                                <div class="validation-feedback"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="last_name" class="form-label">Last Name</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" 
+                                       maxlength="50" placeholder="Doe">
+                                <div class="validation-feedback"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Professional Information -->
+                    <div class="form-section">
+                        <h6><i class="bi bi-building me-2"></i>Professional Information</h6>
+                        <div class="row">
+                            <div class="col-md-7">
+                                <label for="company" class="form-label">Company</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-building"></i></span>
+                                    <input type="text" class="form-control" id="company" name="company" 
+                                           maxlength="100" placeholder="Acme Corporation">
+                                </div>
+                                <div class="validation-feedback"></div>
+                                <div class="form-text">Target's workplace for personalization</div>
+                            </div>
+                            <div class="col-md-5">
+                                <label for="position" class="form-label">Position/Title</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-briefcase"></i></span>
+                                    <input type="text" class="form-control" id="position" name="position" 
+                                           maxlength="100" placeholder="Software Engineer">
+                                </div>
+                                <div class="validation-feedback"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Notes -->
+                    <div class="form-section">
+                        <h6><i class="bi bi-journal-text me-2"></i>Additional Information</h6>
+                        <div class="row">
+                            <div class="col-12">
+                                <label for="notes" class="form-label">Notes</label>
+                                <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                          maxlength="500" placeholder="Any additional information about this target..."></textarea>
+                                <div class="d-flex justify-content-between">
+                                    <div class="form-text">Optional notes for internal reference</div>
+                                    <small class="char-counter" id="notesCounter">0/500</small>
+                                </div>
+                                <div class="validation-feedback"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="row">
+                        <div class="col-md-4">
+                            <a href="{{ url_for('targets.list_targets') }}" class="btn btn-secondary w-100">
+                                <i class="bi bi-arrow-left me-2"></i>Cancel
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-outline-primary w-100" onclick="previewTarget()">
+                                <i class="bi bi-eye me-2"></i>Preview
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary w-100" id="submitBtn">
+                                <i class="bi bi-person-plus me-2"></i>Create Target
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Help Card -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-lightbulb text-warning me-2"></i>Target Creation Tips
+                </h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Required Information:</strong>
+                        <ul class="small mb-0">
+                            <li>Valid email address is mandatory</li>
+                            <li>Campaign must be selected</li>
+                            <li>Email will be validated in real-time</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Best Practices:</strong>
+                        <ul class="small mb-0">
+                            <li>Add company/position for better personalization</li>
+                            <li>Include phone for SMS campaigns</li>
+                            <li>Use notes for special targeting considerations</li>
+                        </ul>
+                    </div>
                 </div>
-                <button type="submit" class="btn btn-primary">Create</button>
-            </form>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="previewModalLabel">
+                    <i class="bi bi-eye me-2"></i>Target Preview
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="previewContent">
+                <!-- Preview content will be populated here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="submitForm()">
+                    <i class="bi bi-check-circle me-1"></i>Create Target
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Real-time validation
+const form = document.getElementById('createTargetForm');
+const emailInput = document.getElementById('email');
+const phoneInput = document.getElementById('phone');
+const notesTextarea = document.getElementById('notes');
+const submitBtn = document.getElementById('submitBtn');
+
+// Email validation
+emailInput.addEventListener('input', function() {
+    const email = this.value.trim();
+    const feedback = this.nextElementSibling;
+    
+    if (email === '') {
+        this.classList.remove('is-valid', 'is-invalid');
+        feedback.className = 'validation-feedback';
+        return;
+    }
+    
+    if (validateEmail(email)) {
+        this.classList.remove('is-invalid');
+        this.classList.add('is-valid');
+        feedback.className = 'validation-feedback valid show';
+        feedback.textContent = '✓ Valid email address';
+    } else {
+        this.classList.remove('is-valid');
+        this.classList.add('is-invalid');
+        feedback.className = 'validation-feedback invalid show';
+        feedback.textContent = 'Please enter a valid email address';
+    }
+});
+
+// Phone validation
+phoneInput.addEventListener('input', function() {
+    const phone = this.value.trim();
+    const feedback = this.nextElementSibling;
+    
+    if (phone === '') {
+        this.classList.remove('is-valid', 'is-invalid');
+        feedback.className = 'validation-feedback';
+        return;
+    }
+    
+    if (validatePhone(phone)) {
+        this.classList.remove('is-invalid');
+        this.classList.add('is-valid');
+        feedback.className = 'validation-feedback valid show';
+        feedback.textContent = '✓ Valid phone number';
+    } else {
+        this.classList.remove('is-valid');
+        this.classList.add('is-invalid');
+        feedback.className = 'validation-feedback invalid show';
+        feedback.textContent = 'Please enter a valid phone number (e.g., +1-555-0123)';
+    }
+});
+
+// Character counter for notes
+notesTextarea.addEventListener('input', function() {
+    const current = this.value.length;
+    const max = 500;
+    const counter = document.getElementById('notesCounter');
+    
+    counter.textContent = `${current}/${max}`;
+    
+    if (current > max * 0.9) {
+        counter.style.color = '#dc3545';
+    } else if (current > max * 0.7) {
+        counter.style.color = '#ffc107';
+    } else {
+        counter.style.color = '#6c757d';
+    }
+});
+
+// Campaign selection validation
+document.getElementById('campaign_id').addEventListener('change', function() {
+    const feedback = this.nextElementSibling;
+    
+    if (this.value) {
+        this.classList.remove('is-invalid');
+        this.classList.add('is-valid');
+        feedback.className = 'validation-feedback valid show';
+        feedback.textContent = '✓ Campaign selected';
+    } else {
+        this.classList.remove('is-valid');
+        this.classList.add('is-invalid');
+        feedback.className = 'validation-feedback invalid show';
+        feedback.textContent = 'Please select a campaign';
+    }
+});
+
+// Form submission
+form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (validateForm()) {
+        submitForm();
+    }
+});
+
+function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+}
+
+function validatePhone(phone) {
+    const re = /^[+]?[0-9\s\-\(\)\.]{7,20}$/;
+    return re.test(phone);
+}
+
+function validateForm() {
+    let isValid = true;
+    
+    // Required fields
+    const requiredFields = ['campaign_id', 'email'];
+    
+    requiredFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        const feedback = field.nextElementSibling;
+        
+        if (!field.value.trim()) {
+            field.classList.add('is-invalid');
+            feedback.className = 'validation-feedback invalid show';
+            feedback.textContent = 'This field is required';
+            isValid = false;
+        }
+    });
+    
+    // Email validation
+    if (emailInput.value && !validateEmail(emailInput.value)) {
+        isValid = false;
+    }
+    
+    // Phone validation (if provided)
+    if (phoneInput.value && !validatePhone(phoneInput.value)) {
+        isValid = false;
+    }
+    
+    return isValid;
+}
+
+function previewTarget() {
+    const formData = new FormData(form);
+    const preview = {
+        campaign: document.getElementById('campaign_id').selectedOptions[0]?.text || 'No campaign selected',
+        email: formData.get('email') || 'No email provided',
+        phone: formData.get('phone') || 'Not provided',
+        first_name: formData.get('first_name') || 'Not provided',
+        last_name: formData.get('last_name') || 'Not provided',
+        company: formData.get('company') || 'Not provided',
+        position: formData.get('position') || 'Not provided',
+        notes: formData.get('notes') || 'No notes'
+    };
+    
+    const previewHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Campaign Information</h6>
+                <p><strong>Campaign:</strong> ${preview.campaign}</p>
+                
+                <h6>Contact Information</h6>
+                <p><strong>Email:</strong> ${preview.email}</p>
+                <p><strong>Phone:</strong> ${preview.phone}</p>
+            </div>
+            <div class="col-md-6">
+                <h6>Personal Information</h6>
+                <p><strong>First Name:</strong> ${preview.first_name}</p>
+                <p><strong>Last Name:</strong> ${preview.last_name}</p>
+                
+                <h6>Professional Information</h6>
+                <p><strong>Company:</strong> ${preview.company}</p>
+                <p><strong>Position:</strong> ${preview.position}</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12">
+                <h6>Notes</h6>
+                <p>${preview.notes}</p>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('previewContent').innerHTML = previewHTML;
+    const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+    modal.show();
+}
+
+function submitForm() {
+    if (!validateForm()) {
+        return;
+    }
+    
+    // Show loading state
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
+    submitBtn.disabled = true;
+    
+    // Submit the form
+    form.submit();
+}
+
+// Auto-complete company names (placeholder for future enhancement)
+document.getElementById('company').addEventListener('input', function() {
+    // Could implement company name autocomplete here
+});
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
 {% endblock %}
