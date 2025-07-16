@@ -107,6 +107,39 @@ def register_context_processors(app):
             'app_name': app.config.get('APP_NAME', 'Phishing Simulator'),
             'app_version': app.config.get('APP_VERSION', '1.0.0')
         }
+    
+    @app.context_processor
+    def inject_sidebar_stats():
+        """Injectează statistici pentru sidebar în toate paginile admin"""
+        try:
+            from datetime import datetime, timedelta
+            from models.campaign import Campaign
+            from models.target import Target
+            from models.credential import Credential
+            from models.tracking import Tracking
+            
+            return {
+                'sidebar_stats': {
+                    'total_campaigns': Campaign.query.count(),
+                    'active_campaigns': Campaign.query.filter_by(status='active').count(),
+                    'total_targets': Target.query.count(),
+                    'total_credentials': Credential.query.count(),
+                    'recent_activity': Tracking.query.filter(
+                        Tracking.timestamp >= datetime.utcnow() - timedelta(hours=24)
+                    ).count()
+                }
+            }
+        except Exception as e:
+            app.logger.error(f"Error getting sidebar stats: {str(e)}")
+            return {
+                'sidebar_stats': {
+                    'total_campaigns': 0,
+                    'active_campaigns': 0,
+                    'total_targets': 0,
+                    'total_credentials': 0,
+                    'recent_activity': 0
+                }
+            }
 
 # Creează aplicația
 app = create_app()

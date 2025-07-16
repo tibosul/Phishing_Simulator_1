@@ -1,7 +1,7 @@
 ﻿import logging
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, jsonify, request
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, text
 
 from models.campaign import Campaign
 from models.target import Target
@@ -307,7 +307,7 @@ def health_check():
     """
     try:
         # Test database
-        db.session.execute('SELECT 1')
+        db.session.execute(text('SELECT 1'))
         
         # Basic counts
         total_campaigns = Campaign.query.count()
@@ -450,25 +450,6 @@ def dashboard_error(error):
 
 
 # === CONTEXT PROCESSORS ===
-
-@bp.context_processor
-def inject_sidebar_stats():
-    """Injectează statistici pentru sidebar în toate paginile admin"""
-    try:
-        return {
-            'sidebar_stats': {
-                'total_campaigns': Campaign.query.count(),
-                'active_campaigns': Campaign.query.filter_by(status='active').count(),
-                'total_targets': Target.query.count(),
-                'total_credentials': Credential.query.count(),
-                'recent_activity': Tracking.query.filter(
-                    Tracking.timestamp >= datetime.utcnow() - timedelta(hours=24)
-                ).count()
-            }
-        }
-    except Exception as e:
-        logger.error(f"Error getting sidebar stats: {str(e)}")
-        return {'sidebar_stats': {}}
 
 
 @bp.context_processor

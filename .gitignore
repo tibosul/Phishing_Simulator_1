@@ -361,3 +361,16 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Python Flask specific
+*.db
+*.db-shm  
+*.db-wal
+instance/
+__pycache__/
+*.pyc
+*.pyo
+*.log
+.env
+venv/
+.venv/
