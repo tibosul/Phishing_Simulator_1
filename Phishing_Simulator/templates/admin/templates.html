@@ -1,32 +1,419 @@
-<!-- ===========================================
-     TEMPLATE: admin/templates.html
-     =========================================== -->
 {% extends "admin/base.html" %}
 
 {% block title %}Templates{% endblock %}
 
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Templates</li>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <h1>📝 Email Templates</h1>
-    
-    <div class="card">
-        <div class="card-header">
-            <h5>All Templates</h5>
-            <a href="/admin/templates/create" class="btn btn-primary">Create Template</a>
-        </div>
-        <div class="card-body">
-            <p>STUB: Templates list will be here</p>
-            
-            {% if templates %}
-                <ul>
-                    {% for template in templates %}
-                    <li>{{ template.name }} - {{ template.type }}</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>No templates found.</p>
-            {% endif %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-3">
+                <i class="bi bi-file-earmark-text me-2"></i>
+                Email & SMS Templates
+            </h1>
+            <a href="{{ url_for('templates.create_template') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Create Template
+            </a>
         </div>
     </div>
 </div>
+
+<!-- Quick Stats Row -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-primary">{{ stats.total or 0 }}</h5>
+                <p class="card-text text-muted">Total Templates</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-info">{{ stats.email or 0 }}</h5>
+                <p class="card-text text-muted">Email Templates</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-success">{{ stats.sms or 0 }}</h5>
+                <p class="card-text text-muted">SMS Templates</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-warning">{{ stats.categories or 0 }}</h5>
+                <p class="card-text text-muted">Categories</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter Section -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label for="search" class="form-label">Search Templates</label>
+                <input type="text" class="form-control" id="search" name="q" 
+                       value="{{ filters.search_query or '' }}" 
+                       placeholder="Search by name or content">
+            </div>
+            <div class="col-md-3">
+                <label for="type" class="form-label">Type</label>
+                <select class="form-select" id="type" name="type">
+                    <option value="">All Types</option>
+                    <option value="email" {% if filters.type_filter == 'email' %}selected{% endif %}>Email</option>
+                    <option value="sms" {% if filters.type_filter == 'sms' %}selected{% endif %}>SMS</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="category" class="form-label">Category</label>
+                <select class="form-select" id="category" name="category">
+                    <option value="">All Categories</option>
+                    {% for category in stats.categories %}
+                        <option value="{{ category }}" {% if filters.category_filter == category %}selected{% endif %}>
+                            {{ category|title }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-search me-1"></i>Filter
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Popular Templates Section -->
+{% if popular_templates or high_success_templates %}
+<div class="row mb-4">
+    {% if popular_templates %}
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-star me-2"></i>Most Used Templates
+                </h6>
+            </div>
+            <div class="card-body">
+                {% for template in popular_templates %}
+                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                    <div>
+                        <a href="{{ url_for('templates.view_template', template_id=template.id) }}" 
+                           class="text-decoration-none fw-bold">{{ template.name }}</a>
+                        <br><small class="text-muted">{{ template.type|upper }} • Used {{ template.usage_count }} times</small>
+                    </div>
+                    <span class="badge bg-secondary">{{ template.usage_count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if high_success_templates %}
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-trophy me-2"></i>High Success Rate
+                </h6>
+            </div>
+            <div class="card-body">
+                {% for template in high_success_templates %}
+                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                    <div>
+                        <a href="{{ url_for('templates.view_template', template_id=template.id) }}" 
+                           class="text-decoration-none fw-bold">{{ template.name }}</a>
+                        <br><small class="text-muted">{{ template.type|upper }} • {{ "%.1f"|format(template.success_rate) }}% success</small>
+                    </div>
+                    <span class="badge bg-warning">{{ "%.1f"|format(template.success_rate) }}%</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Templates Grid -->
+<div class="row">
+    {% if templates %}
+        {% for template in templates %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 template-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="badge bg-{% if template.type == 'email' %}primary{% else %}success{% endif %}">
+                        <i class="bi bi-{% if template.type == 'email' %}envelope{% else %}phone{% endif %} me-1"></i>
+                        {{ template.type|upper }}
+                    </span>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('templates.view_template', template_id=template.id) }}">
+                                <i class="bi bi-eye me-2"></i>View Details
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('templates.edit_template', template_id=template.id) }}">
+                                <i class="bi bi-pencil me-2"></i>Edit
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('templates.test_template', template_id=template.id) }}">
+                                <i class="bi bi-send me-2"></i>Test
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="cloneTemplate({{ template.id }})">
+                                <i class="bi bi-files me-2"></i>Clone
+                            </a></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="deleteTemplate({{ template.id }}, '{{ template.name }}')">
+                                <i class="bi bi-trash me-2"></i>Delete
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <a href="{{ url_for('templates.view_template', template_id=template.id) }}" 
+                           class="text-decoration-none">{{ template.name }}</a>
+                    </h6>
+                    
+                    {% if template.category %}
+                        <span class="badge bg-light text-dark mb-2">{{ template.category|title }}</span>
+                    {% endif %}
+                    
+                    {% if template.description %}
+                        <p class="card-text text-muted small">{{ template.description[:100] }}{% if template.description|length > 100 %}...{% endif %}</p>
+                    {% endif %}
+                    
+                    {% if template.type == 'email' and template.subject %}
+                        <div class="mb-2">
+                            <strong class="small">Subject:</strong>
+                            <div class="small text-muted">{{ template.subject[:50] }}{% if template.subject|length > 50 %}...{% endif %}</div>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="small text-muted mb-2">
+                        <strong>Content:</strong> {{ template.content_length }} characters
+                        {% if template.placeholder_count > 0 %}
+                            • {{ template.placeholder_count }} placeholders
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row text-center small">
+                        <div class="col-4">
+                            <div class="text-primary fw-bold">{{ template.usage_count }}</div>
+                            <div class="text-muted">Used</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-success fw-bold">{{ "%.1f"|format(template.success_rate) }}%</div>
+                            <div class="text-muted">Success</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="fw-bold text-{% if template.difficulty_level == 'easy' %}success{% elif template.difficulty_level == 'medium' %}warning{% else %}danger{% endif %}">
+                                {{ template.difficulty_level|title }}
+                            </div>
+                            <div class="text-muted">Level</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            Created {{ template.created_at.strftime('%b %d, %Y') if template.created_at else 'Unknown' }}
+                        </small>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{{ url_for('templates.test_template', template_id=template.id) }}" 
+                               class="btn btn-outline-primary btn-sm" title="Test Template">
+                                <i class="bi bi-send"></i>
+                            </a>
+                            <a href="{{ url_for('templates.edit_template', template_id=template.id) }}" 
+                               class="btn btn-outline-secondary btn-sm" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        
+                <!-- Pagination for Grid -->
+        {% if pagination.pages > 1 %}
+        <div class="col-12">
+            <nav aria-label="Templates pagination">
+                <ul class="pagination justify-content-center">
+                    {% if pagination.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ pagination.page - 1 }}&q={{ filters.search_query or '' }}&type={{ filters.type_filter or '' }}&category={{ filters.category_filter or '' }}">
+                                Previous
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% for page_num in range(1, pagination.pages + 1) %}
+                        {% if page_num == pagination.page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                        {% elif page_num <= 3 or page_num > pagination.pages - 3 or (page_num >= pagination.page - 1 and page_num <= pagination.page + 1) %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_num }}&q={{ filters.search_query or '' }}&type={{ filters.type_filter or '' }}&category={{ filters.category_filter or '' }}">
+                                    {{ page_num }}
+                                </a>
+                            </li>
+                        {% elif page_num == 4 or page_num == pagination.pages - 3 %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if pagination.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ pagination.page + 1 }}&q={{ filters.search_query or '' }}&type={{ filters.type_filter or '' }}&category={{ filters.category_filter or '' }}">
+                                Next
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
+    {% else %}
+        <!-- Empty State -->
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="bi bi-file-earmark-plus display-1 text-muted mb-3"></i>
+                <h4 class="text-muted">No templates found</h4>
+                {% if filters.search_query or filters.type_filter or filters.category_filter %}
+                    <p class="text-muted">Try adjusting your filters or search terms.</p>
+                    <a href="{{ url_for('templates.list_templates') }}" class="btn btn-outline-primary me-2">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Clear Filters
+                    </a>
+                {% else %}
+                    <p class="text-muted">Start by creating your first email or SMS template.</p>
+                {% endif %}
+                <a href="{{ url_for('templates.create_template') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i>Create First Template
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
 {% endblock %}
+
+{% block scripts %}
+<script>
+// Clone template function
+async function cloneTemplate(templateId) {
+    const newName = prompt('Enter name for the cloned template:');
+    if (!newName) return;
+    
+    try {
+        const response = await fetch(`{{ url_for('templates.clone_template', template_id=0) }}`.replace('0', templateId), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `new_name=${encodeURIComponent(newName)}`
+        });
+        
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Error cloning template');
+        }
+    } catch (error) {
+        alert('Network error occurred');
+    }
+}
+
+// Delete template function
+async function deleteTemplate(templateId, templateName) {
+    if (!confirm(`Are you sure you want to delete the template "${templateName}"?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`{{ url_for('templates.delete_template', template_id=0) }}`.replace('0', templateId), {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Error deleting template');
+        }
+    } catch (error) {
+        alert('Network error occurred');
+    }
+}
+
+// Template card hover effects
+document.querySelectorAll('.template-card').forEach(card => {
+    card.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-5px)';
+        this.style.boxShadow = '0 8px 15px rgba(0,0,0,0.1)';
+    });
+    
+    card.addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = '';
+    });
+});
+
+// Live search functionality
+document.getElementById('search').addEventListener('input', function() {
+    clearTimeout(this.searchTimeout);
+    this.searchTimeout = setTimeout(() => {
+        // Could implement live search here
+        console.log('Search for:', this.value);
+    }, 500);
+});
+
+// Auto-refresh every 60 seconds
+setInterval(function() {
+    if (document.hasFocus()) {
+        const urlParams = new URLSearchParams(window.location.search);
+        fetch(`{{ url_for('templates.api_list_templates') }}?${urlParams.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Template list refreshed');
+                // Could update the grid without full page reload
+            })
+            .catch(error => console.log('Refresh failed:', error));
+    }
+}, 60000);
+</script>
+
+<style>
+.template-card {
+    transition: all 0.3s ease;
+    border: 1px solid #e3e6f0;
+}
+
+.template-card:hover {
+    border-color: #0066cc;
+}
+
+.card-title a:hover {
+    color: #0066cc !important;
+}
+</style>

@@ -12,6 +12,7 @@
     <Name>Phishing_Simulator</Name>
     <RootNamespace>Phishing_Simulator</RootNamespace>
     <InterpreterId>MSBuild|venv|$(MSBuildProjectFullPath)</InterpreterId>
+    <TestFramework>Pytest</TestFramework>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -83,6 +84,7 @@
     <Content Include="templates\admin\dashboard.html" />
     <Content Include="templates\admin\edit_campaign.html" />
     <Content Include="templates\admin\edit_template.html" />
+    <Content Include="templates\admin\health.html" />
     <Content Include="templates\admin\statistics.html" />
     <Content Include="templates\admin\targets.html" />
     <Content Include="templates\admin\target_detail.html" />

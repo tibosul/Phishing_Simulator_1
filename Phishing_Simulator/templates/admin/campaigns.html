@@ -1,32 +1,299 @@
-<!-- ===========================================
-     TEMPLATE: admin/campaigns.html
-     =========================================== -->
 {% extends "admin/base.html" %}
 
 {% block title %}Campaigns{% endblock %}
 
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Campaigns</li>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <h1>📧 Campaigns List</h1>
-    
-    <div class="card">
-        <div class="card-header">
-            <h5>All Campaigns</h5>
-            <a href="/admin/campaigns/create" class="btn btn-primary">Create Campaign</a>
-        </div>
-        <div class="card-body">
-            <p>STUB: Campaigns list will be here</p>
-            
-            {% if campaigns %}
-                <ul>
-                    {% for campaign in campaigns %}
-                    <li>{{ campaign.name }} - {{ campaign.status }}</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>No campaigns found.</p>
-            {% endif %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-3">
+                <i class="bi bi-envelope-paper me-2"></i>
+                Phishing Campaigns
+            </h1>
+            <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Create Campaign
+            </a>
         </div>
     </div>
 </div>
+
+<!-- Quick Stats Row -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-primary">{{ stats.total or 0 }}</h5>
+                <p class="card-text text-muted">Total Campaigns</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-success">{{ stats.active or 0 }}</h5>
+                <p class="card-text text-muted">Active</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-warning">{{ stats.draft or 0 }}</h5>
+                <p class="card-text text-muted">Draft</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-info">{{ stats.completed or 0 }}</h5>
+                <p class="card-text text-muted">Completed</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter Section -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label for="search" class="form-label">Search Campaigns</label>
+                <input type="text" class="form-control" id="search" name="q" 
+                       value="{{ filters.search_query or '' }}" 
+                       placeholder="Search by name or description">
+            </div>
+            <div class="col-md-3">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">All Statuses</option>
+                    <option value="draft" {% if filters.status_filter == 'draft' %}selected{% endif %}>Draft</option>
+                    <option value="active" {% if filters.status_filter == 'active' %}selected{% endif %}>Active</option>
+                    <option value="paused" {% if filters.status_filter == 'paused' %}selected{% endif %}>Paused</option>
+                    <option value="completed" {% if filters.status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="type" class="form-label">Type</label>
+                <select class="form-select" id="type" name="type">
+                    <option value="">All Types</option>
+                    <option value="email" {% if filters.type_filter == 'email' %}selected{% endif %}>Email</option>
+                    <option value="sms" {% if filters.type_filter == 'sms' %}selected{% endif %}>SMS</option>
+                    <option value="both" {% if filters.type_filter == 'both' %}selected{% endif %}>Both</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-search me-1"></i>Filter
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Campaigns Table -->
+<div class="card shadow">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            Campaign List
+            {% if pagination.total %}
+                ({{ pagination.total }} total)
+            {% endif %}
+        </h6>
+    </div>
+    <div class="card-body">
+        {% if campaigns %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Targets</th>
+                            <th>Success Rate</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for campaign in campaigns %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}" 
+                                   class="text-decoration-none fw-bold">
+                                    {{ campaign.name }}
+                                </a>
+                                {% if campaign.description %}
+                                    <br><small class="text-muted">{{ campaign.description[:50] }}{% if campaign.description|length > 50 %}...{% endif %}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ campaign.type|upper }}</span>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if campaign.status == 'active' %}bg-success
+                                    {% elif campaign.status == 'draft' %}bg-warning
+                                    {% elif campaign.status == 'paused' %}bg-info
+                                    {% elif campaign.status == 'completed' %}bg-dark
+                                    {% else %}bg-secondary
+                                    {% endif %}">
+                                    {{ campaign.status|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark">{{ campaign.total_targets }}</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <span class="me-2">{{ "%.1f"|format(campaign.success_rate) }}%</span>
+                                    <div class="progress" style="width: 60px; height: 4px;">
+                                        <div class="progress-bar 
+                                            {% if campaign.success_rate > 50 %}bg-danger
+                                            {% elif campaign.success_rate > 20 %}bg-warning
+                                            {% else %}bg-success
+                                            {% endif %}" 
+                                            style="width: {{ campaign.success_rate }}%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ campaign.created_at.strftime('%Y-%m-%d') if campaign.created_at else 'Unknown' }}</small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}" 
+                                       class="btn btn-outline-primary btn-sm" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('campaigns.edit_campaign', campaign_id=campaign.id) }}" 
+                                       class="btn btn-outline-secondary btn-sm" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% if campaign.status == 'draft' %}
+                                    <form method="POST" action="{{ url_for('campaigns.start_campaign', campaign_id=campaign.id) }}" 
+                                          class="d-inline" onsubmit="return confirm('Start this campaign?')">
+                                        <button type="submit" class="btn btn-outline-success btn-sm" title="Start Campaign">
+                                            <i class="bi bi-play-fill"></i>
+                                        </button>
+                                    </form>
+                                    {% elif campaign.status == 'active' %}
+                                    <form method="POST" action="{{ url_for('campaigns.pause_campaign', campaign_id=campaign.id) }}" 
+                                          class="d-inline" onsubmit="return confirm('Pause this campaign?')">
+                                        <button type="submit" class="btn btn-outline-warning btn-sm" title="Pause Campaign">
+                                            <i class="bi bi-pause-fill"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if pagination.pages > 1 %}
+            <nav aria-label="Campaigns pagination">
+                <ul class="pagination justify-content-center">
+                    {% if pagination.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ pagination.page - 1 }}&q={{ filters.search_query or '' }}&status={{ filters.status_filter or '' }}&type={{ filters.type_filter or '' }}">
+                                Previous
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% for page_num in range(1, pagination.pages + 1) %}
+                        {% if page_num == pagination.page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                        {% elif page_num <= 3 or page_num > pagination.pages - 3 or (page_num >= pagination.page - 1 and page_num <= pagination.page + 1) %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_num }}&q={{ filters.search_query or '' }}&status={{ filters.status_filter or '' }}&type={{ filters.type_filter or '' }}">
+                                    {{ page_num }}
+                                </a>
+                            </li>
+                        {% elif page_num == 4 or page_num == pagination.pages - 3 %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if pagination.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ pagination.page + 1 }}&q={{ filters.search_query or '' }}&status={{ filters.status_filter or '' }}&type={{ filters.type_filter or '' }}">
+                                Next
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+        {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted mb-3"></i>
+                <h4 class="text-muted">No campaigns found</h4>
+                {% if filters.search_query or filters.status_filter or filters.type_filter %}
+                    <p class="text-muted">Try adjusting your filters or search terms.</p>
+                    <a href="{{ url_for('campaigns.list_campaigns') }}" class="btn btn-outline-primary me-2">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Clear Filters
+                    </a>
+                {% else %}
+                    <p class="text-muted">Get started by creating your first phishing campaign.</p>
+                {% endif %}
+                <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i>Create First Campaign
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh campaign list every 60 seconds
+setInterval(function() {
+    if (document.hasFocus()) {
+        const urlParams = new URLSearchParams(window.location.search);
+        fetch(`{{ url_for('campaigns.api_list_campaigns') }}?${urlParams.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Campaign list refreshed');
+                // Could update the table without full page reload
+            })
+            .catch(error => console.log('Refresh failed:', error));
+    }
+}, 60000);
+
+// Confirm delete actions
+function confirmDelete(campaignName) {
+    return confirm(`Are you sure you want to delete the campaign "${campaignName}"? This action cannot be undone.`);
+}
+
+// Quick search functionality
+document.getElementById('search').addEventListener('input', function() {
+    // Debounce search to avoid too many requests
+    clearTimeout(this.searchTimeout);
+    this.searchTimeout = setTimeout(() => {
+        // Could implement live search here
+        console.log('Search for:', this.value);
+    }, 500);
+});
+</script>
 {% endblock %}

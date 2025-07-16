@@ -1,43 +1,259 @@
-<!-- ===========================================
-     TEMPLATE: admin/create_campaign.html
-     =========================================== -->
 {% extends "admin/base.html" %}
 
 {% block title %}Create Campaign{% endblock %}
 
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('campaigns.list_campaigns') }}">Campaigns</a></li>
+<li class="breadcrumb-item active">Create</li>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <h1>➕ Create Campaign</h1>
-    
-    <div class="card">
-        <div class="card-header">
-            <h5>New Campaign</h5>
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-plus-circle me-2"></i>Create New Campaign
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="campaignForm">
+                    <!-- Campaign Name -->
+                    <div class="mb-4">
+                        <label for="name" class="form-label fw-bold">
+                            Campaign Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control form-control-lg" id="name" name="name" 
+                               required maxlength="100" placeholder="Enter a descriptive campaign name">
+                        <div class="form-text">Choose a clear, memorable name for your campaign</div>
+                    </div>
+
+                    <!-- Campaign Type -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            Campaign Type <span class="text-danger">*</span>
+                        </label>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card h-100 campaign-type-card" onclick="selectCampaignType('email')">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-envelope-fill text-primary mb-2" style="font-size: 2rem;"></i>
+                                        <h6 class="card-title">Email Only</h6>
+                                        <p class="card-text small text-muted">Send phishing emails with tracking</p>
+                                        <input type="radio" name="type" value="email" id="type_email" class="form-check-input">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card h-100 campaign-type-card" onclick="selectCampaignType('sms')">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-phone-fill text-success mb-2" style="font-size: 2rem;"></i>
+                                        <h6 class="card-title">SMS Only</h6>
+                                        <p class="card-text small text-muted">Send phishing SMS messages</p>
+                                        <input type="radio" name="type" value="sms" id="type_sms" class="form-check-input">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card h-100 campaign-type-card" onclick="selectCampaignType('both')">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-collection-fill text-warning mb-2" style="font-size: 2rem;"></i>
+                                        <h6 class="card-title">Both</h6>
+                                        <p class="card-text small text-muted">Combine email and SMS</p>
+                                        <input type="radio" name="type" value="both" id="type_both" class="form-check-input">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-4">
+                        <label for="description" class="form-label fw-bold">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" 
+                                  maxlength="500" placeholder="Describe the purpose and goals of this campaign"></textarea>
+                        <div class="form-text">Optional description to help you remember this campaign's purpose</div>
+                    </div>
+
+                    <!-- Advanced Settings -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <button class="btn btn-link p-0 text-decoration-none" type="button" 
+                                        data-bs-toggle="collapse" data-bs-target="#advancedSettings">
+                                    <i class="bi bi-gear me-2"></i>Advanced Settings
+                                    <i class="bi bi-chevron-down"></i>
+                                </button>
+                            </h6>
+                        </div>
+                        <div class="collapse" id="advancedSettings">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="auto_start" name="auto_start">
+                                            <label class="form-check-label" for="auto_start">
+                                                Auto-start campaign
+                                            </label>
+                                            <div class="form-text">Start sending immediately after adding targets</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="track_opens" name="track_opens" checked>
+                                            <label class="form-check-label" for="track_opens">
+                                                Track email opens
+                                            </label>
+                                            <div class="form-text">Monitor when emails are opened</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="track_clicks" name="track_clicks" checked>
+                                            <label class="form-check-label" for="track_clicks">
+                                                Track link clicks
+                                            </label>
+                                            <div class="form-text">Monitor when links are clicked</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <a href="{{ url_for('campaigns.list_campaigns') }}" class="btn btn-secondary w-100">
+                                <i class="bi bi-arrow-left me-2"></i>Cancel
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-check-circle me-2"></i>Create Campaign
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
-        <div class="card-body">
-            <form method="POST">
-                <div class="mb-3">
-                    <label class="form-label">Campaign Name</label>
-                    <input type="text" class="form-control" name="name" required placeholder="Enter campaign name" title="Campaign Name">
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label" for="campaign-type">Type</label>
-                    <select class="form-control" name="type" id="campaign-type" title="Type">
-                        <option value="email">Email</option>
-                        <option value="sms">SMS</option>
-                        <option value="both">Both</option>
-                    </select>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Description</label>
-                    <textarea class="form-control" name="description" title="Description" placeholder="Enter campaign description"></textarea>
-                </div>
-                
-                <button type="submit" class="btn btn-primary">Create</button>
-                <a href="/admin/campaigns/" class="btn btn-secondary">Cancel</a>
-            </form>
+
+        <!-- Help Card -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-lightbulb text-warning me-2"></i>Tips for Creating Effective Campaigns
+                </h6>
+                <ul class="mb-0">
+                    <li><strong>Choose meaningful names:</strong> Use descriptive names that indicate the campaign's purpose</li>
+                    <li><strong>Email campaigns:</strong> Best for detailed phishing scenarios with rich content</li>
+                    <li><strong>SMS campaigns:</strong> Great for urgent, short messages that drive immediate action</li>
+                    <li><strong>Combined campaigns:</strong> Use both channels for maximum impact and testing</li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function selectCampaignType(type) {
+    // Clear all selections
+    document.querySelectorAll('.campaign-type-card').forEach(card => {
+        card.classList.remove('border-primary', 'bg-light');
+    });
+    
+    // Select the clicked type
+    const selectedCard = document.querySelector(`#type_${type}`).closest('.campaign-type-card');
+    selectedCard.classList.add('border-primary', 'bg-light');
+    
+    // Check the radio button
+    document.getElementById(`type_${type}`).checked = true;
+}
+
+// Form validation
+document.getElementById('campaignForm').addEventListener('submit', function(e) {
+    const name = document.getElementById('name').value.trim();
+    const type = document.querySelector('input[name="type"]:checked');
+    
+    if (!name) {
+        e.preventDefault();
+        alert('Please enter a campaign name');
+        document.getElementById('name').focus();
+        return;
+    }
+    
+    if (!type) {
+        e.preventDefault();
+        alert('Please select a campaign type');
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = document.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
+    submitBtn.disabled = true;
+});
+
+// Character counter for description
+document.getElementById('description').addEventListener('input', function() {
+    const current = this.value.length;
+    const max = this.getAttribute('maxlength');
+    
+    // Add character counter if not exists
+    let counter = this.parentNode.querySelector('.char-counter');
+    if (!counter) {
+        counter = document.createElement('div');
+        counter.className = 'char-counter form-text text-end';
+        this.parentNode.appendChild(counter);
+    }
+    
+    counter.textContent = `${current}/${max} characters`;
+    counter.className = `char-counter form-text text-end ${current > max * 0.9 ? 'text-warning' : ''}`;
+});
+
+// Auto-generate campaign name suggestions
+document.getElementById('name').addEventListener('focus', function() {
+    if (!this.value) {
+        const suggestions = [
+            'Security Awareness Test',
+            'Phishing Simulation Q' + Math.ceil((new Date().getMonth() + 1) / 3),
+            'Employee Training Campaign',
+            'Revolut Security Alert Test',
+            'Monthly Security Check'
+        ];
+        
+        // Could show suggestions dropdown here
+        this.placeholder = suggestions[Math.floor(Math.random() * suggestions.length)];
+    }
+});
+</script>
+
+<style>
+.campaign-type-card {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.campaign-type-card:hover {
+    border-color: #0066cc;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.campaign-type-card.border-primary {
+    border-color: #0066cc !important;
+    background-color: #f8f9fa !important;
+}
+
+.form-check-input {
+    pointer-events: none;
+}
+
+.char-counter {
+    font-size: 0.875rem;
+}
+</style>
 {% endblock %}

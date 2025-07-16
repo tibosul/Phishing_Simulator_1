@@ -1,26 +1,486 @@
-<!-- ===========================================
-     TEMPLATE: admin/create_template.html
-     =========================================== -->
 {% extends "admin/base.html" %}
 
 {% block title %}Create Template{% endblock %}
 
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('templates.list_templates') }}">Templates</a></li>
+<li class="breadcrumb-item active">Create</li>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <h1>➕ Create Template</h1>
-    
-    <div class="card">
-        <div class="card-body">
-            <p>STUB: Create template form will be here</p>
-            
-            <form method="POST">
-                <div class="mb-3">
-                    <label class="form-label">Template Name</label>
-                    <input type="text" class="form-control" name="name" required placeholder="Enter template name" title="Template Name">
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-file-earmark-plus me-2"></i>Create New Template
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="templateForm">
+                    <!-- Template Type Selection -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            Template Type <span class="text-danger">*</span>
+                        </label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card h-100 template-type-card" onclick="selectTemplateType('email')">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-envelope-fill text-primary mb-2" style="font-size: 2.5rem;"></i>
+                                        <h5 class="card-title">Email Template</h5>
+                                        <p class="card-text text-muted">Create rich HTML email templates with subject lines</p>
+                                        <input type="radio" name="type" value="email" id="type_email" class="form-check-input">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card h-100 template-type-card" onclick="selectTemplateType('sms')">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-phone-fill text-success mb-2" style="font-size: 2.5rem;"></i>
+                                        <h5 class="card-title">SMS Template</h5>
+                                        <p class="card-text text-muted">Create short, impactful SMS messages</p>
+                                        <input type="radio" name="type" value="sms" id="type_sms" class="form-check-input">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Template Name -->
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <label for="name" class="form-label fw-bold">
+                                Template Name <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control form-control-lg" id="name" name="name" 
+                                   required maxlength="100" placeholder="Enter a descriptive template name">
+                            <div class="form-text">Choose a clear name that describes the template's purpose</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="category" class="form-label fw-bold">Category</label>
+                            <select class="form-select form-select-lg" id="category" name="category">
+                                <option value="">Select Category</option>
+                                <option value="banking">Banking & Finance</option>
+                                <option value="social">Social Media</option>
+                                <option value="work">Work & Business</option>
+                                <option value="government">Government</option>
+                                <option value="shopping">Shopping & E-commerce</option>
+                                <option value="security">Security Alerts</option>
+                                <option value="updates">Account Updates</option>
+                                <option value="promotions">Promotions & Offers</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Email Subject (shown only for email templates) -->
+                    <div class="mb-4" id="subjectSection" style="display: none;">
+                        <label for="subject" class="form-label fw-bold">
+                            Email Subject Line <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="subject" name="subject" 
+                               maxlength="200" placeholder="Enter compelling subject line">
+                        <div class="form-text">Use placeholders like {{target_name}} for personalization</div>
+                    </div>
+
+                    <!-- Template Content -->
+                    <div class="mb-4">
+                        <label for="content" class="form-label fw-bold">
+                            Template Content <span class="text-danger">*</span>
+                        </label>
+                        
+                        <!-- Content Type Tabs (for email) -->
+                        <div id="emailContentTabs" style="display: none;">
+                            <ul class="nav nav-tabs" id="contentTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="visual-tab" data-bs-toggle="tab" 
+                                            data-bs-target="#visual" type="button" role="tab">
+                                        <i class="bi bi-eye me-1"></i>Visual Editor
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="html-tab" data-bs-toggle="tab" 
+                                            data-bs-target="#html" type="button" role="tab">
+                                        <i class="bi bi-code me-1"></i>HTML Source
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="preview-tab" data-bs-toggle="tab" 
+                                            data-bs-target="#preview" type="button" role="tab">
+                                        <i class="bi bi-phone me-1"></i>Preview
+                                    </button>
+                                </li>
+                            </ul>
+                            <div class="tab-content border border-top-0 p-3" id="contentTabsContent">
+                                <div class="tab-pane fade show active" id="visual" role="tabpanel">
+                                    <div id="visualEditor" style="min-height: 300px; border: 1px solid #dee2e6;">
+                                        <!-- Rich text editor would go here -->
+                                        <p>Visual editor placeholder - would integrate with a WYSIWYG editor</p>
+                                    </div>
+                                </div>
+                                <div class="tab-pane fade" id="html" role="tabpanel">
+                                    <textarea class="form-control" id="content" name="content" rows="15" 
+                                              placeholder="Enter your template content..."></textarea>
+                                </div>
+                                <div class="tab-pane fade" id="preview" role="tabpanel">
+                                    <div id="previewContent" class="border rounded p-3" style="min-height: 300px;">
+                                        <p class="text-muted">Preview will appear here...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SMS Content (simple textarea) -->
+                        <div id="smsContent" style="display: none;">
+                            <textarea class="form-control" id="smsContentArea" name="content" rows="4" 
+                                      maxlength="160" placeholder="Enter your SMS message (max 160 characters)"></textarea>
+                            <div class="d-flex justify-content-between">
+                                <div class="form-text">Include {{tracking_link}} for the phishing link</div>
+                                <small class="text-muted" id="smsCharCount">0/160 characters</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-4">
+                        <label for="description" class="form-label fw-bold">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" 
+                                  maxlength="500" placeholder="Describe when and how to use this template"></textarea>
+                        <div class="form-text">Optional description to help team members understand the template's purpose</div>
+                    </div>
+
+                    <!-- Advanced Settings -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <button class="btn btn-link p-0 text-decoration-none" type="button" 
+                                        data-bs-toggle="collapse" data-bs-target="#advancedSettings">
+                                    <i class="bi bi-sliders me-2"></i>Advanced Settings
+                                    <i class="bi bi-chevron-down"></i>
+                                </button>
+                            </h6>
+                        </div>
+                        <div class="collapse" id="advancedSettings">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <label for="difficulty_level" class="form-label">Difficulty Level</label>
+                                        <select class="form-select" id="difficulty_level" name="difficulty_level">
+                                            <option value="easy">Easy</option>
+                                            <option value="medium" selected>Medium</option>
+                                            <option value="hard">Hard</option>
+                                        </select>
+                                        <div class="form-text">How sophisticated is this phishing attempt?</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="language" class="form-label">Language</label>
+                                        <select class="form-select" id="language" name="language">
+                                            <option value="en" selected>English</option>
+                                            <option value="ro">Romanian</option>
+                                            <option value="es">Spanish</option>
+                                            <option value="fr">French</option>
+                                            <option value="de">German</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch mt-4">
+                                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+                                            <label class="form-check-label" for="is_active">
+                                                Active Template
+                                            </label>
+                                            <div class="form-text">Make this template available for use</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Placeholder Helper -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="bi bi-tags me-2"></i>Available Placeholders
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <strong>Target Info:</strong>
+                                    <ul class="list-unstyled small">
+                                        <li><code>{{target_name}}</code></li>
+                                        <li><code>{{target_first_name}}</code></li>
+                                        <li><code>{{target_email}}</code></li>
+                                        <li><code>{{target_company}}</code></li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Links:</strong>
+                                    <ul class="list-unstyled small">
+                                        <li><code>{{tracking_link}}</code> <span class="text-danger">*</span></li>
+                                        <li><code>{{tracking_pixel}}</code></li>
+                                        <li><code>{{unsubscribe_link}}</code></li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Date/Time:</strong>
+                                    <ul class="list-unstyled small">
+                                        <li><code>{{current_date}}</code></li>
+                                        <li><code>{{current_year}}</code></li>
+                                        <li><code>{{current_time}}</code></li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Campaign:</strong>
+                                    <ul class="list-unstyled small">
+                                        <li><code>{{campaign_name}}</code></li>
+                                        <li><code>{{company_name}}</code></li>
+                                        <li><code>{{sender_name}}</code></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="alert alert-warning small mb-0">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                <strong>Required:</strong> Email templates must include <code>{{tracking_link}}</code> and SMS templates must include <code>{{tracking_link}}</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="row">
+                        <div class="col-md-4">
+                            <a href="{{ url_for('templates.list_templates') }}" class="btn btn-secondary w-100">
+                                <i class="bi bi-arrow-left me-2"></i>Cancel
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-outline-primary w-100" onclick="previewTemplate()">
+                                <i class="bi bi-eye me-2"></i>Preview
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-check-circle me-2"></i>Create Template
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Help Card -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-lightbulb text-warning me-2"></i>Template Creation Tips
+                </h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Email Templates:</strong>
+                        <ul class="small mb-0">
+                            <li>Use compelling subject lines that create urgency</li>
+                            <li>Include official-looking branding and logos</li>
+                            <li>Keep the call-to-action clear and prominent</li>
+                            <li>Test across different email clients</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>SMS Templates:</strong>
+                        <ul class="small mb-0">
+                            <li>Keep messages under 160 characters</li>
+                            <li>Create a sense of urgency</li>
+                            <li>Use short, branded links</li>
+                            <li>Include a clear call-to-action</li>
+                        </ul>
+                    </div>
                 </div>
-                <button type="submit" class="btn btn-primary">Create</button>
-            </form>
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedType = null;
+
+function selectTemplateType(type) {
+    selectedType = type;
+    
+    // Clear all selections
+    document.querySelectorAll('.template-type-card').forEach(card => {
+        card.classList.remove('border-primary', 'bg-light');
+    });
+    
+    // Select the clicked type
+    const selectedCard = document.querySelector(`#type_${type}`).closest('.template-type-card');
+    selectedCard.classList.add('border-primary', 'bg-light');
+    
+    // Check the radio button
+    document.getElementById(`type_${type}`).checked = true;
+    
+    // Show/hide relevant sections
+    if (type === 'email') {
+        document.getElementById('subjectSection').style.display = 'block';
+        document.getElementById('emailContentTabs').style.display = 'block';
+        document.getElementById('smsContent').style.display = 'none';
+        document.getElementById('subject').required = true;
+    } else {
+        document.getElementById('subjectSection').style.display = 'none';
+        document.getElementById('emailContentTabs').style.display = 'none';
+        document.getElementById('smsContent').style.display = 'block';
+        document.getElementById('subject').required = false;
+    }
+}
+
+// SMS character counter
+document.getElementById('smsContentArea').addEventListener('input', function() {
+    const current = this.value.length;
+    const max = 160;
+    document.getElementById('smsCharCount').textContent = `${current}/${max} characters`;
+    
+    if (current > max) {
+        document.getElementById('smsCharCount').className = 'text-danger';
+    } else if (current > max * 0.9) {
+        document.getElementById('smsCharCount').className = 'text-warning';
+    } else {
+        document.getElementById('smsCharCount').className = 'text-muted';
+    }
+});
+
+// Preview function
+function previewTemplate() {
+    const type = selectedType;
+    const content = type === 'email' ? 
+        document.getElementById('content').value : 
+        document.getElementById('smsContentArea').value;
+    
+    if (!content) {
+        alert('Please enter template content first');
+        return;
+    }
+    
+    // Simple preview - replace placeholders with sample data
+    let previewContent = content
+        .replace(/{{target_name}}/g, 'John Doe')
+        .replace(/{{target_first_name}}/g, 'John')
+        .replace(/{{target_email}}/g, 'john.doe@example.com')
+        .replace(/{{target_company}}/g, 'Example Corp')
+        .replace(/{{tracking_link}}/g, '#preview-link')
+        .replace(/{{current_date}}/g, new Date().toLocaleDateString())
+        .replace(/{{current_year}}/g, new Date().getFullYear());
+    
+    if (type === 'email') {
+        document.getElementById('previewContent').innerHTML = previewContent;
+        // Switch to preview tab
+        document.getElementById('preview-tab').click();
+    } else {
+        alert('SMS Preview:\n\n' + previewContent);
+    }
+}
+
+// Form validation
+document.getElementById('templateForm').addEventListener('submit', function(e) {
+    const name = document.getElementById('name').value.trim();
+    const type = document.querySelector('input[name="type"]:checked');
+    
+    if (!name) {
+        e.preventDefault();
+        alert('Please enter a template name');
+        document.getElementById('name').focus();
+        return;
+    }
+    
+    if (!type) {
+        e.preventDefault();
+        alert('Please select a template type');
+        return;
+    }
+    
+    const content = type.value === 'email' ? 
+        document.getElementById('content').value : 
+        document.getElementById('smsContentArea').value;
+    
+    if (!content.trim()) {
+        e.preventDefault();
+        alert('Please enter template content');
+        return;
+    }
+    
+    // Check for required tracking_link
+    if (!content.includes('{{tracking_link}}')) {
+        e.preventDefault();
+        alert('Template must include {{tracking_link}} placeholder');
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = document.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
+    submitBtn.disabled = true;
+});
+
+// Insert placeholder function
+function insertPlaceholder(placeholder) {
+    const activeTextarea = selectedType === 'email' ? 
+        document.getElementById('content') : 
+        document.getElementById('smsContentArea');
+    
+    const start = activeTextarea.selectionStart;
+    const end = activeTextarea.selectionEnd;
+    const text = activeTextarea.value;
+    
+    activeTextarea.value = text.substring(0, start) + placeholder + text.substring(end);
+    activeTextarea.focus();
+    activeTextarea.setSelectionRange(start + placeholder.length, start + placeholder.length);
+}
+
+// Add click handlers to placeholder codes
+document.querySelectorAll('code').forEach(code => {
+    code.style.cursor = 'pointer';
+    code.title = 'Click to insert';
+    code.addEventListener('click', function() {
+        insertPlaceholder(this.textContent);
+    });
+});
+</script>
+
+<style>
+.template-type-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.template-type-card:hover {
+    border-color: #0066cc;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+}
+
+.template-type-card.border-primary {
+    border-color: #0066cc !important;
+    background-color: #f8f9fa !important;
+}
+
+.form-check-input {
+    pointer-events: none;
+}
+
+code {
+    background-color: #f8f9fa;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 0.875em;
+}
+
+code:hover {
+    background-color: #e9ecef;
+}
+
+#visualEditor {
+    background-color: #fff;
+    padding: 10px;
+}
+</style>
 {% endblock %}

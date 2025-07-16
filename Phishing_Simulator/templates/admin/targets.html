@@ -1,22 +1,418 @@
-<!-- ===========================================
-     TEMPLATE: admin/targets.html
-     =========================================== -->
 {% extends "admin/base.html" %}
 
 {% block title %}Targets{% endblock %}
 
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Targets</li>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <h1>🎯 All Targets</h1>
-    
-    <div class="card">
-        <div class="card-header">
-            <h5>Target List</h5>
-            <a href="/admin/targets/create" class="btn btn-primary">Add Target</a>
-        </div>
-        <div class="card-body">
-            <p>STUB: Targets list will be here</p>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-3">
+                <i class="bi bi-people me-2"></i>
+                Target Management
+            </h1>
+            <a href="{{ url_for('targets.create_target') }}" class="btn btn-primary">
+                <i class="bi bi-person-plus me-2"></i>Add Target
+            </a>
         </div>
     </div>
 </div>
+
+<!-- Quick Stats Row -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-primary">{{ stats.total_targets or 0 }}</h5>
+                <p class="card-text text-muted">Total Targets</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-info">{{ stats.contacted or 0 }}</h5>
+                <p class="card-text text-muted">Contacted</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-warning">{{ stats.clicked or 0 }}</h5>
+                <p class="card-text text-muted">Clicked Links</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-danger">{{ stats.compromised or 0 }}</h5>
+                <p class="card-text text-muted">Compromised</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter Section -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label for="search" class="form-label">Search Targets</label>
+                <input type="text" class="form-control" id="search" name="q" 
+                       value="{{ filters.search_query or '' }}" 
+                       placeholder="Search by name, email, or company">
+            </div>
+            <div class="col-md-3">
+                <label for="campaign" class="form-label">Campaign</label>
+                <select class="form-select" id="campaign" name="campaign_id">
+                    <option value="">All Campaigns</option>
+                    {% for campaign in campaigns %}
+                    <option value="{{ campaign.id }}" {% if filters.campaign_filter == campaign.id %}selected{% endif %}>
+                        {{ campaign.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">All Statuses</option>
+                    <option value="pending" {% if filters.status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="contacted" {% if filters.status_filter == 'contacted' %}selected{% endif %}>Contacted</option>
+                    <option value="clicked_link" {% if filters.status_filter == 'clicked_link' %}selected{% endif %}>Clicked Link</option>
+                    <option value="credentials_entered" {% if filters.status_filter == 'credentials_entered' %}selected{% endif %}>Credentials Entered</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-search me-1"></i>Filter
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Targets Table -->
+<div class="card shadow">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            Target List
+            {% if pagination.total %}
+                ({{ pagination.total }} total)
+            {% endif %}
+        </h6>
+    </div>
+    <div class="card-body">
+        {% if targets %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Target</th>
+                            <th>Campaign</th>
+                            <th>Status</th>
+                            <th>Engagement</th>
+                            <th>Contact Info</th>
+                            <th>Last Activity</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for target in targets %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                             style="width: 40px; height: 40px;">
+                                            {{ (target.first_name or target.email)[0]|upper }}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <strong>{{ target.display_name }}</strong>
+                                        <br><small class="text-muted">{{ target.email }}</small>
+                                        {% if target.company %}
+                                            <br><small class="text-muted">{{ target.company }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('campaigns.view_campaign', campaign_id=target.campaign_id) }}" 
+                                   class="text-decoration-none">
+                                    {{ target.campaign.name if target.campaign else 'Unknown' }}
+                                </a>
+                                {% if target.campaign %}
+                                    <br><span class="badge bg-secondary">{{ target.campaign.type|upper }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if target.status == 'credentials_entered' %}danger{% elif target.status == 'clicked_link' %}warning{% elif target.status == 'contacted' %}info{% else %}secondary{% endif %}">
+                                    {{ target.status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress me-2" style="width: 80px; height: 8px;">
+                                        <div class="progress-bar bg-{% if target.engagement_score > 75 %}danger{% elif target.engagement_score > 50 %}warning{% elif target.engagement_score > 25 %}info{% else %}secondary{% endif %}" 
+                                             style="width: {{ target.engagement_score }}%"></div>
+                                    </div>
+                                    <small class="text-muted">{{ target.engagement_score }}%</small>
+                                </div>
+                                <div class="mt-1">
+                                    {% if target.email_sent %}<i class="bi bi-envelope-check text-success me-1" title="Email Sent"></i>{% endif %}
+                                    {% if target.sms_sent %}<i class="bi bi-phone-vibrate text-success me-1" title="SMS Sent"></i>{% endif %}
+                                    {% if target.clicked_link %}<i class="bi bi-cursor text-warning me-1" title="Clicked Link"></i>{% endif %}
+                                    {% if target.entered_credentials %}<i class="bi bi-shield-exclamation text-danger me-1" title="Entered Credentials"></i>{% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small">
+                                    <i class="bi bi-envelope me-1"></i>{{ target.email }}<br>
+                                    {% if target.phone %}
+                                        <i class="bi bi-phone me-1"></i>{{ target.phone }}<br>
+                                    {% endif %}
+                                    {% if target.position %}
+                                        <i class="bi bi-briefcase me-1"></i>{{ target.position }}
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if target.last_activity %}
+                                    <small class="text-muted">{{ target.last_activity.strftime('%Y-%m-%d') }}<br>{{ target.last_activity.strftime('%H:%M') }}</small>
+                                {% else %}
+                                    <small class="text-muted">No activity</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ url_for('targets.view_target', target_id=target.id) }}" 
+                                       class="btn btn-outline-primary btn-sm" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <button class="btn btn-outline-secondary btn-sm" 
+                                            onclick="editTarget({{ target.id }})" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm" 
+                                            onclick="deleteTarget({{ target.id }}, '{{ target.email }}')" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if pagination.pages > 1 %}
+            <nav aria-label="Targets pagination">
+                <ul class="pagination justify-content-center">
+                    {% if pagination.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ pagination.page - 1 }}&q={{ filters.search_query or '' }}&campaign_id={{ filters.campaign_filter or '' }}&status={{ filters.status_filter or '' }}">
+                                Previous
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% for page_num in range(1, pagination.pages + 1) %}
+                        {% if page_num == pagination.page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                        {% elif page_num <= 3 or page_num > pagination.pages - 3 or (page_num >= pagination.page - 1 and page_num <= pagination.page + 1) %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_num }}&q={{ filters.search_query or '' }}&campaign_id={{ filters.campaign_filter or '' }}&status={{ filters.status_filter or '' }}">
+                                    {{ page_num }}
+                                </a>
+                            </li>
+                        {% elif page_num == 4 or page_num == pagination.pages - 3 %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if pagination.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ pagination.page + 1 }}&q={{ filters.search_query or '' }}&campaign_id={{ filters.campaign_filter or '' }}&status={{ filters.status_filter or '' }}">
+                                Next
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+        {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <i class="bi bi-person-x display-1 text-muted mb-3"></i>
+                <h4 class="text-muted">No targets found</h4>
+                {% if filters.search_query or filters.campaign_filter or filters.status_filter %}
+                    <p class="text-muted">Try adjusting your filters or search terms.</p>
+                    <a href="{{ url_for('targets.list_targets') }}" class="btn btn-outline-primary me-2">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Clear Filters
+                    </a>
+                {% else %}
+                    <p class="text-muted">Start by adding targets to your campaigns.</p>
+                {% endif %}
+                <a href="{{ url_for('targets.create_target') }}" class="btn btn-primary">
+                    <i class="bi bi-person-plus me-1"></i>Add First Target
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Bulk Actions (if targets selected) -->
+<div class="card mt-4" id="bulkActions" style="display: none;">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong id="selectedCount">0</strong> targets selected
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-outline-danger" onclick="bulkDelete()">
+                    <i class="bi bi-trash me-1"></i>Delete Selected
+                </button>
+                <button class="btn btn-outline-secondary" onclick="exportSelected()">
+                    <i class="bi bi-download me-1"></i>Export Selected
+                </button>
+                <button class="btn btn-outline-primary" onclick="clearSelection()">
+                    <i class="bi bi-x me-1"></i>Clear Selection
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedTargets = new Set();
+
+// Target selection functionality
+function toggleTargetSelection(targetId, checkbox) {
+    if (checkbox.checked) {
+        selectedTargets.add(targetId);
+    } else {
+        selectedTargets.delete(targetId);
+    }
+    updateBulkActions();
+}
+
+function updateBulkActions() {
+    const bulkActions = document.getElementById('bulkActions');
+    const selectedCount = document.getElementById('selectedCount');
+    
+    if (selectedTargets.size > 0) {
+        bulkActions.style.display = 'block';
+        selectedCount.textContent = selectedTargets.size;
+    } else {
+        bulkActions.style.display = 'none';
+    }
+}
+
+function clearSelection() {
+    selectedTargets.clear();
+    document.querySelectorAll('input[type="checkbox"][data-target-id]').forEach(cb => {
+        cb.checked = false;
+    });
+    updateBulkActions();
+}
+
+// Edit target function
+async function editTarget(targetId) {
+    try {
+        const response = await fetch(`{{ url_for('targets.api_get_target', target_id=0) }}`.replace('0', targetId));
+        const data = await response.json();
+        
+        if (data.target) {
+            // Open edit modal with target data
+            showEditModal(data.target);
+        }
+    } catch (error) {
+        alert('Error loading target data');
+    }
+}
+
+// Delete target function
+async function deleteTarget(targetId, targetEmail) {
+    if (!confirm(`Are you sure you want to delete target "${targetEmail}"?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`{{ url_for('targets.api_delete_target', target_id=0) }}`.replace('0', targetId), {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Network error occurred');
+    }
+}
+
+// Bulk delete function
+async function bulkDelete() {
+    if (selectedTargets.size === 0) return;
+    
+    if (!confirm(`Are you sure you want to delete ${selectedTargets.size} selected targets?`)) {
+        return;
+    }
+    
+    // Implementation would go here
+    alert('Bulk delete functionality to be implemented');
+}
+
+// Export selected function
+function exportSelected() {
+    if (selectedTargets.size === 0) return;
+    
+    // Implementation would go here
+    alert('Export functionality to be implemented');
+}
+
+// Auto-refresh every 60 seconds
+setInterval(function() {
+    if (document.hasFocus()) {
+        const urlParams = new URLSearchParams(window.location.search);
+        fetch(`{{ url_for('targets.api_list_targets') }}?${urlParams.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Target list refreshed');
+                // Could update the table without full page reload
+            })
+            .catch(error => console.log('Refresh failed:', error));
+    }
+}, 60000);
+
+// Live search functionality
+document.getElementById('search').addEventListener('input', function() {
+    clearTimeout(this.searchTimeout);
+    this.searchTimeout = setTimeout(() => {
+        // Could implement live search here
+        console.log('Search for:', this.value);
+    }, 500);
+});
+</script>
 {% endblock %}
