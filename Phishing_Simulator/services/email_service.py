@@ -8,6 +8,9 @@ from email import encoders
 from datetime import datetime
 from flask import current_app, render_template_string
 from jinja2 import Template
+import threading
+import time
+from queue import Queue
 
 from models.campaign import Campaign
 from models.target import Target
@@ -20,20 +23,36 @@ from utils.validators import validate_email, ValidationError
 
 class EmailService:
     """
-    Service pentru trimiterea email-urilor de phishing
+    Service complet pentru trimiterea email-urilor de phishing
     
-    MODIFICAT: Folosește template-urile din /templates/emails/ în loc de baza de date
+    Features:
+    - Template loading din fișiere și baza de date
+    - Batch sending cu rate limiting
+    - Email tracking (opens, clicks)
+    - Queue management pentru email-uri
+    - Error handling și retry logic
+    - Email spoofing și headers personalizate
+    - Multi-threading pentru performance
     """
     
     def __init__(self):
         self.smtp_server = None
         self.logger = logging.getLogger(__name__)
+        self.email_queue = Queue()
+        self.is_sending = False
         
-        # Mapare template-uri disponibile
+        # Mapare template-uri disponibile (fișiere locale)
         self.available_templates = {
             'security': 'emails/revolut_security.html',
             'promotion': 'emails/revolut_promotion.html', 
             'update': 'emails/revolut_update.html'
+        }
+        
+        # Rate limiting settings
+        self.rate_limit = {
+            'emails_per_minute': 30,
+            'emails_per_hour': 1000,
+            'delay_between_emails': 2  # seconds
         }
     
     def _get_smtp_connection(self):
@@ -46,16 +65,20 @@ class EmailService:
             username = current_app.config.get('MAIL_USERNAME')
             password = current_app.config.get('MAIL_PASSWORD')
             use_tls = current_app.config.get('MAIL_USE_TLS', True)
+            use_ssl = current_app.config.get('MAIL_USE_SSL', False)
             
             if not server or not username or not password:
                 raise ValueError("Email configuration incomplete. Check MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD")
             
-            smtp = smtplib.SMTP(server, port)
-            smtp.ehlo()
-            
-            if use_tls:
-                smtp.starttls()
+            if use_ssl:
+                smtp = smtplib.SMTP_SSL(server, port)
+            else:
+                smtp = smtplib.SMTP(server, port)
                 smtp.ehlo()
+                
+                if use_tls:
+                    smtp.starttls()
+                    smtp.ehlo()
             
             smtp.login(username, password)
             
@@ -69,12 +92,6 @@ class EmailService:
     def get_template_path(self, template_name):
         """
         Returnează calea către template-ul de email
-        
-        Args:
-            template_name: Numele template-ului (security, promotion, update)
-            
-        Returns:
-            str: Calea către fișierul template
         """
         if template_name in self.available_templates:
             return self.available_templates[template_name]
@@ -85,12 +102,6 @@ class EmailService:
     def load_template_content(self, template_path):
         """
         Încarcă conținutul template-ului din fișier
-        
-        Args:
-            template_path: Calea către template (ex: emails/revolut_security.html)
-            
-        Returns:
-            str: Conținutul template-ului
         """
         try:
             # Construiește calea completă către template
@@ -98,7 +109,8 @@ class EmailService:
             full_path = os.path.join(template_dir, template_path)
             
             if not os.path.exists(full_path):
-                raise FileNotFoundError(f"Template not found: {full_path}")
+                self.logger.warning(f"Template not found: {full_path}, using fallback")
+                return self._get_fallback_template()
             
             with open(full_path, 'r', encoding='utf-8') as f:
                 content = f.read()
@@ -108,7 +120,6 @@ class EmailService:
             
         except Exception as e:
             self.logger.error(f"Error loading template {template_path}: {str(e)}")
-            # Fallback la un template minimal
             return self._get_fallback_template()
     
     def _get_fallback_template(self):
@@ -120,29 +131,32 @@ class EmailService:
         <html>
         <head>
             <title>Revolut Security Alert</title>
+            <style>
+                body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; }
+                .header { background: #0075eb; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; }
+                .button { background: #0075eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; }
+            </style>
         </head>
-        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #0075eb;">Security Alert</h2>
-            <p>Dear {{target_name}},</p>
-            <p>We detected suspicious activity on your Revolut account.</p>
-            <p><a href="{{tracking_link}}" style="background: #0075eb; color: white; padding: 10px 20px; text-decoration: none;">Verify Account</a></p>
-            <p><small>This is an automated message from Revolut Security.</small></p>
-            <img src="{{tracking_pixel}}" width="1" height="1" alt="" />
+        <body>
+            <div class="header">
+                <h1>Revolut</h1>
+            </div>
+            <div class="content">
+                <h2>Security Alert</h2>
+                <p>Dear {{target_name}},</p>
+                <p>We detected suspicious activity on your Revolut account. Please verify your identity immediately.</p>
+                <p><a href="{{tracking_link}}" class="button">Verify Account</a></p>
+                <p><small>This is an automated message from Revolut Security.</small></p>
+                <img src="{{tracking_pixel}}" width="1" height="1" alt="" />
+            </div>
         </body>
         </html>
         '''
     
-    def render_email_template(self, template_name, target, campaign):
+    def render_email_template(self, template_name, target, campaign, personalization_data=None):
         """
         Renderizează template-ul email cu datele target-ului și campaniei
-        
-        Args:
-            template_name: Numele template-ului (security, promotion, update)
-            target: Target-ul destinatar
-            campaign: Campania asociată
-            
-        Returns:
-            tuple: (subject_rendered, content_rendered)
         """
         try:
             # Încarcă template-ul din fișier
@@ -166,6 +180,7 @@ class EmailService:
                 # URLs și tracking
                 'tracking_link': build_tracking_url(campaign.id, target.id, 'login'),
                 'tracking_pixel': build_tracking_pixel_url(campaign.id, target.id),
+                'tracking_pixel_url': build_tracking_pixel_url(campaign.id, target.id),
                 'unsubscribe_link': f"{current_app.config.get('BASE_URL')}/unsubscribe?c={campaign.id}&t={target.id}",
                 
                 # Date și timp
@@ -179,11 +194,15 @@ class EmailService:
                 'support_email': 'security@revolut.com'
             }
             
+            # Adaugă personalizare din Ollama dacă există
+            if personalization_data:
+                template_data.update(personalization_data)
+            
             # Renderizează template-ul cu Jinja2
             template = Template(template_content)
             rendered_content = template.render(**template_data)
             
-            # Extrage subiectul din template (dacă există în <title> sau folosește default)
+            # Extrage subiectul din template
             subject = self._extract_subject_from_template(rendered_content, template_name)
             
             # Renderizează subiectul cu datele template-ului
@@ -210,24 +229,94 @@ class EmailService:
         
         # Default subjects pentru fiecare template
         default_subjects = {
-            'security': 'Security Alert: Immediate Action Required',
+            'security': 'Security Alert: Immediate Action Required - {{target_first_name}}',
             'promotion': 'Exclusive Offer: {{target_first_name}}, Don\'t Miss Out!',
-            'update': 'Important: Account Update Required'
+            'update': 'Important: Account Update Required - {{target_first_name}}'
         }
         
-        return default_subjects.get(template_name, 'Important Message from Revolut')
+        return default_subjects.get(template_name, 'Important Message from Revolut - {{target_first_name}}')
     
-    def send_phishing_email(self, campaign_id, target_id, template_name='security'):
+    def create_email_message(self, target, subject, content, from_email=None, from_name=None, 
+                           campaign_id=None, additional_headers=None):
+        """
+        Creează mesajul email complet cu headers personalizate
+        """
+        try:
+            # Creează mesajul multipart
+            msg = MIMEMultipart('alternative')
+            
+            # Headers principale
+            msg['Subject'] = subject
+            msg['From'] = from_email or current_app.config.get('MAIL_DEFAULT_SENDER')
+            msg['To'] = target.email
+            
+            # Headers pentru tracking și spoofing
+            msg['Message-ID'] = f"<{campaign_id}.{target.id}.{datetime.now().timestamp()}@revolut.com>"
+            msg['Date'] = datetime.now().strftime('%a, %d %b %Y %H:%M:%S %z')
+            
+            # Headers de spoofing pentru a părea oficial
+            if from_name:
+                msg['From'] = f"{from_name} <{from_email or current_app.config.get('MAIL_DEFAULT_SENDER')}>"
+            
+            # Reply-To pentru a intercepta răspunsurile
+            msg['Reply-To'] = 'noreply@revolut.com'
+            
+            # Headers pentru tracking
+            if campaign_id:
+                msg['X-Campaign-ID'] = str(campaign_id)
+                msg['X-Target-ID'] = str(target.id)
+            
+            # Headers pentru a evita spam filters
+            msg['X-Mailer'] = 'Revolut Notification Service v2.1'
+            msg['X-Priority'] = '1'
+            msg['Importance'] = 'high'
+            
+            # Headers suplimentare
+            if additional_headers:
+                for header, value in additional_headers.items():
+                    msg[header] = value
+            
+            # Adaugă conținutul HTML
+            html_part = MIMEText(content, 'html', 'utf-8')
+            msg.attach(html_part)
+            
+            # Opțional: adaugă versiunea text plain
+            text_content = self._html_to_text(content)
+            text_part = MIMEText(text_content, 'plain', 'utf-8')
+            msg.attach(text_part)
+            
+            return msg
+            
+        except Exception as e:
+            self.logger.error(f"Error creating email message: {str(e)}")
+            raise
+    
+    def _html_to_text(self, html_content):
+        """
+        Convertește HTML-ul în text simplu pentru versiunea text a email-ului
+        """
+        import re
+        
+        # Elimină tag-urile HTML
+        text = re.sub(r'<[^>]+>', '', html_content)
+        
+        # Înlocuiește entitățile HTML
+        text = text.replace('&nbsp;', ' ')
+        text = text.replace('&amp;', '&')
+        text = text.replace('&lt;', '<')
+        text = text.replace('&gt;', '>')
+        text = text.replace('&quot;', '"')
+        
+        # Curăță spațiile extra
+        text = re.sub(r'\s+', ' ', text)
+        text = text.strip()
+        
+        return text
+    
+    def send_phishing_email(self, campaign_id, target_id, template_name='security', 
+                          personalization_data=None, custom_headers=None):
         """
         Trimite un email de phishing către o țintă specifică
-        
-        Args:
-            campaign_id: ID-ul campaniei
-            target_id: ID-ul țintei
-            template_name: Numele template-ului (security, promotion, update)
-            
-        Returns:
-            bool: True dacă email-ul a fost trimis cu succes
         """
         try:
             # Încarcă entitățile
@@ -247,23 +336,38 @@ class EmailService:
                 self.logger.warning(f"Template {template_name} not found, using security template")
                 template_name = 'security'
             
+            # Folosește Ollama pentru personalizare dacă este disponibil
+            if not personalization_data:
+                try:
+                    from services.ollama_service import OllamaService
+                    ollama = OllamaService()
+                    personalization_data = ollama.personalize_email_content(target, campaign, template_name)
+                except Exception as e:
+                    self.logger.warning(f"Ollama personalization failed: {str(e)}")
+                    personalization_data = {}
+            
             # Renderizează template-ul
-            subject, content = self.render_email_template(template_name, target, campaign)
+            subject, content = self.render_email_template(template_name, target, campaign, personalization_data)
             
-            # Creează mesajul email
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From'] = current_app.config.get('MAIL_DEFAULT_SENDER')
-            msg['To'] = target.email
+            # Creează mesajul email cu headers personalizate
+            email_headers = {
+                'X-Template': template_name,
+                'X-Mailer': 'Microsoft Outlook 16.0',
+                'User-Agent': 'Microsoft-MacOutlook/16.67.22101101'
+            }
             
-            # Adaugă headers pentru tracking
-            msg['Message-ID'] = f"<{campaign.id}.{target.id}.{datetime.now().timestamp()}@phishing-sim>"
-            msg['X-Campaign-ID'] = str(campaign.id)
-            msg['X-Target-ID'] = str(target.id)
+            if custom_headers:
+                email_headers.update(custom_headers)
             
-            # Convertește conținutul în HTML
-            html_part = MIMEText(content, 'html', 'utf-8')
-            msg.attach(html_part)
+            msg = self.create_email_message(
+                target=target,
+                subject=subject,
+                content=content,
+                from_email='security@revolut.com',
+                from_name='Revolut Security Team',
+                campaign_id=campaign.id,
+                additional_headers=email_headers
+            )
             
             # Trimite email-ul
             smtp = self._get_smtp_connection()
@@ -282,7 +386,8 @@ class EmailService:
                 extra_data={
                     'template_name': template_name,
                     'subject': subject,
-                    'email_length': len(content)
+                    'email_length': len(content),
+                    'personalized': bool(personalization_data)
                 }
             )
             
@@ -295,21 +400,11 @@ class EmailService:
             self.logger.error(f"Failed to send phishing email: {str(e)}")
             raise
     
-    def send_campaign_emails(self, campaign_id, template_name='security', batch_size=10, delay_seconds=5):
+    def send_campaign_emails(self, campaign_id, template_name='security', batch_size=10, 
+                           delay_seconds=5, use_threading=True):
         """
-        Trimite email-uri pentru întreaga campanie în batch-uri
-        
-        Args:
-            campaign_id: ID-ul campaniei
-            template_name: Numele template-ului de folosit
-            batch_size: Numărul de email-uri per batch
-            delay_seconds: Delay între batch-uri
-            
-        Returns:
-            dict: Statistici despre trimitere
+        Trimite email-uri pentru întreaga campanie în batch-uri cu threading
         """
-        import time
-        
         try:
             campaign = Campaign.query.get(campaign_id)
             if not campaign:
@@ -330,15 +425,44 @@ class EmailService:
             
             stats = {'sent': 0, 'failed': 0, 'skipped': 0}
             
+            if use_threading:
+                return self._send_emails_threaded(campaign, targets, template_name, batch_size, delay_seconds)
+            else:
+                return self._send_emails_sequential(campaign, targets, template_name, batch_size, delay_seconds)
+            
+        except Exception as e:
+            self.logger.error(f"Failed to send campaign emails: {str(e)}")
+            raise
+    
+    def _send_emails_threaded(self, campaign, targets, template_name, batch_size, delay_seconds):
+        """
+        Trimite email-uri folosind threading pentru performanță
+        """
+        import concurrent.futures
+        
+        stats = {'sent': 0, 'failed': 0, 'skipped': 0}
+        
+        # Creează thread pool
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             # Procesează în batch-uri
             for i in range(0, len(targets), batch_size):
                 batch = targets[i:i + batch_size]
                 
-                for target in batch:
+                # Submit tasks pentru batch-ul curent
+                future_to_target = {
+                    executor.submit(self._send_single_email_safe, campaign.id, target.id, template_name): target 
+                    for target in batch
+                }
+                
+                # Procesează rezultatele
+                for future in concurrent.futures.as_completed(future_to_target):
+                    target = future_to_target[future]
                     try:
-                        self.send_phishing_email(campaign_id, target.id, template_name)
-                        stats['sent'] += 1
-                        
+                        success = future.result()
+                        if success:
+                            stats['sent'] += 1
+                        else:
+                            stats['failed'] += 1
                     except Exception as e:
                         self.logger.error(f"Failed to send email to {target.email}: {str(e)}")
                         stats['failed'] += 1
@@ -347,51 +471,155 @@ class EmailService:
                 if i + batch_size < len(targets):
                     self.logger.info(f"Processed batch {i//batch_size + 1}, waiting {delay_seconds}s...")
                     time.sleep(delay_seconds)
+        
+        self.logger.info(f"Campaign {campaign.name} email sending complete: {stats}")
+        log_security_event('campaign_emails_sent', f"Campaign {campaign.name}: {stats['sent']} emails sent")
+        
+        return stats
+    
+    def _send_emails_sequential(self, campaign, targets, template_name, batch_size, delay_seconds):
+        """
+        Trimite email-uri secvențial (mai sigur, mai lent)
+        """
+        stats = {'sent': 0, 'failed': 0, 'skipped': 0}
+        
+        # Procesează în batch-uri
+        for i in range(0, len(targets), batch_size):
+            batch = targets[i:i + batch_size]
             
-            self.logger.info(f"Campaign {campaign.name} email sending complete: {stats}")
-            log_security_event('campaign_emails_sent', f"Campaign {campaign.name}: {stats['sent']} emails sent")
+            for target in batch:
+                try:
+                    success = self._send_single_email_safe(campaign.id, target.id, template_name)
+                    if success:
+                        stats['sent'] += 1
+                    else:
+                        stats['failed'] += 1
+                        
+                    # Delay între email-uri individuale
+                    time.sleep(self.rate_limit['delay_between_emails'])
+                    
+                except Exception as e:
+                    self.logger.error(f"Failed to send email to {target.email}: {str(e)}")
+                    stats['failed'] += 1
             
-            return stats
-            
+            # Delay între batch-uri
+            if i + batch_size < len(targets):
+                self.logger.info(f"Processed batch {i//batch_size + 1}, waiting {delay_seconds}s...")
+                time.sleep(delay_seconds)
+        
+        return stats
+    
+    def _send_single_email_safe(self, campaign_id, target_id, template_name):
+        """
+        Wrapper sigur pentru trimiterea unui email individual
+        """
+        try:
+            return self.send_phishing_email(campaign_id, target_id, template_name)
         except Exception as e:
-            self.logger.error(f"Failed to send campaign emails: {str(e)}")
-            raise
+            self.logger.error(f"Error in _send_single_email_safe: {str(e)}")
+            return False
+    
+    def queue_email(self, campaign_id, target_id, template_name='security', priority=1):
+        """
+        Adaugă un email în queue pentru trimitere asyncronă
+        """
+        email_job = {
+            'campaign_id': campaign_id,
+            'target_id': target_id,
+            'template_name': template_name,
+            'priority': priority,
+            'created_at': datetime.now(),
+            'retry_count': 0
+        }
+        
+        self.email_queue.put(email_job)
+        self.logger.info(f"Email queued for campaign {campaign_id}, target {target_id}")
+    
+    def process_email_queue(self):
+        """
+        Procesează queue-ul de email-uri (rulează în background)
+        """
+        self.is_sending = True
+        self.logger.info("Email queue processor started")
+        
+        while self.is_sending:
+            try:
+                if not self.email_queue.empty():
+                    email_job = self.email_queue.get()
+                    
+                    try:
+                        success = self.send_phishing_email(
+                            email_job['campaign_id'],
+                            email_job['target_id'],
+                            email_job['template_name']
+                        )
+                        
+                        if success:
+                            self.logger.info(f"Queued email sent successfully: {email_job}")
+                        else:
+                            self._handle_failed_email(email_job)
+                            
+                    except Exception as e:
+                        self.logger.error(f"Error processing queued email: {str(e)}")
+                        self._handle_failed_email(email_job)
+                    
+                    # Rate limiting
+                    time.sleep(self.rate_limit['delay_between_emails'])
+                else:
+                    # Queue este gol, așteaptă
+                    time.sleep(1)
+                    
+            except Exception as e:
+                self.logger.error(f"Error in email queue processor: {str(e)}")
+                time.sleep(5)
+        
+        self.logger.info("Email queue processor stopped")
+    
+    def _handle_failed_email(self, email_job):
+        """
+        Gestionează email-urile care au eșuat
+        """
+        email_job['retry_count'] += 1
+        
+        if email_job['retry_count'] < 3:  # Retry până la 3 ori
+            self.logger.warning(f"Retrying failed email: {email_job}")
+            # Adaugă înapoi în queue cu delay
+            time.sleep(30)
+            self.email_queue.put(email_job)
+        else:
+            self.logger.error(f"Email failed permanently: {email_job}")
     
     def list_available_templates(self):
         """
         Returnează lista template-urilor disponibile
-        
-        Returns:
-            dict: Template-urile disponibile cu descrieri
         """
-        return {
-            'security': {
-                'name': 'Security Alert',
-                'description': 'Urgent security alert requiring immediate action',
-                'file': self.available_templates['security']
-            },
-            'promotion': {
-                'name': 'Promotional Offer', 
-                'description': 'Special promotion or offer email',
-                'file': self.available_templates['promotion']
-            },
-            'update': {
-                'name': 'Account Update',
-                'description': 'Account information update requirement',
-                'file': self.available_templates['update']
+        templates_info = {}
+        
+        # Template-uri din fișiere
+        for name, path in self.available_templates.items():
+            templates_info[name] = {
+                'name': name.title(),
+                'description': f'{name.title()} email template',
+                'file': path,
+                'type': 'file'
             }
-        }
+        
+        # Template-uri din baza de date
+        db_templates = EmailTemplate.query.filter_by(type='email', is_active=True).all()
+        for template in db_templates:
+            templates_info[f"db_{template.id}"] = {
+                'name': template.name,
+                'description': template.description or 'Database template',
+                'file': None,
+                'type': 'database',
+                'template_obj': template
+            }
+        
+        return templates_info
     
-    def send_test_email(self, template_name, test_email):
+    def send_test_email(self, template_name, test_email, personalization_data=None):
         """
         Trimite un email de test pentru verificarea template-ului
-        
-        Args:
-            template_name: Numele template-ului
-            test_email: Email-ul de test
-            
-        Returns:
-            bool: True dacă email-ul de test a fost trimis
         """
         try:
             validate_email(test_email)
@@ -414,15 +642,15 @@ class EmailService:
             test_campaign.id = 0
             
             # Renderizează și trimite
-            subject, content = self.render_email_template(template_name, test_target, test_campaign)
+            subject, content = self.render_email_template(template_name, test_target, test_campaign, personalization_data)
             
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = f"[TEST] {subject}"
-            msg['From'] = current_app.config.get('MAIL_DEFAULT_SENDER')
-            msg['To'] = test_email
-            
-            html_part = MIMEText(content, 'html', 'utf-8')
-            msg.attach(html_part)
+            msg = self.create_email_message(
+                target=test_target,
+                subject=f"[TEST] {subject}",
+                content=content,
+                from_email=current_app.config.get('MAIL_DEFAULT_SENDER'),
+                additional_headers={'X-Test-Email': 'true'}
+            )
             
             smtp = self._get_smtp_connection()
             smtp.send_message(msg)
@@ -435,3 +663,86 @@ class EmailService:
         except Exception as e:
             self.logger.error(f"Failed to send test email: {str(e)}")
             raise
+    
+    def get_email_statistics(self, campaign_id=None):
+        """
+        Returnează statistici despre email-urile trimise
+        """
+        try:
+            from sqlalchemy import func
+            
+            # Total email-uri trimise
+            query = db.session.query(
+                func.count(Tracking.id).label('total_sent')
+            ).filter(Tracking.event_type == 'email_sent')
+            
+            if campaign_id:
+                query = query.filter(Tracking.campaign_id == campaign_id)
+            
+            total_sent = query.scalar() or 0
+            
+            # Email-uri deschise
+            opens_query = db.session.query(
+                func.count(Tracking.id).label('total_opens')
+            ).filter(Tracking.event_type == 'email_opened')
+            
+            if campaign_id:
+                opens_query = opens_query.filter(Tracking.campaign_id == campaign_id)
+            
+            total_opens = opens_query.scalar() or 0
+            
+            # Click-uri din email-uri
+            clicks_query = db.session.query(
+                func.count(Tracking.id).label('total_clicks')
+            ).filter(Tracking.event_type == 'link_clicked')
+            
+            if campaign_id:
+                clicks_query = clicks_query.filter(Tracking.campaign_id == campaign_id)
+            
+            total_clicks = clicks_query.scalar() or 0
+            
+            # Calculează ratele
+            open_rate = (total_opens / total_sent * 100) if total_sent > 0 else 0
+            click_rate = (total_clicks / total_sent * 100) if total_sent > 0 else 0
+            
+            return {
+                'total_sent': total_sent,
+                'total_opens': total_opens,
+                'total_clicks': total_clicks,
+                'open_rate': round(open_rate, 2),
+                'click_rate': round(click_rate, 2)
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error getting email statistics: {str(e)}")
+            return {}
+    
+    def stop_queue_processor(self):
+        """
+        Oprește procesorul de queue
+        """
+        self.is_sending = False
+        
+    @staticmethod
+    def validate_email_config():
+        """
+        Validează configurația email din Flask config
+        """
+        try:
+            required_configs = ['MAIL_SERVER', 'MAIL_USERNAME', 'MAIL_PASSWORD']
+            
+            for config_key in required_configs:
+                if not current_app.config.get(config_key):
+                    return False, f"Missing configuration: {config_key}"
+            
+            # Test conexiune SMTP
+            try:
+                service = EmailService()
+                smtp = service._get_smtp_connection()
+                smtp.quit()
+                return True, "Email configuration is valid"
+            except Exception as e:
+                return False, f"SMTP connection failed: {str(e)}"
+            
+        except Exception as e:
+            return False, f"Email configuration error: {str(e)}"
