@@ -7,7 +7,7 @@ from utils.helpers import get_client_ip, log_security_event
 from utils.database import db
 import logging
 
-# FIXED: Added url_prefix to match app.py registration
+# URL prefix to match app.py registration
 bp = Blueprint('templates', __name__, url_prefix='/admin/templates')
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 @bp.route('/')
 def list_templates():
     """
-    FIXED: Lista cu toate template-urile - returnează HTML, nu JSON
+    FIXED: Lista cu toate template-urile - returnează HTML
     """
     try:
         # Parametri de căutare și filtrare
@@ -88,14 +88,14 @@ def list_templates():
         
     except Exception as e:
         logger.error(f"Error listing templates: {str(e)}")
+        flash('Error loading templates', 'error')
         return render_template('admin/templates.html',
                              templates=[],
                              pagination={},
                              stats={},
                              popular_templates=[],
                              high_success_templates=[],
-                             filters={},
-                             error_message="Error loading templates")
+                             filters={})
 
 
 # API ENDPOINTS (pentru AJAX calls)
@@ -109,10 +109,8 @@ def api_list_templates():
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 20))
         
-        # Construiește query-ul de bază
         templates_query = Template.query.filter_by(is_active=True)
         
-        # Aplică filtrele
         if search_query:
             templates_query = templates_query.filter(
                 db.or_(
@@ -128,7 +126,6 @@ def api_list_templates():
         if category_filter:
             templates_query = templates_query.filter_by(category=category_filter)
         
-        # Paginare și ordonare
         templates = templates_query.order_by(
             Template.usage_count.desc(),
             Template.created_at.desc()
@@ -138,7 +135,6 @@ def api_list_templates():
             error_out=False
         )
         
-        # Statistici pentru dashboard
         stats = {
             'total': Template.query.filter_by(is_active=True).count(),
             'email': Template.query.filter_by(type='email', is_active=True).count(),
@@ -146,7 +142,6 @@ def api_list_templates():
             'categories': [cat[0] for cat in Template.query.with_entities(Template.category).filter(Template.category.isnot(None)).distinct().all()]
         }
         
-        # Template-uri populare
         popular_templates = Template.get_popular_templates(5)
         high_success_templates = Template.get_high_success_templates(5)
         
@@ -183,17 +178,14 @@ def create_template():
         return render_template('admin/create_template.html')
     
     try:
-        data = request.get_json() or request.form.to_dict()
+        data = request.form.to_dict()
         
         # Validări de bază
         required_fields = ['name', 'type', 'content']
         for field in required_fields:
             if not data.get(field):
-                if request.is_json:
-                    return jsonify({'error': f'{field} is required'}), 400
-                else:
-                    flash(f'{field} is required', 'error')
-                    return render_template('admin/create_template.html')
+                flash(f'{field} is required', 'error')
+                return render_template('admin/create_template.html')
         
         # Extrage datele
         name = data['name'].strip()
@@ -207,30 +199,18 @@ def create_template():
         
         # Validări specifice
         if template_type not in ['email', 'sms']:
-            error_msg = 'Invalid template type'
-            if request.is_json:
-                return jsonify({'error': error_msg}), 400
-            else:
-                flash(error_msg, 'error')
-                return render_template('admin/create_template.html')
+            flash('Invalid template type', 'error')
+            return render_template('admin/create_template.html')
         
         if template_type == 'email' and not subject:
-            error_msg = 'Subject is required for email templates'
-            if request.is_json:
-                return jsonify({'error': error_msg}), 400
-            else:
-                flash(error_msg, 'error')
-                return render_template('admin/create_template.html')
+            flash('Subject is required for email templates', 'error')
+            return render_template('admin/create_template.html')
         
         # Verifică unicitatea numelui
         existing = Template.query.filter_by(name=name).first()
         if existing:
-            error_msg = f'Template with name "{name}" already exists'
-            if request.is_json:
-                return jsonify({'error': error_msg}), 400
-            else:
-                flash(error_msg, 'error')
-                return render_template('admin/create_template.html')
+            flash(f'Template with name "{name}" already exists', 'error')
+            return render_template('admin/create_template.html')
         
         # Creează template-ul
         template = Template(
@@ -251,33 +231,20 @@ def create_template():
         
         log_security_event('template_created', f'Template "{template.name}" created', get_client_ip())
         
-        if request.is_json:
-            return jsonify({
-                'success': True,
-                'template': template.to_dict(),
-                'message': f'Template "{template.name}" created successfully'
-            })
-        else:
-            flash(f'Template "{template.name}" created successfully!', 'success')
-            return redirect(url_for('templates.list_templates'))
+        flash(f'Template "{template.name}" created successfully!', 'success')
+        return redirect(url_for('templates.view_template', template_id=template.id))
         
     except ValidationError as e:
-        if request.is_json:
-            return jsonify({'error': str(e)}), 400
-        else:
-            flash(str(e), 'error')
-            return render_template('admin/create_template.html')
+        flash(str(e), 'error')
+        return render_template('admin/create_template.html')
     except Exception as e:
         logger.error(f"Error creating template: {str(e)}")
-        if request.is_json:
-            return jsonify({'error': 'Failed to create template'}), 500
-        else:
-            flash('Error creating template', 'error')
-            return render_template('admin/create_template.html')
+        flash('Error creating template', 'error')
+        return render_template('admin/create_template.html')
 
 
 @bp.route('/<int:template_id>')
-def get_template(template_id):
+def view_template(template_id):
     """FIXED: Returnează detaliile unui template - HTML page"""
     try:
         template = Template.query.get_or_404(template_id)
@@ -344,7 +311,7 @@ def edit_template(template_id):
         return render_template('admin/edit_template.html', template=template)
     
     try:
-        data = request.get_json() or request.form.to_dict()
+        data = request.form.to_dict()
         
         # Actualizează câmpurile
         if 'name' in data:
@@ -356,12 +323,8 @@ def edit_template(template_id):
                     Template.id != template_id
                 ).first()
                 if existing:
-                    error_msg = f'Template name "{new_name}" already exists'
-                    if request.is_json:
-                        return jsonify({'error': error_msg}), 400
-                    else:
-                        flash(error_msg, 'error')
-                        return render_template('admin/edit_template.html', template=template)
+                    flash(f'Template name "{new_name}" already exists', 'error')
+                    return render_template('admin/edit_template.html', template=template)
                 template.name = new_name
         
         updatable_fields = ['subject', 'content', 'description', 'category', 'difficulty_level', 'language']
@@ -375,29 +338,16 @@ def edit_template(template_id):
         
         log_security_event('template_updated', f'Template "{template.name}" updated', get_client_ip())
         
-        if request.is_json:
-            return jsonify({
-                'success': True,
-                'template': template.to_dict(),
-                'message': f'Template "{template.name}" updated successfully'
-            })
-        else:
-            flash(f'Template "{template.name}" updated successfully!', 'success')
-            return redirect(url_for('templates.get_template', template_id=template_id))
+        flash(f'Template "{template.name}" updated successfully!', 'success')
+        return redirect(url_for('templates.view_template', template_id=template_id))
         
     except ValidationError as e:
-        if request.is_json:
-            return jsonify({'error': str(e)}), 400
-        else:
-            flash(str(e), 'error')
-            return render_template('admin/edit_template.html', template=template)
+        flash(str(e), 'error')
+        return render_template('admin/edit_template.html', template=template)
     except Exception as e:
         logger.error(f"Error updating template {template_id}: {str(e)}")
-        if request.is_json:
-            return jsonify({'error': 'Failed to update template'}), 500
-        else:
-            flash('Error updating template', 'error')
-            return render_template('admin/edit_template.html', template=template)
+        flash('Error updating template', 'error')
+        return render_template('admin/edit_template.html', template=template)
 
 
 @bp.route('/<int:template_id>/delete', methods=['POST'])
@@ -413,22 +363,13 @@ def delete_template(template_id):
         
         log_security_event('template_deleted', f'Template "{template_name}" deleted', get_client_ip())
         
-        if request.is_json:
-            return jsonify({
-                'success': True,
-                'message': f'Template "{template_name}" deleted successfully'
-            })
-        else:
-            flash(f'Template "{template_name}" deleted successfully!', 'success')
-            return redirect(url_for('templates.list_templates'))
+        flash(f'Template "{template_name}" deleted successfully!', 'success')
+        return redirect(url_for('templates.list_templates'))
         
     except Exception as e:
         logger.error(f"Error deleting template {template_id}: {str(e)}")
-        if request.is_json:
-            return jsonify({'error': 'Failed to delete template'}), 500
-        else:
-            flash('Error deleting template', 'error')
-            return redirect(url_for('templates.list_templates'))
+        flash('Error deleting template', 'error')
+        return redirect(url_for('templates.view_template', template_id=template_id))
 
 
 @bp.route('/<int:template_id>/clone', methods=['POST'])
@@ -436,19 +377,15 @@ def clone_template(template_id):
     """Clonează un template"""
     try:
         template = Template.query.get_or_404(template_id)
-        data = request.get_json() or request.form.to_dict()
+        data = request.form.to_dict()
         
         new_name = data.get('new_name', f"{template.name} - Copy")
         
         # Verifică unicitatea numelui
         existing = Template.query.filter_by(name=new_name).first()
         if existing:
-            error_msg = f'Template name "{new_name}" already exists'
-            if request.is_json:
-                return jsonify({'error': error_msg}), 400
-            else:
-                flash(error_msg, 'error')
-                return redirect(url_for('templates.get_template', template_id=template_id))
+            flash(f'Template name "{new_name}" already exists', 'error')
+            return redirect(url_for('templates.view_template', template_id=template_id))
         
         # Clonează template-ul
         cloned_template = template.clone(new_name)
@@ -457,23 +394,13 @@ def clone_template(template_id):
         
         log_security_event('template_cloned', f'Template "{template.name}" cloned as "{new_name}"', get_client_ip())
         
-        if request.is_json:
-            return jsonify({
-                'success': True,
-                'template': cloned_template.to_dict(),
-                'message': f'Template cloned as "{new_name}"'
-            })
-        else:
-            flash(f'Template cloned as "{new_name}"!', 'success')
-            return redirect(url_for('templates.get_template', template_id=cloned_template.id))
+        flash(f'Template cloned as "{new_name}"!', 'success')
+        return redirect(url_for('templates.view_template', template_id=cloned_template.id))
         
     except Exception as e:
         logger.error(f"Error cloning template {template_id}: {str(e)}")
-        if request.is_json:
-            return jsonify({'error': 'Failed to clone template'}), 500
-        else:
-            flash('Error cloning template', 'error')
-            return redirect(url_for('templates.get_template', template_id=template_id))
+        flash('Error cloning template', 'error')
+        return redirect(url_for('templates.view_template', template_id=template_id))
 
 
 @bp.route('/<int:template_id>/test', methods=['GET', 'POST'])
@@ -485,16 +412,12 @@ def test_template(template_id):
         return render_template('admin/test_template.html', template=template)
     
     try:
-        data = request.get_json() or request.form.to_dict()
+        data = request.form.to_dict()
         
         test_target = data.get('test_target', '').strip()
         if not test_target:
-            error_msg = 'Test target (email/phone) is required'
-            if request.is_json:
-                return jsonify({'error': error_msg}), 400
-            else:
-                flash(error_msg, 'error')
-                return render_template('admin/test_template.html', template=template)
+            flash('Test target (email/phone) is required', 'error')
+            return render_template('admin/test_template.html', template=template)
         
         if template.is_email:
             # Test email folosind EmailService
@@ -506,39 +429,21 @@ def test_template(template_id):
             sms_service = SMSService()
             success = sms_service.send_test_sms(template.content, test_target)
         else:
-            error_msg = 'Invalid template type'
-            if request.is_json:
-                return jsonify({'error': error_msg}), 400
-            else:
-                flash(error_msg, 'error')
-                return render_template('admin/test_template.html', template=template)
+            flash('Invalid template type', 'error')
+            return render_template('admin/test_template.html', template=template)
         
         if success:
             log_security_event('template_tested', f'Template "{template.name}" tested to {test_target}', get_client_ip())
-            success_msg = f'Test {template.type} sent to {test_target}'
-            if request.is_json:
-                return jsonify({
-                    'success': True,
-                    'message': success_msg
-                })
-            else:
-                flash(success_msg, 'success')
-                return render_template('admin/test_template.html', template=template)
+            flash(f'Test {template.type} sent to {test_target}', 'success')
         else:
-            error_msg = f'Failed to send test {template.type}'
-            if request.is_json:
-                return jsonify({'error': error_msg}), 500
-            else:
-                flash(error_msg, 'error')
-                return render_template('admin/test_template.html', template=template)
+            flash(f'Failed to send test {template.type}', 'error')
+            
+        return render_template('admin/test_template.html', template=template)
             
     except Exception as e:
         logger.error(f"Error testing template {template_id}: {str(e)}")
-        if request.is_json:
-            return jsonify({'error': 'Failed to send test message'}), 500
-        else:
-            flash('Failed to send test message', 'error')
-            return render_template('admin/test_template.html', template=template)
+        flash('Failed to send test message', 'error')
+        return render_template('admin/test_template.html', template=template)
 
 
 @bp.route('/api/categories')
