@@ -2,303 +2,139 @@
 
 {% block title %}Campaigns{% endblock %}
 
-{% block breadcrumb %}
-<li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
-<li class="breadcrumb-item active">Campaigns</li>
-{% endblock %}
-
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-6">
-        <h1 class="h3 mb-3">
-            <i class="bi bi-envelope-paper me-2"></i>
-            Campaigns Management
-        </h1>
-    </div>
-    <div class="col-md-6 text-end">
-        <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
-            <i class="bi bi-plus"></i> Create New Campaign
-        </a>
-    </div>
-</div>
+<div class="container-fluid">
+    <h1>📧 Campaigns Management</h1>
 
-<!-- Quick Stats Cards -->
-<div class="row mb-4">
-    <div class="col-xl-3 col-md-6 mb-3">
-        <div class="card stats-card border-left-primary">
-            <div class="card-body">
-                <div class="row g-0 align-items-center">
-                    <div class="col me-2">
-                        <div class="text-xs fw-bold text-primary text-uppercase mb-1">
-                            Total Campaigns
-                        </div>
-                        <div class="h5 mb-0 fw-bold text-gray-800">
-                            {{ (stats.total if stats else 0) or 0 }}
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="bi bi-envelope-paper fa-2x text-gray-300"></i>
-                    </div>
+    <!-- Stats Cards - Simple Version -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5>Total: {{ (stats.total if stats else 0) or 0 }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5>Active: {{ (stats.active if stats else 0) or 0 }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h5>Draft: {{ (stats.draft if stats else 0) or 0 }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5>Completed: {{ (stats.completed if stats else 0) or 0 }}</h5>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="col-xl-3 col-md-6 mb-3">
-        <div class="card stats-card border-left-success">
-            <div class="card-body">
-                <div class="row g-0 align-items-center">
-                    <div class="col me-2">
-                        <div class="text-xs fw-bold text-success text-uppercase mb-1">
-                            Active
-                        </div>
-                        <div class="h5 mb-0 fw-bold text-gray-800">
-                            {{ (stats.active if stats else 0) or 0 }}
-                        </div>
+    <!-- Simple Search -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET">
+                <div class="row">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" name="q"
+                               value="{{ q or '' }}" placeholder="Search campaigns">
                     </div>
-                    <div class="col-auto">
-                        <i class="bi bi-play-circle fa-2x text-gray-300"></i>
+                    <div class="col-md-3">
+                        <select class="form-control" name="status">
+                            <option value="">All Status</option>
+                            <option value="draft" {% if status= ='draft' %}selected{% endif %}>Draft</option>
+                            <option value="active" {% if status= ='active' %}selected{% endif %}>Active</option>
+                            <option value="completed" {% if status= ='completed' %}selected{% endif %}>Completed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary">Search</button>
                     </div>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
 
-    <div class="col-xl-3 col-md-6 mb-3">
-        <div class="card stats-card border-left-warning">
-            <div class="card-body">
-                <div class="row g-0 align-items-center">
-                    <div class="col me-2">
-                        <div class="text-xs fw-bold text-warning text-uppercase mb-1">
-                            Draft
-                        </div>
-                        <div class="h5 mb-0 fw-bold text-gray-800">
-                            {{ (stats.draft if stats else 0) or 0 }}
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="bi bi-file-earmark fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
+    <!-- Campaigns Table - Simple Version -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between">
+            <h5>Campaigns List</h5>
+            <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary btn-sm">
+                + Create Campaign
+            </a>
         </div>
-    </div>
-
-    <div class="col-xl-3 col-md-6 mb-3">
-        <div class="card stats-card border-left-info">
-            <div class="card-body">
-                <div class="row g-0 align-items-center">
-                    <div class="col me-2">
-                        <div class="text-xs fw-bold text-info text-uppercase mb-1">
-                            Completed
-                        </div>
-                        <div class="h5 mb-0 fw-bold text-gray-800">
-                            {{ (stats.completed if stats else 0) or 0 }}
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="bi bi-check-circle fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Search and Filters -->
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 fw-bold text-primary">Search & Filters</h6>
-    </div>
-    <div class="card-body">
-        <form method="GET" action="{{ url_for('campaigns.list_campaigns') }}">
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label for="search" class="form-label">Search Campaigns</label>
-                    <input type="text" class="form-control" id="search" name="q" 
-                           value="{{ q or '' }}" placeholder="Campaign name or description">
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label for="status_filter" class="form-label">Status</label>
-                    <select class="form-select" id="status_filter" name="status">
-                        <option value="">All Statuses</option>
-                        <option value="draft" {% if status == 'draft' %}selected{% endif %}>Draft</option>
-                        <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
-                        <option value="paused" {% if status == 'paused' %}selected{% endif %}>Paused</option>
-                        <option value="completed" {% if status == 'completed' %}selected{% endif %}>Completed</option>
-                    </select>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label for="type_filter" class="form-label">Type</label>
-                    <select class="form-select" id="type_filter" name="type">
-                        <option value="">All Types</option>
-                        <option value="email" {% if type == 'email' %}selected{% endif %}>Email</option>
-                        <option value="sms" {% if type == 'sms' %}selected{% endif %}>SMS</option>
-                        <option value="both" {% if type == 'both' %}selected{% endif %}>Both</option>
-                    </select>
-                </div>
-                <div class="col-md-2 mb-3">
-                    <label class="form-label">&nbsp;</label>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-search"></i> Search
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Campaigns Table -->
-<div class="card shadow mb-4">
-    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-        <h6 class="m-0 fw-bold text-primary">Campaigns List</h6>
-        <div class="dropdown">
-            <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-label="Campaign actions menu">
-                <i class="bi bi-three-dots" aria-hidden="true"></i> Actions
-            </button>
-            <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="#"><i class="bi bi-download me-2"></i>Export All</a></li>
-                <li><a class="dropdown-item" href="#"><i class="bi bi-archive me-2"></i>Archive Selected</a></li>
-            </ul>
-        </div>
-    </div>
-    <div class="card-body">
-        {% if campaigns and campaigns|length > 0 %}
+        <div class="card-body">
+            {% if campaigns and campaigns|length > 0 %}
             <div class="table-responsive">
-                <table class="table table-bordered" width="100%" cellspacing="0">
+                <table class="table table-striped">
                     <thead>
                         <tr>
-                            <th width="5%">
-                                <label for="selectAll" class="visually-hidden">Select all campaigns</label>
-                                <input type="checkbox" class="form-check-input" id="selectAll" title="Select all campaigns">
-                            </th>
                             <th>Name</th>
                             <th>Type</th>
                             <th>Status</th>
                             <th>Targets</th>
                             <th>Success Rate</th>
                             <th>Created</th>
-                            <th width="15%">Actions</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for campaign in campaigns %}
                         <tr>
                             <td>
-                                <label for="campaign-{{ campaign.id }}" class="visually-hidden">Select campaign {{ campaign.name or 'Unnamed' }}</label>
-                                <input type="checkbox" class="form-check-input campaign-checkbox" id="campaign-{{ campaign.id }}" value="{{ campaign.id }}" title="Select campaign {{ campaign.name or 'Unnamed' }}">
+                                <strong>{{ campaign.name or 'Unnamed Campaign' }}</strong>
+                                {% if campaign.description %}
+                                <br><small class="text-muted">{{ campaign.description[:50] }}...</small>
+                                {% endif %}
                             </td>
                             <td>
-                                <div class="d-flex align-items-center">
-                                    <div>
-                                        <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}" 
-                                           class="fw-bold text-decoration-none">
-                                            {{ campaign.name or 'Unnamed Campaign' }}
-                                        </a>
-                                        {% if campaign.description %}
-                                            <div class="small text-muted">{{ (campaign.description or '')[:50] }}{% if (campaign.description or '')|length > 50 %}...{% endif %}</div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                {% set type_class = 'primary' if campaign.type == 'email' else ('info' if campaign.type == 'sms' else 'secondary') %}
-                                <span class="badge bg-{{ type_class }}">
+                                <span class="badge badge-secondary">
                                     {{ (campaign.type or 'unknown')|upper }}
                                 </span>
                             </td>
                             <td>
-                                {% set status_class = 'success' if campaign.status == 'active' else ('warning' if campaign.status == 'draft' else ('danger' if campaign.status == 'paused' else 'secondary')) %}
-                                <span class="badge bg-{{ status_class }}">
-                                    {{ (campaign.status or 'unknown')|title }}
-                                </span>
+                                {% if campaign.status == 'active' %}
+                                <span class="badge badge-success">Active</span>
+                                {% elif campaign.status == 'draft' %}
+                                <span class="badge badge-warning">Draft</span>
+                                {% else %}
+                                <span class="badge badge-secondary">{{ campaign.status|title }}</span>
+                                {% endif %}
                             </td>
+                            <td>{{ campaign.total_targets or 0 }}</td>
+                            <td>{{ "%.1f"|format(campaign.success_rate or 0) }}%</td>
                             <td>
-                                <span class="fw-bold">{{ campaign.total_targets or 0 }}</span>
-                                {% if (campaign.total_targets or 0) > 0 %}
-                                    <div class="small text-muted">
-                                        <i class="bi bi-cursor me-1"></i>{{ campaign.total_clicks or 0 }} clicks
-                                    </div>
+                                {% if campaign.created_at %}
+                                {{ campaign.created_at.strftime('%Y-%m-%d') }}
+                                {% else %}
+                                N/A
                                 {% endif %}
                             </td>
                             <td>
-                                <div class="d-flex align-items-center">
-                                    <span class="me-2">{{ "%.1f"|format(campaign.success_rate or 0) }}%</span>
-                                    <div class="progress" style="width: 60px; height: 8px;">
-                                        {% set success_rate = campaign.success_rate or 0 %}
-                                        {% set progress_class = 'success' if success_rate > 20 else ('warning' if success_rate > 10 else 'danger') %}
-                                        <div class="progress-bar bg-{{ progress_class }}" 
-                                             style="width: {{ success_rate }}%"></div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="small">
-                                    {{ campaign.created_at.strftime('%m/%d/%Y') if campaign.created_at else 'N/A' }}
-                                    {% if campaign.created_at %}
-                                        <div class="text-muted">{{ campaign.created_at.strftime('%H:%M') }}</div>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}" 
-                                       class="btn btn-sm btn-outline-primary" title="View Details">
-                                        <i class="bi bi-eye"></i>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}"
+                                       class="btn btn-outline-primary" title="View">
+                                        👁️
                                     </a>
-                                    <a href="{{ url_for('campaigns.edit_campaign', campaign_id=campaign.id) }}" 
-                                       class="btn btn-sm btn-outline-secondary" title="Edit">
-                                        <i class="bi bi-pencil"></i>
+                                    <a href="{{ url_for('campaigns.edit_campaign', campaign_id=campaign.id) }}"
+                                       class="btn btn-outline-secondary" title="Edit">
+                                        ✏️
                                     </a>
-                                    
                                     {% if campaign.status == 'draft' %}
-                                        <form method="POST" action="{{ url_for('campaigns.start_campaign', campaign_id=campaign.id) }}" class="d-inline">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
-                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Start Campaign">
-                                                <i class="bi bi-play"></i>
-                                            </button>
-                                        </form>
-                                    {% elif campaign.status == 'active' %}
-                                        <form method="POST" action="{{ url_for('campaigns.pause_campaign', campaign_id=campaign.id) }}" class="d-inline">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
-                                            <button type="submit" class="btn btn-sm btn-outline-warning" title="Pause Campaign">
-                                                <i class="bi bi-pause"></i>
-                                            </button>
-                                        </form>
-                                    {% elif campaign.status == 'paused' %}
-                                        <form method="POST" action="{{ url_for('campaigns.start_campaign', campaign_id=campaign.id) }}" class="d-inline">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
-                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Resume Campaign">
-                                                <i class="bi bi-play"></i>
-                                            </button>
-                                        </form>
-                                    {% endif %}
-                                    
-                                    <div class="btn-group" role="group">
-                                        <button type="button" class="btn btn-sm btn-outline-danger dropdown-toggle" data-bs-toggle="dropdown" title="More Actions" aria-label="More actions for {{ campaign.name or 'campaign' }}">
-                                            <i class="bi bi-three-dots" aria-hidden="true"></i>
+                                    <form method="POST" action="{{ url_for('campaigns.start_campaign', campaign_id=campaign.id) }}" style="display:inline;">
+                                        <button type="submit" class="btn btn-outline-success btn-sm" title="Start">
+                                            ▶️
                                         </button>
-                                        <ul class="dropdown-menu">
-                                            <li>
-                                                <a class="dropdown-item" href="{{ url_for('campaigns.upload_targets', campaign_id=campaign.id) }}">
-                                                    <i class="bi bi-upload me-2"></i>Upload Targets
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" href="{{ url_for('campaigns.export_campaign', campaign_id=campaign.id) }}">
-                                                    <i class="bi bi-download me-2"></i>Export Data
-                                                </a>
-                                            </li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li>
-                                                <a class="dropdown-item text-danger" href="#" onclick="deleteCampaign({{ campaign.id }}, '{{ campaign.name or 'Unnamed' }}')">
-                                                    <i class="bi bi-trash me-2"></i>Delete
-                                                </a>
-                                            </li>
-                                        </ul>
-                                    </div>
+                                    </form>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
@@ -306,214 +142,22 @@
                     </tbody>
                 </table>
             </div>
-
-            <!-- Pagination -->
-            {% if (total_pages or 1) > 1 %}
-            <nav aria-label="Campaign pagination">
-                <ul class="pagination justify-content-center">
-                    <li class="page-item {% if (page or 1) <= 1 %}disabled{% endif %}">
-                        <a class="page-link" href="{{ url_for('campaigns.list_campaigns', page=(page or 1)-1, q=q, status=status, type=type) }}">Previous</a>
-                    </li>
-                    
-                    {% for p in range(1, (total_pages or 1) + 1) %}
-                        {% if p == (page or 1) %}
-                            <li class="page-item active">
-                                <span class="page-link">{{ p }}</span>
-                            </li>
-                        {% elif p <= 3 or p >= (total_pages or 1) - 2 or (p >= (page or 1) - 1 and p <= (page or 1) + 1) %}
-                            <li class="page-item">
-                                <a class="page-link" href="{{ url_for('campaigns.list_campaigns', page=p, q=q, status=status, type=type) }}">{{ p }}</a>
-                            </li>
-                        {% elif p == 4 and (page or 1) > 6 %}
-                            <li class="page-item disabled">
-                                <span class="page-link">...</span>
-                            </li>
-                        {% elif p == (total_pages or 1) - 3 and (page or 1) < (total_pages or 1) - 5 %}
-                            <li class="page-item disabled">
-                                <span class="page-link">...</span>
-                            </li>
-                        {% endif %}
-                    {% endfor %}
-                    
-                    <li class="page-item {% if (page or 1) >= (total_pages or 1) %}disabled{% endif %}">
-                        <a class="page-link" href="{{ url_for('campaigns.list_campaigns', page=(page or 1)+1, q=q, status=status, type=type) }}">Next</a>
-                    </li>
-                </ul>
-            </nav>
-            {% endif %}
-
-        {% else %}
+            {% else %}
             <div class="text-center py-5">
-                <i class="bi bi-inbox display-1 text-muted"></i>
-                <h4 class="mt-3 text-muted">No campaigns found</h4>
+                <h4>No campaigns found</h4>
                 <p class="text-muted">
-                    {% if q or status or type %}
-                        No campaigns match your search criteria. <a href="{{ url_for('campaigns.list_campaigns') }}">Clear filters</a>
+                    {% if q or status %}
+                    No campaigns match your search. <a href="{{ url_for('campaigns.list_campaigns') }}">Clear filters</a>
                     {% else %}
-                        Get started by creating your first phishing campaign.
+                    Get started by creating your first campaign.
                     {% endif %}
                 </p>
                 <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
-                    <i class="bi bi-plus"></i> Create First Campaign
+                    + Create First Campaign
                 </a>
             </div>
-        {% endif %}
-    </div>
-</div>
-
-<!-- Delete Campaign Modal -->
-<div class="modal fade" id="deleteCampaignModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Delete Campaign</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete the campaign <strong id="campaignNameToDelete"></strong>?</p>
-                <p class="text-danger">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    This action cannot be undone. All targets, tracking data, and captured credentials will be permanently deleted.
-                </p>
-                <div class="mb-3">
-                    <label for="confirmDelete" class="form-label">Type <strong>DELETE</strong> to confirm:</label>
-                    <input type="text" class="form-control" id="confirmDelete" placeholder="DELETE">
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="forceDelete">
-                    <label class="form-check-label" for="forceDelete">
-                        Force delete (even if campaign is active)
-                    </label>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteBtn" disabled>Delete Campaign</button>
-            </div>
+            {% endif %}
         </div>
     </div>
 </div>
-
-{% endblock %}
-
-{% block scripts %}
-<style>
-.visually-hidden {
-    position: absolute !important;
-    width: 1px !important;
-    height: 1px !important;
-    padding: 0 !important;
-    margin: -1px !important;
-    overflow: hidden !important;
-    clip: rect(0, 0, 0, 0) !important;
-    white-space: nowrap !important;
-    border: 0 !important;
-}
-
-.stats-card {
-    border-left: 4px solid;
-}
-
-.border-left-primary {
-    border-left-color: #007bff !important;
-}
-
-.border-left-success {
-    border-left-color: #28a745 !important;
-}
-
-.border-left-warning {
-    border-left-color: #ffc107 !important;
-}
-
-.border-left-info {
-    border-left-color: #17a2b8 !important;
-}
-
-.text-gray-800 {
-    color: #5a5c69 !important;
-}
-
-.text-gray-300 {
-    color: #dddfeb !important;
-}
-
-.text-xs {
-    font-size: 0.75rem;
-}
-</style>
-<script>
-// Select all functionality
-document.getElementById('selectAll').addEventListener('change', function() {
-    const checkboxes = document.querySelectorAll('.campaign-checkbox');
-    checkboxes.forEach(function(checkbox) {
-        checkbox.checked = this.checked;
-    }.bind(this));
-});
-
-// Delete campaign functionality
-let campaignToDelete = null;
-
-function deleteCampaign(campaignId, campaignName) {
-    campaignToDelete = campaignId;
-    document.getElementById('campaignNameToDelete').textContent = campaignName;
-    document.getElementById('confirmDelete').value = '';
-    document.getElementById('forceDelete').checked = false;
-    document.getElementById('confirmDeleteBtn').disabled = true;
-    
-    const modal = new bootstrap.Modal(document.getElementById('deleteCampaignModal'));
-    modal.show();
-}
-
-// Enable delete button only when "DELETE" is typed
-document.getElementById('confirmDelete').addEventListener('input', function() {
-    const deleteBtn = document.getElementById('confirmDeleteBtn');
-    deleteBtn.disabled = this.value !== 'DELETE';
-});
-
-// Handle delete confirmation
-document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-    if (campaignToDelete) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '{{ url_for("campaigns.delete_campaign", campaign_id="") }}' + campaignToDelete;
-        
-        // Add CSRF token
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = 'csrf_token';
-        csrfInput.value = '{{ csrf_token() if csrf_token else "" }}';
-        form.appendChild(csrfInput);
-        
-        const confirmInput = document.createElement('input');
-        confirmInput.type = 'hidden';
-        confirmInput.name = 'confirm';
-        confirmInput.value = 'DELETE';
-        form.appendChild(confirmInput);
-        
-        if (document.getElementById('forceDelete').checked) {
-            const forceInput = document.createElement('input');
-            forceInput.type = 'hidden';
-            forceInput.name = 'force';
-            forceInput.value = 'on';
-            form.appendChild(forceInput);
-        }
-        
-        document.body.appendChild(form);
-        form.submit();
-    }
-});
-
-// Auto-submit search form with delay
-let searchTimeout;
-const searchInput = document.getElementById('search');
-if (searchInput) {
-    searchInput.addEventListener('input', function() {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(function() {
-            searchInput.form.submit();
-        }, 500);
-    });
-}
-</script>
 {% endblock %}

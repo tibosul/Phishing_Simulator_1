@@ -60,15 +60,14 @@ def list_campaigns():
         }
         
         return render_template('admin/campaigns.html',
-                             campaigns=paginated_campaigns,
-                             stats=stats,
-                             search_query=search_query,
-                             status_filter=status_filter,
-                             type_filter=type_filter,
-                             page=page,
-                             per_page=per_page,
-                             total_pages=total_pages,
-                             total_campaigns=total_campaigns)
+                     campaigns=paginated_campaigns,
+                     stats=stats,
+                     q=search_query,
+                     status=status_filter,    
+                     type=type_filter,  
+                     page=page,
+                     total_pages=total_pages,
+                     total_campaigns=total_campaigns)
         
     except Exception as e:
         logging.error(f"Error listing campaigns: {str(e)}")

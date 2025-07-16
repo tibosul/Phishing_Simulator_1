@@ -70,13 +70,13 @@ def register_blueprints(app):
     # Admin routes
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(campaigns_bp)
-    app.register_blueprint(templates_bp, url_prefix='/admin/templates')
-    app.register_blueprint(targets_bp, url_prefix='/admin/targets')
+    app.register_blueprint(templates_bp)
+    app.register_blueprint(targets_bp)
     
     # Webhook routes
     app.register_blueprint(webhook_bp)
     
-    # Fake site routes (dacă le păstrezi)
+    # Fake site routes
     app.register_blueprint(fake_revolut_bp, url_prefix='/revolut')
 
 def register_error_handlers(app):
@@ -110,6 +110,12 @@ def register_context_processors(app):
 
 # Creează aplicația
 app = create_app()
+
+# Debug: Print all routes
+print("\n=== REGISTERED ROUTES ===")
+for rule in app.url_map.iter_rules():
+    print(f"{rule.methods} {rule.rule} -> {rule.endpoint}")
+print("========================\n")
 
 if __name__ == '__main__':
     app.run(

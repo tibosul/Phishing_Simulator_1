@@ -50,7 +50,7 @@ class Config:
     BASE_URL = os.environ.get('BASE_URL') or 'http://localhost:5000'
     
     # === SECURITY SETTINGS ===
-    WTF_CSRF_ENABLED = True
+    WTF_CSRF_ENABLED = False
     WTF_CSRF_TIME_LIMIT = 3600  # 1 hour
     BCRYPT_LOG_ROUNDS = 12
     
