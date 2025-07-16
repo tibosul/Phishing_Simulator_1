@@ -1,1 +1,26 @@
-﻿
+﻿<!-- ===========================================
+     TEMPLATE: admin/upload_targets.html
+     =========================================== -->
+{% extends "admin/base.html" %}
+
+{% block title %}Upload Targets{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1>📤 Upload Targets</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <p>STUB: Upload targets form will be here</p>
+            
+            <form method="POST" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label class="form-label" for="csv_file_input">CSV File</label>
+                    <input type="file" class="form-control" id="csv_file_input" name="csv_file" accept=".csv" title="Upload CSV file" placeholder="Choose CSV file">
+                </div>
+                <button type="submit" class="btn btn-primary">Upload</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

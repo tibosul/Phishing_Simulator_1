@@ -1,161 +1,30 @@
+<!-- ===========================================
+     TEMPLATE: admin/campaigns.html
+     =========================================== -->
 {% extends "admin/base.html" %}
 
 {% block title %}Campaigns{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <h1>📧 Campaigns Management</h1>
-
-    <!-- Stats Cards - Simple Version -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <h5>Total: {{ (stats.total if stats else 0) or 0 }}</h5>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <h5>Active: {{ (stats.active if stats else 0) or 0 }}</h5>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-white">
-                <div class="card-body">
-                    <h5>Draft: {{ (stats.draft if stats else 0) or 0 }}</h5>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <h5>Completed: {{ (stats.completed if stats else 0) or 0 }}</h5>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Simple Search -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="GET">
-                <div class="row">
-                    <div class="col-md-4">
-                        <input type="text" class="form-control" name="q"
-                               value="{{ q or '' }}" placeholder="Search campaigns">
-                    </div>
-                    <div class="col-md-3">
-                        <select class="form-control" name="status">
-                            <option value="">All Status</option>
-                            <option value="draft" {% if status= ='draft' %}selected{% endif %}>Draft</option>
-                            <option value="active" {% if status= ='active' %}selected{% endif %}>Active</option>
-                            <option value="completed" {% if status= ='completed' %}selected{% endif %}>Completed</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary">Search</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Campaigns Table - Simple Version -->
+    <h1>📧 Campaigns List</h1>
+    
     <div class="card">
-        <div class="card-header d-flex justify-content-between">
-            <h5>Campaigns List</h5>
-            <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary btn-sm">
-                + Create Campaign
-            </a>
+        <div class="card-header">
+            <h5>All Campaigns</h5>
+            <a href="/admin/campaigns/create" class="btn btn-primary">Create Campaign</a>
         </div>
         <div class="card-body">
-            {% if campaigns and campaigns|length > 0 %}
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Targets</th>
-                            <th>Success Rate</th>
-                            <th>Created</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for campaign in campaigns %}
-                        <tr>
-                            <td>
-                                <strong>{{ campaign.name or 'Unnamed Campaign' }}</strong>
-                                {% if campaign.description %}
-                                <br><small class="text-muted">{{ campaign.description[:50] }}...</small>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <span class="badge badge-secondary">
-                                    {{ (campaign.type or 'unknown')|upper }}
-                                </span>
-                            </td>
-                            <td>
-                                {% if campaign.status == 'active' %}
-                                <span class="badge badge-success">Active</span>
-                                {% elif campaign.status == 'draft' %}
-                                <span class="badge badge-warning">Draft</span>
-                                {% else %}
-                                <span class="badge badge-secondary">{{ campaign.status|title }}</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ campaign.total_targets or 0 }}</td>
-                            <td>{{ "%.1f"|format(campaign.success_rate or 0) }}%</td>
-                            <td>
-                                {% if campaign.created_at %}
-                                {{ campaign.created_at.strftime('%Y-%m-%d') }}
-                                {% else %}
-                                N/A
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
-                                    <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}"
-                                       class="btn btn-outline-primary" title="View">
-                                        👁️
-                                    </a>
-                                    <a href="{{ url_for('campaigns.edit_campaign', campaign_id=campaign.id) }}"
-                                       class="btn btn-outline-secondary" title="Edit">
-                                        ✏️
-                                    </a>
-                                    {% if campaign.status == 'draft' %}
-                                    <form method="POST" action="{{ url_for('campaigns.start_campaign', campaign_id=campaign.id) }}" style="display:inline;">
-                                        <button type="submit" class="btn btn-outline-success btn-sm" title="Start">
-                                            ▶️
-                                        </button>
-                                    </form>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            <p>STUB: Campaigns list will be here</p>
+            
+            {% if campaigns %}
+                <ul>
+                    {% for campaign in campaigns %}
+                    <li>{{ campaign.name }} - {{ campaign.status }}</li>
+                    {% endfor %}
+                </ul>
             {% else %}
-            <div class="text-center py-5">
-                <h4>No campaigns found</h4>
-                <p class="text-muted">
-                    {% if q or status %}
-                    No campaigns match your search. <a href="{{ url_for('campaigns.list_campaigns') }}">Clear filters</a>
-                    {% else %}
-                    Get started by creating your first campaign.
-                    {% endif %}
-                </p>
-                <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
-                    + Create First Campaign
-                </a>
-            </div>
+                <p>No campaigns found.</p>
             {% endif %}
         </div>
     </div>

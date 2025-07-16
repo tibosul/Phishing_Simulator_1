@@ -1,0 +1,26 @@
+<!-- ===========================================
+     TEMPLATE: admin/edit_campaign.html
+     =========================================== -->
+{% extends "admin/base.html" %}
+
+{% block title %}Edit Campaign{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1>✏️ Edit Campaign</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <p>STUB: Edit campaign form will be here</p>
+            
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Campaign Name</label>
+                    <input type="text" class="form-control" name="name" value="Test Campaign" title="Campaign Name" placeholder="Enter campaign name">
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

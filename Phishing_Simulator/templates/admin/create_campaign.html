@@ -1,39 +1,42 @@
+<!-- ===========================================
+     TEMPLATE: admin/create_campaign.html
+     =========================================== -->
 {% extends "admin/base.html" %}
 
 {% block title %}Create Campaign{% endblock %}
 
 {% block content %}
-<h1>➕ Create Campaign STUB - IT WORKS!</h1>
-<p>Create campaign routing is working fine!</p>
-
-<div class="row">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h5>New Campaign Form</h5>
-            </div>
-            <div class="card-body">
-                <form method="POST">
-                    <div class="mb-3">
-                        <label class="form-label">Campaign Name</label>
-                        <input type="text" class="form-control" name="name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Type</label>
-                        <select class="form-control" name="type">
-                            <option value="email">Email</option>
-                            <option value="sms">SMS</option>
-                            <option value="both">Both</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" name="description"></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Create Campaign</button>
-                    <a href="{{ url_for('campaigns.list_campaigns') }}" class="btn btn-secondary">Cancel</a>
-                </form>
-            </div>
+<div class="container-fluid">
+    <h1>➕ Create Campaign</h1>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5>New Campaign</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Campaign Name</label>
+                    <input type="text" class="form-control" name="name" required placeholder="Enter campaign name" title="Campaign Name">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label" for="campaign-type">Type</label>
+                    <select class="form-control" name="type" id="campaign-type" title="Type">
+                        <option value="email">Email</option>
+                        <option value="sms">SMS</option>
+                        <option value="both">Both</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" name="description" title="Description" placeholder="Enter campaign description"></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Create</button>
+                <a href="/admin/campaigns/" class="btn btn-secondary">Cancel</a>
+            </form>
         </div>
     </div>
 </div>

@@ -1,0 +1,26 @@
+<!-- ===========================================
+     TEMPLATE: admin/create_target.html
+     =========================================== -->
+{% extends "admin/base.html" %}
+
+{% block title %}Create Target{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1>➕ Create Target</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <p>STUB: Create target form will be here</p>
+            
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" name="email" required title="Enter target email address" placeholder="Enter email address">
+                </div>
+                <button type="submit" class="btn btn-primary">Create</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

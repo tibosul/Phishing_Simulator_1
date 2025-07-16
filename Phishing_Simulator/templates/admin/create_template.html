@@ -1,0 +1,26 @@
+<!-- ===========================================
+     TEMPLATE: admin/create_template.html
+     =========================================== -->
+{% extends "admin/base.html" %}
+
+{% block title %}Create Template{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1>➕ Create Template</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <p>STUB: Create template form will be here</p>
+            
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Template Name</label>
+                    <input type="text" class="form-control" name="name" required placeholder="Enter template name" title="Template Name">
+                </div>
+                <button type="submit" class="btn btn-primary">Create</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
