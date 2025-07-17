@@ -2,8 +2,9 @@
 from models.target import Target
 from models.campaign import Campaign
 from services.campaign_service import CampaignService
-from utils.validators import ValidationError, validate_email, validate_phone_number
-from utils.helpers import get_client_ip, log_security_event, sanitize_input
+from utils.validators import ValidationError, validate_email, validate_phone_number, require_valid_email, validate_backend_input
+from utils.helpers import get_client_ip, log_security_event, log_admin_action, sanitize_input
+from utils.api_responses import success_response, error_response, validation_error_response, not_found_response, csv_import_response
 from utils.database import db
 import logging
 import csv
@@ -182,10 +183,14 @@ def api_list_targets():
         
     except Exception as e:
         logger.error(f"Error listing targets: {str(e)}")
-        return jsonify({'error': 'Failed to load targets'}), 500
+        return error_response("Failed to load targets", status_code=500)
 
 
 @bp.route('/create', methods=['GET', 'POST'])
+@validate_backend_input({
+    'email': validate_email,
+    'phone': lambda x: validate_phone_number(x) if x else True
+})
 def create_target():
     """FIXED: Creează o nouă țintă - GET returnează form, POST procesează"""
     if request.method == 'GET':
@@ -199,6 +204,13 @@ def create_target():
         return render_template('admin/create_target.html', campaigns=campaigns)
     
     try:
+        # Check for backend validation errors
+        if hasattr(request, '_validation_errors'):
+            for error in request._validation_errors:
+                flash(error, 'error')
+            campaigns = Campaign.query.order_by(Campaign.name).all()
+            return render_template('admin/create_target.html', campaigns=campaigns)
+        
         # POST - procesează crearea
         data = request.form.to_dict()
         
@@ -258,6 +270,9 @@ def create_target():
         
         # Creează ținta folosind CampaignService
         target = CampaignService.add_single_target(campaign_id, email, **target_data)
+        
+        # Log admin action
+        log_admin_action('create', 'target', target.id, f'Email: {email}, Campaign: {campaign.name}')
         
         flash(f'Target {email} added to campaign "{campaign.name}"', 'success')
         return redirect(url_for('targets.list_targets'))
@@ -357,11 +372,21 @@ def api_get_target(target_id):
 
 # Continue with other endpoints...
 @bp.route('/api/<int:target_id>', methods=['PUT'])
+@validate_backend_input({
+    'phone': lambda x: validate_phone_number(x) if x else True
+})
 def api_update_target(target_id):
     """API endpoint pentru actualizarea unei ținte"""
     try:
+        # Check for backend validation errors
+        if hasattr(request, '_validation_errors'):
+            return validation_error_response("Input validation failed", request._validation_errors)
+        
         target = Target.query.get_or_404(target_id)
         data = request.get_json()
+        
+        if not data:
+            return validation_error_response("No data provided")
         
         updatable_fields = ['first_name', 'last_name', 'company', 'position', 'phone', 'notes']
         update_data = {}
@@ -377,26 +402,28 @@ def api_update_target(target_id):
             try:
                 validate_phone_number(update_data['phone'])
             except ValidationError as e:
-                return jsonify({'error': f'Invalid phone: {str(e)}'}), 400
+                return validation_error_response(f"Invalid phone number", [str(e)])
         
         updated = target.update_profile(**update_data)
         
         if updated:
             log_security_event('target_updated', f'Target {target.email} updated', get_client_ip())
+            log_admin_action('update', 'target', target.id, f'Email: {target.email}')
             message = f'Target {target.email} updated successfully'
         else:
             message = f'No changes made to target {target.email}'
         
-        return jsonify({
-            'success': True,
-            'target': target.to_dict(),
-            'updated': updated,
-            'message': message
-        })
+        return success_response(
+            data={
+                'target': target.to_dict(),
+                'updated': updated
+            },
+            message=message
+        )
         
     except Exception as e:
         logger.error(f"Error updating target {target_id}: {str(e)}")
-        return jsonify({'error': 'Failed to update target'}), 500
+        return error_response("Failed to update target", status_code=500)
 
 
 @bp.route('/api/<int:target_id>', methods=['DELETE'])
@@ -411,15 +438,13 @@ def api_delete_target(target_id):
         db.session.commit()
         
         log_security_event('target_deleted', f'Target {target_email} deleted from campaign {campaign_name}', get_client_ip())
+        log_admin_action('delete', 'target', target_id, f'Email: {target_email}, Campaign: {campaign_name}')
         
-        return jsonify({
-            'success': True,
-            'message': f'Target {target_email} deleted successfully'
-        })
+        return success_response(message=f'Target {target_email} deleted successfully')
         
     except Exception as e:
         logger.error(f"Error deleting target {target_id}: {str(e)}")
-        return jsonify({'error': 'Failed to delete target'}), 500
+        return error_response("Failed to delete target", status_code=500)
 
 
 # Additional routes continue as API endpoints...
@@ -490,14 +515,33 @@ def upload_targets():
             campaigns = Campaign.query.order_by(Campaign.name).all()
             return render_template('admin/upload_targets.html', campaigns=campaigns, selected_campaign=campaign)
         
-        # Verifică extensia
+        # Verifică extensia și mărimea fișierului
         if not file.filename.lower().endswith('.csv'):
             flash('Please upload a CSV file', 'error')
             campaigns = Campaign.query.order_by(Campaign.name).all()
             return render_template('admin/upload_targets.html', campaigns=campaigns, selected_campaign=campaign)
         
+        # Verifică mărimea fișierului (5MB limit)
+        max_file_size = 5 * 1024 * 1024  # 5MB
+        file.seek(0, 2)  # Seek to end
+        file_size = file.tell()
+        file.seek(0)  # Reset to beginning
+        
+        if file_size > max_file_size:
+            flash(f'File too large. Maximum size allowed: {max_file_size // 1024 // 1024}MB', 'error')
+            campaigns = Campaign.query.order_by(Campaign.name).all()
+            return render_template('admin/upload_targets.html', campaigns=campaigns, selected_campaign=campaign)
+        
         # Citește conținutul
         csv_content = file.read().decode('utf-8')
+        
+        # Verifică numărul de rânduri pentru prevenirea DoS
+        row_count = len(csv_content.split('\n')) - 1  # -1 for header
+        max_rows = 10000
+        if row_count > max_rows:
+            flash(f'CSV has too many rows. Maximum allowed: {max_rows}', 'error')
+            campaigns = Campaign.query.order_by(Campaign.name).all()
+            return render_template('admin/upload_targets.html', campaigns=campaigns, selected_campaign=campaign)
         
         # Opțiuni
         skip_duplicates = request.form.get('skip_duplicates') == 'on'
@@ -520,6 +564,8 @@ def upload_targets():
             flash(f'{len(stats["errors"])} errors occurred during import', 'warning')
         
         log_security_event('targets_uploaded', f'{stats["added"]} targets added to campaign "{campaign.name}"', get_client_ip())
+        log_admin_action('csv_upload', 'targets', campaign.id, 
+                        f'Campaign: {campaign.name}, Added: {stats["added"]}, Skipped: {stats["skipped"]}, Errors: {len(stats["errors"])}')
         
         campaigns = Campaign.query.order_by(Campaign.name).all()
         return render_template('admin/upload_targets.html', 
@@ -549,33 +595,32 @@ def api_bulk_import_targets():
         skip_duplicates = data.get('skip_duplicates', True)
         
         if not campaign_id:
-            return jsonify({'error': 'Campaign ID is required'}), 400
+            return validation_error_response("Campaign ID is required")
         
         if not csv_content:
-            return jsonify({'error': 'CSV content is required'}), 400
+            return validation_error_response("CSV content is required")
         
         campaign = db.session.get(Campaign, campaign_id)
         if not campaign:
-            return jsonify({'error': 'Campaign not found'}), 404
+            return not_found_response("Campaign")
         
+        # Enhanced CSV import with security limits
         stats = CampaignService.add_targets_from_csv(
             campaign_id=campaign_id,
             csv_content=csv_content,
-            skip_duplicates=skip_duplicates
+            skip_duplicates=skip_duplicates,
+            max_rows=10000,  # Explicit limit
+            max_file_size=5*1024*1024  # 5MB limit
         )
         
         log_security_event('targets_bulk_imported', 
                           f'{stats["added"]} targets imported to campaign {campaign.name}', 
                           get_client_ip())
         
-        return jsonify({
-            'success': True,
-            'stats': stats,
-            'message': f'Import complete: {stats["added"]} added, {stats["skipped"]} skipped'
-        })
+        return csv_import_response(stats, campaign.name)
         
     except ValidationError as e:
-        return jsonify({'error': str(e)}), 400
+        return validation_error_response(str(e))
     except Exception as e:
         logger.error(f"Error in bulk import: {str(e)}")
-        return jsonify({'error': 'Bulk import failed'}), 500
+        return error_response("Bulk import failed", status_code=500)

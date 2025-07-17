@@ -1,6 +1,6 @@
 ﻿import os
 import logging
-from flask import Flask, redirect, url_for, request
+from flask import Flask, redirect, url_for, request, jsonify
 from config import config
 from utils.database import init_db
 
@@ -24,6 +24,9 @@ def create_app(config_name=None):
     
     # Configurează logging
     configure_logging(app)
+    
+    # Configurează security middleware
+    configure_security(app)
     
     # Inițializează baza de date
     init_db(app)
@@ -59,6 +62,56 @@ def configure_logging(app):
         
         app.logger.setLevel(logging.INFO)
         app.logger.info('Phishing Simulator startup')
+
+
+def configure_security(app):
+    """Configurează middleware-ul de securitate"""
+    from utils.security import apply_security_headers, rate_limit_check, log_security_event
+    from utils.helpers import get_client_ip
+    
+    @app.before_request
+    def security_middleware():
+        """Middleware pentru verificări de securitate"""
+        
+        # Skip security checks for static files
+        if request.endpoint == 'static':
+            return
+        
+        # Rate limiting pentru endpoint-uri critice
+        if app.config.get('RATE_LIMIT_ENABLED', True):
+            # Endpoint-uri cu rate limiting strict
+            strict_endpoints = [
+                'targets.create_target',
+                'templates.create_template',
+                'campaigns.create_campaign',
+                'targets.upload_targets',
+                'targets.api_bulk_import_targets'
+            ]
+            
+            if request.endpoint in strict_endpoints:
+                client_ip = get_client_ip()
+                limit = app.config.get('RATE_LIMIT_STRICT_ENDPOINTS', 10)
+                
+                if not rate_limit_check(client_ip, limit=limit, window=3600):  # 1 hour window
+                    log_security_event('rate_limit_exceeded', 
+                                     f'Rate limit exceeded for endpoint {request.endpoint}',
+                                     additional_data={'endpoint': request.endpoint, 'ip': client_ip})
+                    return jsonify({'error': 'Rate limit exceeded. Please try again later.'}), 429
+            
+            # Rate limiting general
+            else:
+                client_ip = get_client_ip()
+                general_limit = app.config.get('RATE_LIMIT_DEFAULT', 100)
+                
+                if not rate_limit_check(client_ip, limit=general_limit, window=3600):
+                    return jsonify({'error': 'Rate limit exceeded.'}), 429
+    
+    @app.after_request
+    def security_headers(response):
+        """Aplică header-uri de securitate la toate răspunsurile"""
+        if app.config.get('SECURITY_HEADERS_ENABLED', True):
+            response = apply_security_headers(response)
+        return response
 
 def register_blueprints(app):
     """Înregistrează toate blueprint-urile"""

@@ -3,6 +3,8 @@ import dns.resolver
 from urllib.parse import urlparse
 from datetime import datetime
 import logging
+from functools import wraps
+from flask import request, jsonify
 
 
 class ValidationError(Exception):
@@ -257,27 +259,44 @@ def validate_file_upload(file, allowed_extensions=None, max_size=None):
     return True
 
 
-def validate_csv_format(file_content, required_columns=None):
+def validate_csv_format(file_content, required_columns=None, max_rows=None, max_file_size=None):
     """
-    Validează formatul unui fișier CSV
+    Validează formatul unui fișier CSV cu limite de securitate
     
     Args:
         file_content: Conținutul fișierului CSV
         required_columns: Lista cu coloanele obligatorii
+        max_rows: Numărul maxim de rânduri permise (default: 10000)
+        max_file_size: Mărimea maximă a fișierului în bytes (default: 5MB)
         
     Returns:
         bool: True dacă CSV-ul este valid
         
     Raises:
-        ValidationError: Dacă CSV-ul nu este valid
+        ValidationError: Dacă CSV-ul nu este valid sau depășește limitele
     """
     if not file_content:
         raise ValidationError("CSV file is empty")
+    
+    # Verifică mărimea fișierului pentru prevenirea atacurilor DoS
+    if max_file_size is None:
+        max_file_size = 5 * 1024 * 1024  # 5MB default
+    
+    file_size = len(file_content.encode('utf-8'))
+    if file_size > max_file_size:
+        raise ValidationError(f"CSV file too large. Maximum size: {max_file_size / 1024 / 1024:.1f}MB")
     
     lines = file_content.strip().split('\n')
     
     if len(lines) < 2:
         raise ValidationError("CSV must have at least header and one data row")
+    
+    # Verifică numărul de rânduri pentru prevenirea atacurilor DoS
+    if max_rows is None:
+        max_rows = 10000  # 10K rows default
+    
+    if len(lines) - 1 > max_rows:  # -1 pentru header
+        raise ValidationError(f"CSV has too many rows. Maximum allowed: {max_rows}")
     
     # Verifică header-ul
     header = lines[0].split(',')
@@ -424,3 +443,74 @@ def sanitize_and_validate_input(data, field_validations):
         raise ValidationError("; ".join(errors))
     
     return result
+
+
+def validate_backend_input(field_rules):
+    """
+    Decorator pentru validarea backend a input-urilor pe endpoint-uri
+    
+    Args:
+        field_rules: Dicționar cu regulile de validare pentru fiecare câmp
+                    Exemplu: {
+                        'email': validate_email,
+                        'phone': validate_phone_number,
+                        'name': lambda x: validate_campaign_name(x)
+                    }
+    
+    Returns:
+        Decorated function that validates inputs before execution
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Get data from request
+            if request.is_json:
+                data = request.get_json() or {}
+            else:
+                data = request.form.to_dict()
+            
+            errors = []
+            
+            # Validate each field according to rules
+            for field, validator in field_rules.items():
+                if field in data and data[field]:
+                    try:
+                        validator(data[field])
+                    except ValidationError as e:
+                        errors.append(f"{field}: {str(e)}")
+                    except Exception as e:
+                        errors.append(f"{field}: Validation error - {str(e)}")
+            
+            # If there are validation errors, return them
+            if errors:
+                if request.is_json:
+                    return jsonify({'error': 'Validation failed', 'details': errors}), 400
+                else:
+                    # For form submissions, we'll let the original function handle the errors
+                    # by adding them to a special attribute
+                    request._validation_errors = errors
+            
+            return f(*args, **kwargs)
+        
+        return decorated_function
+    return decorator
+
+
+def require_valid_email(field_name='email'):
+    """
+    Decorator pentru a require email valid pe endpoint
+    
+    Args:
+        field_name: Numele câmpului de email în request
+    """
+    return validate_backend_input({field_name: validate_email})
+
+
+def require_valid_phone(field_name='phone'):
+    """
+    Decorator pentru a require telefon valid pe endpoint
+    
+    Args:
+        field_name: Numele câmpului de telefon în request
+    """
+    return validate_backend_input({field_name: validate_phone_number})
