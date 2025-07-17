@@ -1,11 +1,11 @@
 /**
  * Admin Interface JavaScript - Phishing Simulator
- * FIXED: Updated API endpoints to match new routes
+ * Handles all admin dashboard functionality and API interactions
  */
 
 class AdminInterface {
     constructor() {
-        this.apiBase = '/admin/api';  // FIXED: Changed from '/admin' to '/admin/api'
+        this.apiBase = '/admin/api';  // Centralized API base URL
         this.realTimeEnabled = false;
         this.realTimeInterval = null;
         this.charts = {};
@@ -59,7 +59,6 @@ class AdminInterface {
      */
     async loadQuickStats() {
         try {
-            // FIXED: Updated endpoint path
             const response = await fetch(`${this.apiBase}/stats`);
             const data = await response.json();
 
@@ -112,7 +111,6 @@ class AdminInterface {
      */
     async initNotifications() {
         try {
-            // FIXED: Updated endpoint path
             const response = await fetch(`${this.apiBase}/realtime`);
             const data = await response.json();
 
@@ -208,7 +206,6 @@ class AdminInterface {
         if (!content) return;
 
         try {
-            // FIXED: Updated endpoint path
             const response = await fetch(`${this.apiBase}/realtime`);
             const data = await response.json();
 
@@ -257,7 +254,6 @@ class AdminInterface {
         this.showLoading();
 
         try {
-            // FIXED: Updated endpoint path
             const response = await fetch(`${this.apiBase}/export`);
             const data = await response.json();
 
@@ -330,8 +326,8 @@ class AdminInterface {
      */
     async checkSystemHealth() {
         try {
-            // FIXED: Updated endpoint path - health check is directly under /admin/
-            const response = await fetch('/admin/health');
+            // Use consistent API endpoint
+            const response = await fetch(`${this.apiBase}/health`);
             const data = await response.json();
 
             const healthStatus = document.getElementById('health-status');
