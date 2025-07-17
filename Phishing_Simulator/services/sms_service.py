@@ -271,11 +271,11 @@ class SMSService:
         """
         try:
             # Încarcă entitățile
-            campaign = Campaign.query.get(campaign_id)
+            campaign = db.session.get(Campaign, campaign_id)
             if not campaign:
                 raise ValidationError(f"Campaign {campaign_id} not found")
             
-            target = Target.query.get(target_id)
+            target = db.session.get(Target, target_id)
             if not target:
                 raise ValidationError(f"Target {target_id} not found")
             
@@ -347,7 +347,7 @@ class SMSService:
             dict: Statistici despre trimitere
         """
         try:
-            campaign = Campaign.query.get(campaign_id)
+            campaign = db.session.get(Campaign, campaign_id)
             if not campaign:
                 raise ValidationError(f"Campaign {campaign_id} not found")
             

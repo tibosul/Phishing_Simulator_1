@@ -43,8 +43,8 @@ class TrackingService:
         """
         try:
             # Verifică validitatea
-            campaign = Campaign.query.get(campaign_id)
-            target = Target.query.get(target_id)
+            campaign = db.session.get(Campaign, campaign_id)
+            target = db.session.get(Target, target_id)
             
             if not campaign or not target:
                 raise ValidationError("Invalid campaign or target ID")
@@ -130,8 +130,8 @@ class TrackingService:
             tuple: (tracking_event, redirect_url)
         """
         try:
-            campaign = Campaign.query.get(campaign_id)
-            target = Target.query.get(target_id)
+            campaign = db.session.get(Campaign, campaign_id)
+            target = db.session.get(Target, target_id)
             
             if not campaign or not target:
                 raise ValidationError("Invalid campaign or target ID")
@@ -384,7 +384,8 @@ class TrackingService:
             # Calculează ratele de conversie
             total_sent = funnel_data.get('email_sent', 0)
             if total_sent > 0:
-                for step, count in funnel_data.items():
+                # Create a copy of the items to avoid modifying dict during iteration
+                for step, count in list(funnel_data.items()):
                     funnel_data[f'{step}_rate'] = round((count / total_sent) * 100, 2)
             
             return funnel_data
@@ -522,7 +523,7 @@ class TrackingService:
             dict: Journey complet cu timeline și metrici
         """
         try:
-            target = Target.query.get(target_id)
+            target = db.session.get(Target, target_id)
             if not target:
                 raise ValidationError(f"Target {target_id} not found")
             

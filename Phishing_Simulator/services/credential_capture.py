@@ -67,8 +67,8 @@ class CredentialCaptureService:
         """
         try:
             # Validări inițiale
-            campaign = Campaign.query.get(campaign_id)
-            target = Target.query.get(target_id)
+            campaign = db.session.get(Campaign, campaign_id)
+            target = db.session.get(Target, target_id)
             
             if not campaign or not target:
                 raise ValidationError("Invalid campaign or target ID")

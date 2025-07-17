@@ -211,7 +211,7 @@ def create_target():
             return render_template('admin/create_target.html', campaigns=campaigns)
         
         # Verifică dacă campania există
-        campaign = Campaign.query.get(campaign_id)
+        campaign = db.session.get(Campaign, campaign_id)
         if not campaign:
             flash('Campaign not found', 'error')
             campaigns = Campaign.query.order_by(Campaign.name).all()
@@ -433,7 +433,7 @@ def api_bulk_import_targets():
         if not csv_content:
             return jsonify({'error': 'CSV content is required'}), 400
         
-        campaign = Campaign.query.get(campaign_id)
+        campaign = db.session.get(Campaign, campaign_id)
         if not campaign:
             return jsonify({'error': 'Campaign not found'}), 404
         
