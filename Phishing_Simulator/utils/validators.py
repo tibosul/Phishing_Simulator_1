@@ -14,7 +14,7 @@ class ValidationError(Exception):
 
 def validate_email(email):
     """
-    Validează o adresă de email
+    Validează o adresă de email cu validări RFC-compliant și securizate
     
     Args:
         email: Adresa de email de validat
@@ -28,7 +28,10 @@ def validate_email(email):
     if not email:
         raise ValidationError("Email address is required")
     
-    # Pattern pentru validarea email-ului
+    # Strip whitespace
+    email = email.strip()
+    
+    # Pattern pentru validarea email-ului (enhanced)
     email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     
     if not re.match(email_pattern, email):
@@ -42,6 +45,22 @@ def validate_email(email):
     local_part = email.split('@')[0]
     if len(local_part) > 64:
         raise ValidationError("Email local part too long")
+    
+    # Verifică pentru double dots (consecutive dots)
+    if '..' in email:
+        raise ValidationError("Email contains consecutive dots")
+    
+    # Verifică că nu începe sau se termină cu punct
+    if local_part.startswith('.') or local_part.endswith('.'):
+        raise ValidationError("Email local part cannot start or end with dot")
+    
+    # Verifică domeniul
+    domain_part = email.split('@')[1]
+    if domain_part.startswith('.') or domain_part.endswith('.'):
+        raise ValidationError("Email domain cannot start or end with dot")
+    
+    if '..' in domain_part:
+        raise ValidationError("Email domain contains consecutive dots")
     
     return True
 
