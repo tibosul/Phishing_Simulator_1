@@ -18,7 +18,7 @@ def create_app(config_name=None):
         config_name = os.environ.get('FLASK_ENV', 'development')
     
     app = Flask(__name__)
-    
+     
     # Încarcă configurația
     app.config.from_object(config[config_name])
     
