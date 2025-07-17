@@ -10,7 +10,7 @@ from models.target import Target
 from models.tracking import Tracking
 from models.credential import Credential
 from utils.database import db
-from utils.validators import validate_campaign_name, validate_csv_format, ValidationError
+from utils.validators import validate_campaign_name, validate_csv_format, ValidationError, validate_email, validate_phone_number
 from utils.helpers import sanitize_input, log_security_event
 from utils.security import sanitize_input as secure_sanitize_input
 import logging

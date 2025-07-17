@@ -438,7 +438,7 @@ function handleFile(file) {
 }
 
 function parseCSV(csvText, file) {
-    // Simple CSV parser (you might want to use a library like Papa Parse for production)
+    // Match backend CSV validation logic from utils/validators.py
     const lines = csvText.split('\n').filter(line => line.trim());
     
     if (lines.length < 2) {
@@ -446,18 +446,58 @@ function parseCSV(csvText, file) {
         return;
     }
     
-    // Parse headers
-    csvHeaders = lines[0].split(',').map(header => header.trim().replace(/"/g, ''));
+    // Check file size limit (match backend - 5MB)
+    const maxFileSize = 5 * 1024 * 1024;
+    if (file.size > maxFileSize) {
+        showError(`File too large. Maximum size: ${maxFileSize / 1024 / 1024}MB`);
+        return;
+    }
     
-    // Parse data
+    // Check row count limit (match backend - 10000 rows)
+    const maxRows = 10000;
+    if (lines.length - 1 > maxRows) {
+        showError(`CSV has too many rows. Maximum allowed: ${maxRows}`);
+        return;
+    }
+    
+    // Parse headers with proper CSV parsing (handle quoted fields)
+    csvHeaders = parseCSVLine(lines[0]);
+    
+    // Check for required columns
+    const requiredColumns = ['email'];
+    const missingColumns = requiredColumns.filter(col => 
+        !csvHeaders.some(header => header.toLowerCase() === col.toLowerCase())
+    );
+    
+    if (missingColumns.length > 0) {
+        showError(`Missing required columns: ${missingColumns.join(', ')}`);
+        return;
+    }
+    
+    // Parse data with validation
     csvData = [];
+    const errors = [];
+    const expectedCols = csvHeaders.length;
+    
     for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(value => value.trim().replace(/"/g, ''));
+        const values = parseCSVLine(lines[i]);
+        
+        // Check column count consistency (match backend validation)
+        if (values.length !== expectedCols) {
+            errors.push(`Line ${i + 1} has wrong number of columns (expected ${expectedCols}, got ${values.length})`);
+            continue;
+        }
+        
         const row = {};
         csvHeaders.forEach((header, index) => {
             row[header] = values[index] || '';
         });
         csvData.push(row);
+    }
+    
+    if (errors.length > 0) {
+        showError(`CSV format errors:\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? `\n... and ${errors.length - 5} more errors` : ''}`);
+        return;
     }
     
     // Show file info
@@ -468,6 +508,44 @@ function parseCSV(csvText, file) {
     
     // Clear any previous errors
     uploadZone.classList.remove('error');
+}
+
+function parseCSVLine(line) {
+    // Enhanced CSV line parsing to handle quoted fields properly
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    let i = 0;
+    
+    while (i < line.length) {
+        const char = line[i];
+        
+        if (char === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+                // Escaped quote
+                current += '"';
+                i += 2;
+            } else {
+                // Toggle quote state
+                inQuotes = !inQuotes;
+                i++;
+            }
+        } else if (char === ',' && !inQuotes) {
+            // End of field
+            result.push(current.trim());
+            current = '';
+            i++;
+        } else {
+            current += char;
+            i++;
+        }
+    }
+    
+    // Add last field
+    result.push(current.trim());
+    
+    // Remove surrounding quotes from fields
+    return result.map(field => field.replace(/^"(.*)"$/, '$1').trim());
 }
 
 function showFileInfo(file, rowCount, columnCount) {
@@ -654,37 +732,71 @@ function validateAndPreview() {
     csvData.forEach((row, index) => {
         const target = {};
         const rowErrors = [];
+        const rowWarnings = [];
         
         // Map fields
         Object.keys(fieldMappings).forEach(field => {
             const csvColumn = fieldMappings[field];
-            target[field] = row[csvColumn] || '';
+            let value = row[csvColumn] || '';
+            
+            // Apply input sanitization (match backend)
+            if (value) {
+                const originalValue = value;
+                value = sanitizeInput(value);
+                if (value !== originalValue) {
+                    rowWarnings.push(`${field}: Content was sanitized`);
+                }
+            }
+            
+            target[field] = value;
         });
         
-        // Validate email
+        // Validate email (match backend validation)
         if (!target.email) {
             rowErrors.push('Missing email');
-        } else if (!validateEmail(target.email)) {
-            rowErrors.push('Invalid email format');
-        }
-        
-        // Validate phone (if provided)
-        if (target.phone && !validatePhone(target.phone)) {
-            warnings.push(`Row ${index + 1}: Invalid phone format`);
-        }
-        
-        if (rowErrors.length === 0) {
-            validTargets.push({ ...target, rowNumber: index + 1 });
         } else {
-            errors.push(`Row ${index + 1}: ${rowErrors.join(', ')}`);
+            const emailValidation = validateEmail(target.email);
+            if (!emailValidation.valid) {
+                rowErrors.push(`Email: ${emailValidation.error}`);
+            }
+        }
+        
+        // Validate phone if provided (match backend validation)
+        if (target.phone && target.phone.trim()) {
+            const phoneValidation = validatePhone(target.phone.trim());
+            if (!phoneValidation.valid) {
+                rowWarnings.push(`Phone: ${phoneValidation.error}`);
+            }
+        }
+        
+        // Check for empty required fields
+        if (target.email && target.email.length === 0) {
+            rowErrors.push('Email cannot be empty');
+        }
+        
+        // Add row to appropriate category
+        if (rowErrors.length === 0) {
+            validTargets.push({ ...target, rowNumber: index + 1, warnings: rowWarnings });
+        } else {
+            errors.push({
+                rowNumber: index + 1,
+                errors: rowErrors,
+                warnings: rowWarnings,
+                data: target
+            });
+        }
+        
+        // Collect warnings for valid targets too
+        if (rowWarnings.length > 0) {
+            warnings.push(`Row ${index + 1}: ${rowWarnings.join(', ')}`);
         }
     });
     
-    // Show validation summary
+    // Show validation summary with enhanced details
     showValidationSummary(validTargets.length, errors, warnings);
     
-    // Show preview
-    showPreview(validTargets.slice(0, 50)); // Show first 50 rows
+    // Show preview with error details
+    showPreview(validTargets.slice(0, 50), errors.slice(0, 10)); // Show first 50 valid, 10 errors
     
     // Enable/disable import button
     document.getElementById('importBtn').disabled = validTargets.length === 0;
@@ -723,11 +835,20 @@ function showValidationSummary(validCount, errors, warnings) {
     if (errors.length > 0) {
         summaryHTML += `
             <div class="validation-error mt-3">
-                <strong>Errors found:</strong>
-                <ul class="mb-0 mt-2">
-                    ${errors.slice(0, 10).map(error => `<li>${error}</li>`).join('')}
-                    ${errors.length > 10 ? `<li>... and ${errors.length - 10} more errors</li>` : ''}
-                </ul>
+                <strong>Detailed Errors:</strong>
+                <div class="mt-2" style="max-height: 200px; overflow-y: auto;">
+                    ${errors.slice(0, 10).map(error => `
+                        <div class="mb-2 p-2 border rounded bg-light">
+                            <strong>Row ${error.rowNumber}:</strong>
+                            <ul class="mb-0 mt-1">
+                                ${error.errors.map(err => `<li class="text-danger">${err}</li>`).join('')}
+                                ${error.warnings.map(warn => `<li class="text-warning">${warn}</li>`).join('')}
+                            </ul>
+                            <small class="text-muted">Email: ${error.data.email || 'N/A'}</small>
+                        </div>
+                    `).join('')}
+                    ${errors.length > 10 ? `<div class="text-muted"><small>... and ${errors.length - 10} more errors</small></div>` : ''}
+                </div>
             </div>
         `;
     }
@@ -747,12 +868,15 @@ function showValidationSummary(validCount, errors, warnings) {
     document.getElementById('validationSummary').innerHTML = summaryHTML;
 }
 
-function showPreview(targets) {
+function showPreview(targets, errorRows) {
     const tbody = document.querySelector('#previewTable tbody');
     tbody.innerHTML = '';
     
+    // Show valid targets
     targets.forEach(target => {
         const row = document.createElement('tr');
+        const hasWarnings = target.warnings && target.warnings.length > 0;
+        
         row.innerHTML = `
             <td>${target.rowNumber}</td>
             <td>${target.email}</td>
@@ -760,20 +884,123 @@ function showPreview(targets) {
             <td>${target.last_name || '-'}</td>
             <td>${target.company || '-'}</td>
             <td>${target.phone || '-'}</td>
-            <td><span class="badge bg-success">Valid</span></td>
+            <td>
+                <span class="badge ${hasWarnings ? 'bg-warning' : 'bg-success'}">
+                    ${hasWarnings ? 'Valid (Warnings)' : 'Valid'}
+                </span>
+                ${hasWarnings ? `<br><small class="text-muted">${target.warnings.join(', ')}</small>` : ''}
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    // Show error rows
+    errorRows.forEach(errorRow => {
+        const row = document.createElement('tr');
+        row.className = 'table-danger';
+        
+        row.innerHTML = `
+            <td>${errorRow.rowNumber}</td>
+            <td>${errorRow.data.email || '-'}</td>
+            <td>${errorRow.data.first_name || '-'}</td>
+            <td>${errorRow.data.last_name || '-'}</td>
+            <td>${errorRow.data.company || '-'}</td>
+            <td>${errorRow.data.phone || '-'}</td>
+            <td>
+                <span class="badge bg-danger">Error</span>
+                <br><small class="text-danger">${errorRow.errors.join(', ')}</small>
+                ${errorRow.warnings.length > 0 ? `<br><small class="text-warning">${errorRow.warnings.join(', ')}</small>` : ''}
+            </td>
         `;
         tbody.appendChild(row);
     });
 }
 
 function validateEmail(email) {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
+    // Match backend validation logic from utils/validators.py
+    if (!email) {
+        return { valid: false, error: "Email address is required" };
+    }
+    
+    // Strip whitespace
+    email = email.trim();
+    
+    // Backend email pattern: r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    
+    if (!emailPattern.test(email)) {
+        return { valid: false, error: "Invalid email format" };
+    }
+    
+    // Check length limits (match backend)
+    if (email.length > 254) {
+        return { valid: false, error: "Email address too long" };
+    }
+    
+    // Check local part length (before @)
+    const localPart = email.split('@')[0];
+    if (localPart.length > 64) {
+        return { valid: false, error: "Email local part too long" };
+    }
+    
+    // Check for consecutive dots (match backend)
+    if (email.includes('..')) {
+        return { valid: false, error: "Email contains consecutive dots" };
+    }
+    
+    // Check that local part doesn't start or end with dot
+    if (localPart.startsWith('.') || localPart.endsWith('.')) {
+        return { valid: false, error: "Email local part cannot start or end with dot" };
+    }
+    
+    // Check domain part
+    const domainPart = email.split('@')[1];
+    if (domainPart.startsWith('.') || domainPart.endsWith('.')) {
+        return { valid: false, error: "Email domain cannot start or end with dot" };
+    }
+    
+    if (domainPart.includes('..')) {
+        return { valid: false, error: "Email domain contains consecutive dots" };
+    }
+    
+    return { valid: true };
 }
 
 function validatePhone(phone) {
-    const re = /^[+]?[0-9\s\-\(\)\.]{7,20}$/;
-    return re.test(phone);
+    // Match backend validation logic from utils/validators.py
+    if (!phone) {
+        return { valid: false, error: "Phone number is required" };
+    }
+    
+    // Remove spaces and special characters (match backend)
+    const cleanPhone = phone.replace(/[^\d+]/g, '');
+    
+    // International pattern: r'^\+[1-9]\d{1,14}$'
+    const internationalPattern = /^\+[1-9]\d{1,14}$/;
+    
+    // National pattern: r'^0[67]\d{8}$'
+    const nationalPattern = /^0[67]\d{8}$/;
+    
+    if (internationalPattern.test(cleanPhone) || nationalPattern.test(cleanPhone)) {
+        return { valid: true };
+    } else {
+        return { valid: false, error: "Invalid phone number format" };
+    }
+}
+
+function sanitizeInput(text) {
+    // Match backend sanitization logic from utils/helpers.py
+    if (!text) {
+        return "";
+    }
+    
+    // Remove dangerous characters (match backend)
+    text = text.replace(/[<>"']/g, '');
+    
+    // Limit length (match backend)
+    text = text.substring(0, 1000);
+    
+    return text.trim();
 }
 
 function importTargets() {
@@ -809,25 +1036,49 @@ function importTargets() {
     .then(data => {
         modal.hide();
         if (data.success) {
-            // Show success message with statistics
+            // Show detailed success message with statistics
             let message = data.message || 'Targets imported successfully!';
             if (data.stats) {
-                message += `\n\nAdded: ${data.stats.added}`;
+                message += `\n\nResults:`;
+                message += `\n✅ Added: ${data.stats.added}`;
                 if (data.stats.skipped > 0) {
-                    message += `\nSkipped: ${data.stats.skipped}`;
+                    message += `\n⚠️ Skipped: ${data.stats.skipped} (duplicates)`;
                 }
                 if (data.stats.errors > 0) {
-                    message += `\nErrors: ${data.stats.errors}`;
+                    message += `\n❌ Errors: ${data.stats.errors}`;
+                    
+                    // Show detailed error information
+                    if (data.stats.error_details && data.stats.error_details.length > 0) {
+                        message += `\n\nError Details:`;
+                        data.stats.error_details.slice(0, 5).forEach(error => {
+                            message += `\n• ${error}`;
+                        });
+                        if (data.stats.error_details.length > 5) {
+                            message += `\n• ... and ${data.stats.error_details.length - 5} more errors`;
+                        }
+                    }
                 }
             }
-            alert(message);
             
-            // Redirect to targets list
-            window.location.href = "{{ url_for('targets.list_targets') }}";
+            // Show enhanced message with better formatting
+            if (data.stats && data.stats.errors > 0) {
+                // If there were errors, show a detailed modal instead of simple alert
+                showImportResultsModal(data);
+            } else {
+                alert(message);
+                // Redirect to targets list only if no errors
+                window.location.href = "{{ url_for('targets.list_targets') }}";
+            }
         } else {
             let errorMsg = data.error || 'Error importing targets';
             if (data.details) {
                 errorMsg += `\nDetails: ${data.details}`;
+            }
+            if (data.stats && data.stats.error_details) {
+                errorMsg += `\n\nError Details:`;
+                data.stats.error_details.slice(0, 5).forEach(error => {
+                    errorMsg += `\n• ${error}`;
+                });
             }
             alert(errorMsg);
         }
@@ -837,6 +1088,98 @@ function importTargets() {
         console.error('Import error:', error);
         alert('Error importing targets: ' + error.message);
     });
+}
+
+function showImportResultsModal(data) {
+    // Create a detailed results modal
+    const modalHTML = `
+        <div class="modal fade" id="importResultsModal" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-upload me-2"></i>Import Results
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="card border-success text-center">
+                                    <div class="card-body">
+                                        <h4 class="text-success">${data.stats.added}</h4>
+                                        <small>Successfully Added</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card border-warning text-center">
+                                    <div class="card-body">
+                                        <h4 class="text-warning">${data.stats.skipped}</h4>
+                                        <small>Skipped (Duplicates)</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card border-danger text-center">
+                                    <div class="card-body">
+                                        <h4 class="text-danger">${data.stats.errors}</h4>
+                                        <small>Errors</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${data.stats.error_details && data.stats.error_details.length > 0 ? `
+                            <div class="alert alert-danger">
+                                <h6><i class="bi bi-exclamation-triangle me-2"></i>Error Details:</h6>
+                                <div style="max-height: 200px; overflow-y: auto;">
+                                    ${data.stats.error_details.map(error => `
+                                        <div class="mb-1"><small>• ${error}</small></div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>What's next?</strong><br>
+                            ${data.stats.added > 0 ? 
+                                `${data.stats.added} targets were successfully added to the campaign. ` : ''
+                            }
+                            ${data.stats.errors > 0 ? 
+                                'Please fix the errors in your CSV file and try uploading again for the failed rows.' : 
+                                'You can now proceed to manage your targets or start the campaign.'
+                            }
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        ${data.stats.errors > 0 ? `
+                            <button type="button" class="btn btn-secondary" onclick="backToMapping()">
+                                <i class="bi bi-arrow-left me-2"></i>Fix CSV & Try Again
+                            </button>
+                        ` : ''}
+                        <button type="button" class="btn btn-primary" onclick="window.location.href='{{ url_for('targets.list_targets') }}'">
+                            <i class="bi bi-list me-2"></i>View Targets
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('importResultsModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add new modal to DOM
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Show the modal
+    const resultsModal = new bootstrap.Modal(document.getElementById('importResultsModal'));
+    resultsModal.show();
 }
 
 function generateCSVFromMappedData() {
