@@ -334,6 +334,9 @@ def validate_template_variables(content):
             raise ValidationError(f"Template variable contains invalid characters: {{{{{var}}}}}")
     
     return True
+
+
+def apply_security_headers(response):
     """
     Apply security headers to HTTP response
     
