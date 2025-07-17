@@ -131,32 +131,6 @@
                             <label for="campaign_id" class="form-label fw-bold">
                                 Select Campaign <span class="text-danger">*</span>
                             </label>
-                            <!-- DEBUG: campaigns variable = {{ campaigns|length if campaigns else 'NONE' }} -->
-                            {% if selected_campaign %}
-                            <!-- When uploading to a specific campaign, show it as selected and readonly -->
-                            <select class="form-select form-select-lg" id="campaign_id" name="campaign_id" required>
-                                <option value="{{ selected_campaign.id }}" selected>
-                                    {{ selected_campaign.name }} ({{ selected_campaign.type|title }} - {{ selected_campaign.status|title }})
-                                </option>
-                                {% for campaign in campaigns %}
-                                {% if campaign.id != selected_campaign.id %}
-                                <option value="{{ campaign.id }}" 
-                                        data-type="{{ campaign.type }}" 
-                                        data-status="{{ campaign.status }}">
-                                    {{ campaign.name }} ({{ campaign.type|title }} - {{ campaign.status|title }})
-                                </option>
-                                {% endif %}
-                                {% endfor %}
-                            </select>
-                            <div class="form-text">
-                                {% if campaign %}
-                                Uploading targets to campaign: <strong>{{ selected_campaign.name }}</strong>
-                                {% else %}
-                                Select the campaign these targets will be associated with
-                                {% endif %}
-                            </div>
-                            {% else %}
-                            <!-- When no specific campaign is selected, show all campaigns -->
                             <select class="form-select form-select-lg" id="campaign_id" name="campaign_id" required>
                                 <option value="">Choose a campaign...</option>
                                 {% for campaign in campaigns %}
@@ -168,7 +142,6 @@
                                 {% endfor %}
                             </select>
                             <div class="form-text">Select the campaign these targets will be associated with</div>
-                            {% endif %}
                         </div>
 
                         <!-- File Upload Zone -->
