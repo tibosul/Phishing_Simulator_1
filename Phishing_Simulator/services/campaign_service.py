@@ -103,7 +103,7 @@ class CampaignService:
             ValidationError: Dacă campania nu există sau datele nu sunt valide
         """
         try:
-            campaign = Campaign.query.get(campaign_id)
+            campaign = db.session.get(Campaign, campaign_id)
             if not campaign:
                 raise ValidationError(f"Campaign with ID {campaign_id} not found")
             
@@ -171,7 +171,7 @@ class CampaignService:
             ValidationError: Dacă campania nu poate fi ștearsă
         """
         try:
-            campaign = Campaign.query.get(campaign_id)
+            campaign = db.session.get(Campaign, campaign_id)
             if not campaign:
                 raise ValidationError(f"Campaign with ID {campaign_id} not found")
             
@@ -209,7 +209,7 @@ class CampaignService:
             dict: Statistici despre import (added, skipped, errors)
         """
         try:
-            campaign = Campaign.query.get(campaign_id)
+            campaign = db.session.get(Campaign, campaign_id)
             if not campaign:
                 raise ValidationError(f"Campaign with ID {campaign_id} not found")
             
@@ -279,7 +279,7 @@ class CampaignService:
             Target: Ținta creată
         """
         try:
-            campaign = Campaign.query.get(campaign_id)
+            campaign = db.session.get(Campaign, campaign_id)
             if not campaign:
                 raise ValidationError(f"Campaign with ID {campaign_id} not found")
             
@@ -316,7 +316,7 @@ class CampaignService:
             dict: Statistici detaliate
         """
         try:
-            campaign = Campaign.query.get(campaign_id)
+            campaign = db.session.get(Campaign, campaign_id)
             if not campaign:
                 raise ValidationError(f"Campaign with ID {campaign_id} not found")
             
@@ -378,7 +378,7 @@ class CampaignService:
             str: Conținutul CSV
         """
         try:
-            campaign = Campaign.query.get(campaign_id)
+            campaign = db.session.get(Campaign, campaign_id)
             if not campaign:
                 raise ValidationError(f"Campaign with ID {campaign_id} not found")
             

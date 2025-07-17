@@ -43,8 +43,8 @@ class TrackingService:
         """
         try:
             # Verifică validitatea
-            campaign = Campaign.query.get(campaign_id)
-            target = Target.query.get(target_id)
+            campaign = db.session.get(Campaign, campaign_id)
+            target = db.session.get(Target, target_id)
             
             if not campaign or not target:
                 raise ValidationError("Invalid campaign or target ID")
@@ -130,8 +130,8 @@ class TrackingService:
             tuple: (tracking_event, redirect_url)
         """
         try:
-            campaign = Campaign.query.get(campaign_id)
-            target = Target.query.get(target_id)
+            campaign = db.session.get(Campaign, campaign_id)
+            target = db.session.get(Target, target_id)
             
             if not campaign or not target:
                 raise ValidationError("Invalid campaign or target ID")
@@ -523,7 +523,7 @@ class TrackingService:
             dict: Journey complet cu timeline și metrici
         """
         try:
-            target = Target.query.get(target_id)
+            target = db.session.get(Target, target_id)
             if not target:
                 raise ValidationError(f"Target {target_id} not found")
             
