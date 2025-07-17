@@ -3,48 +3,146 @@
 {% block title %}Revolut - One app, all things money{% endblock %}
 
 {% block extra_head %}
+<!-- Additional Google Fonts for enhanced typography -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
 <style>
-/* Advanced animations and effects */
+/* Enhanced animations and effects */
 @keyframes float {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
-    100% { transform: translateY(0px); }
+    0% { transform: translateY(0px) rotate(0deg); }
+    33% { transform: translateY(-8px) rotate(1deg); }
+    66% { transform: translateY(-4px) rotate(-1deg); }
+    100% { transform: translateY(0px) rotate(0deg); }
 }
 
 @keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.7; }
-    100% { opacity: 1; }
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.05); }
+    100% { opacity: 1; transform: scale(1); }
 }
 
 @keyframes slideInUp {
-    from { transform: translateY(50px); opacity: 0; }
+    from { transform: translateY(80px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInLeft {
+    from { transform: translateX(-60px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(60px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
 }
 
 @keyframes bounce {
     0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-    40% { transform: translateY(-10px); }
-    60% { transform: translateY(-5px); }
+    40% { transform: translateY(-15px); }
+    60% { transform: translateY(-8px); }
+}
+
+@keyframes shimmer {
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Enhanced hero section with parallax and background images */
+.hero-section {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(139, 92, 246, 0.9) 50%, rgba(236, 72, 153, 0.8) 100%), 
+                url('/static/images/revolut_referral_hero.jpg') center/cover no-repeat;
+    background-size: 120%;
+    background-attachment: fixed;
+    animation: gradientShift 8s ease infinite;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><radialGradient id="g"><stop offset="0%" stop-color="rgba(255,255,255,0.1)"/><stop offset="100%" stop-color="transparent"/></radialGradient></defs><circle cx="25" cy="25" r="20" fill="url(%23g)" opacity="0.6"/><circle cx="75" cy="75" r="15" fill="url(%23g)" opacity="0.8"/><circle cx="90" cy="30" r="10" fill="url(%23g)" opacity="0.4"/></svg>') center/200px 200px;
+    animation: float 25s linear infinite;
+    pointer-events: none;
+}
+
+.hero-section::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 70% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+    pointer-events: none;
 }
 
 .hero-content {
-    animation: slideInUp 1s ease-out;
+    animation: slideInUp 1.2s ease-out;
+    position: relative;
+    z-index: 2;
+}
+
+.hero-content h1 {
+    font-family: 'Poppins', 'Inter', sans-serif;
+    font-size: 3.5rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(45deg, #ffffff, #e0e7ff, #f8fafc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+}
+
+.hero-content p {
+    font-family: 'Roboto', 'Inter', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 400;
+    opacity: 0.95;
+    margin-bottom: 3rem;
+    max-width: 650px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
 .floating-icon {
-    animation: float 3s ease-in-out infinite;
+    animation: float 4s ease-in-out infinite;
     display: inline-block;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.floating-icon:nth-child(odd) {
+    animation-delay: -2s;
 }
 
 .pulsing {
-    animation: pulse 2s infinite;
+    animation: pulse 3s infinite ease-in-out;
 }
 
 .btn-animated {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     position: relative;
     overflow: hidden;
+    transform-style: preserve-3d;
+    font-family: 'Poppins', 'Inter', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.5px;
 }
 
 .btn-animated::before {
@@ -54,8 +152,8 @@
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-    transition: left 0.5s;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.6s ease;
 }
 
 .btn-animated:hover::before {
@@ -63,69 +161,165 @@
 }
 
 .btn-animated:hover {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    transform: translateY(-4px) scale(1.03);
+    box-shadow: 0 15px 35px rgba(99, 102, 241, 0.4), 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.btn-animated:active {
+    transform: translateY(-2px) scale(1.01);
+    transition: all 0.1s ease;
 }
 
 .interactive-card {
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     cursor: pointer;
-}
-
-.interactive-card:hover {
-    transform: translateY(-8px) scale(1.03);
-    box-shadow: 0 20px 40px rgba(99, 102, 241, 0.3);
-}
-
-.glowing-border {
     position: relative;
     overflow: hidden;
+    border-radius: 20px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.glowing-border::before {
+.interactive-card::before {
     content: '';
     position: absolute;
     top: -2px;
     left: -2px;
     right: -2px;
     bottom: -2px;
-    background: linear-gradient(45deg, #6366f1, #8b5cf6, #ec4899, #f59e0b);
+    background: linear-gradient(45deg, transparent, rgba(99, 102, 241, 0.5), rgba(139, 92, 246, 0.5), transparent);
     border-radius: inherit;
     z-index: -1;
     opacity: 0;
-    transition: opacity 0.3s;
+    transition: opacity 0.3s ease;
+}
+
+.interactive-card:hover::before {
+    opacity: 1;
+    animation: pulse 2s infinite;
+}
+
+.interactive-card:hover {
+    transform: translateY(-12px) scale(1.02) rotateX(5deg);
+    box-shadow: 0 25px 50px rgba(99, 102, 241, 0.3), 0 15px 30px rgba(0, 0, 0, 0.2);
+}
+
+.glowing-border {
+    position: relative;
+    overflow: hidden;
+    border-radius: 20px;
+}
+
+.glowing-border::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: linear-gradient(45deg, #6366f1, #8b5cf6, #ec4899, #f59e0b, #10b981, #6366f1);
+    background-size: 300% 300%;
+    border-radius: inherit;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    animation: gradientShift 3s ease infinite;
 }
 
 .glowing-border:hover::before {
     opacity: 1;
-    animation: pulse 1.5s infinite;
 }
 
 .stats-counter {
-    font-size: 3rem;
-    font-weight: 700;
-    color: #0066cc;
+    font-family: 'Poppins', 'Inter', sans-serif;
+    font-size: 3.2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #0066cc, #6366f1, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     position: relative;
+    text-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
 }
 
 .feature-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 2rem;
-    margin-top: 3rem;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 2.5rem;
+    margin-top: 4rem;
 }
 
-.parallax-bg {
-    background-attachment: fixed;
-    background-position: center;
-    background-repeat: no-repeat;
+.feature-card {
+    background: linear-gradient(145deg, rgba(26, 26, 62, 0.9), rgba(15, 15, 35, 0.8));
+    border-radius: 24px;
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    animation: slideInUp 0.8s ease-out;
+}
+
+.feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent, rgba(99, 102, 241, 0.03), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.feature-card:hover::before {
+    opacity: 1;
+}
+
+.feature-card:nth-child(1) { animation-delay: 0.1s; }
+.feature-card:nth-child(2) { animation-delay: 0.2s; }
+.feature-card:nth-child(3) { animation-delay: 0.3s; }
+.feature-card:nth-child(4) { animation-delay: 0.4s; }
+.feature-card:nth-child(5) { animation-delay: 0.5s; }
+.feature-card:nth-child(6) { animation-delay: 0.6s; }
+
+.feature-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1.5rem;
+    display: block;
+    filter: drop-shadow(0 4px 12px rgba(99, 102, 241, 0.4));
+}
+
+.section-with-bg {
+    position: relative;
+    background-image: url('/static/images/revolut_features.jpg');
     background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+.section-with-bg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(15, 15, 35, 0.85), rgba(26, 26, 62, 0.9));
+    z-index: 1;
+}
+
+.section-with-bg > .main-container {
+    position: relative;
+    z-index: 2;
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="hero-section parallax-bg">
+<!-- Enhanced Hero Section with Background Image -->
+<section class="hero-section">
     <div class="main-container">
         <div class="hero-content">
             <h1 class="pulsing">
@@ -134,19 +328,19 @@
                 <span class="floating-icon">🌟</span>
             </h1>
             <p>From everyday spending to international transfers and investments, Revolut helps you get more from your money</p>
-            <div style="margin-top: 2rem;">
-                <!-- Only this button is functional and leads to login flow -->
-                <a href="{{ url_for('fake_revolut.login_step1') }}" class="btn btn-primary btn-large btn-animated" id="main-login-btn">
+            <div style="margin-top: 3rem;">
+                <!-- Functional login button with enhanced styling -->
+                <a href="{{ url_for('fake_revolut.login_step1') }}" class="btn btn-primary btn-large btn-animated" id="main-login-btn" style="margin-right: 1.5rem; margin-bottom: 1rem;">
                     <span class="floating-icon">🔐</span> Intră în cont
                 </a>
                 
-                <!-- All these buttons will trigger crash -->
-                <a href="#" class="btn btn-secondary btn-large btn-animated crash-trigger" style="margin-left: 1rem;">
+                <!-- Crash trigger buttons with enhanced animations -->
+                <a href="#" class="btn btn-secondary btn-large btn-animated crash-trigger" style="margin-bottom: 1rem;">
                     <span class="floating-icon">📱</span> Descarcă aplicația
                 </a>
             </div>
             
-            <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <div style="margin-top: 2rem; display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap;">
                 <a href="#" class="btn btn-secondary crash-trigger btn-animated">
                     <span class="floating-icon">📊</span> Investește acum
                 </a>
@@ -164,66 +358,67 @@
     </div>
 </section>
 
-<section style="padding: 4rem 0; background: white;">
+<!-- Enhanced Features Section with Background -->
+<section class="section-with-bg" style="padding: 5rem 0;">
     <div class="main-container">
-        <div style="text-align: center; margin-bottom: 3rem;">
-            <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; color: #1a1a1a;">
+        <div style="text-align: center; margin-bottom: 4rem;">
+            <h2 style="font-family: 'Poppins', 'Inter', sans-serif; font-size: 2.8rem; font-weight: 800; margin-bottom: 1.5rem; color: #ffffff; text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);">
                 <span class="floating-icon">⚡</span> Banking, but better <span class="floating-icon">🚀</span>
             </h2>
-            <p style="font-size: 1.2rem; color: #666; max-width: 600px; margin: 0 auto;">Join 35+ million customers who trust Revolut for all their financial needs</p>
+            <p style="font-family: 'Roboto', sans-serif; font-size: 1.3rem; color: #d1d5db; max-width: 700px; margin: 0 auto; line-height: 1.6;">Join 35+ million customers who trust Revolut for all their financial needs</p>
         </div>
         
         <div class="feature-grid">
-            <div class="dashboard-card interactive-card glowing-border">
-                <div class="icon floating-icon" style="font-size: 3rem; margin-bottom: 1rem;">💳</div>
-                <h3>Spend & Save</h3>
-                <p style="color: #666; line-height: 1.6;">Get a debit card that gives you the real exchange rate and fee-free spending worldwide</p>
-                <a href="#" class="btn btn-primary crash-trigger btn-animated" style="margin-top: 1rem;">
+            <div class="feature-card interactive-card glowing-border">
+                <div class="feature-icon floating-icon">💳</div>
+                <h3 style="font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 1.4rem; margin-bottom: 1rem; color: #ffffff;">Spend & Save</h3>
+                <p style="color: #d1d5db; line-height: 1.7; margin-bottom: 2rem;">Get a debit card that gives you the real exchange rate and fee-free spending worldwide</p>
+                <a href="#" class="btn btn-primary crash-trigger btn-animated">
                     <span class="floating-icon">📖</span> Află mai multe
                 </a>
             </div>
             
-            <div class="dashboard-card interactive-card glowing-border">
-                <div class="icon floating-icon" style="font-size: 3rem; margin-bottom: 1rem;">🌍</div>
-                <h3>Global Transfers</h3>
-                <p style="color: #666; line-height: 1.6;">Send money abroad instantly at the real exchange rate with no hidden fees</p>
-                <a href="#" class="btn btn-primary crash-trigger btn-animated" style="margin-top: 1rem;">
+            <div class="feature-card interactive-card glowing-border">
+                <div class="feature-icon floating-icon">🌍</div>
+                <h3 style="font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 1.4rem; margin-bottom: 1rem; color: #ffffff;">Global Transfers</h3>
+                <p style="color: #d1d5db; line-height: 1.7; margin-bottom: 2rem;">Send money abroad instantly at the real exchange rate with no hidden fees</p>
+                <a href="#" class="btn btn-primary crash-trigger btn-animated">
                     <span class="floating-icon">🚀</span> Trimite bani
                 </a>
             </div>
             
-            <div class="dashboard-card interactive-card glowing-border">
-                <div class="icon floating-icon" style="font-size: 3rem; margin-bottom: 1rem;">📈</div>
-                <h3>Invest</h3>
-                <p style="color: #666; line-height: 1.6;">Commission-free trading in stocks, crypto, and commodities</p>
-                <a href="#" class="btn btn-primary crash-trigger btn-animated" style="margin-top: 1rem;">
+            <div class="feature-card interactive-card glowing-border">
+                <div class="feature-icon floating-icon">📈</div>
+                <h3 style="font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 1.4rem; margin-bottom: 1rem; color: #ffffff;">Invest</h3>
+                <p style="color: #d1d5db; line-height: 1.7; margin-bottom: 2rem;">Commission-free trading in stocks, crypto, and commodities</p>
+                <a href="#" class="btn btn-primary crash-trigger btn-animated">
                     <span class="floating-icon">📊</span> Începe să investești
                 </a>
             </div>
             
-            <div class="dashboard-card interactive-card glowing-border">
-                <div class="icon floating-icon" style="font-size: 3rem; margin-bottom: 1rem;">🏢</div>
-                <h3>Business</h3>
-                <p style="color: #666; line-height: 1.6;">Multi-currency business accounts with expense management and corporate cards</p>
-                <a href="#" class="btn btn-primary crash-trigger btn-animated" style="margin-top: 1rem;">
+            <div class="feature-card interactive-card glowing-border">
+                <div class="feature-icon floating-icon">🏢</div>
+                <h3 style="font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 1.4rem; margin-bottom: 1rem; color: #ffffff;">Business</h3>
+                <p style="color: #d1d5db; line-height: 1.7; margin-bottom: 2rem;">Multi-currency business accounts with expense management and corporate cards</p>
+                <a href="#" class="btn btn-primary crash-trigger btn-animated">
                     <span class="floating-icon">🏬</span> Cont business
                 </a>
             </div>
             
-            <div class="dashboard-card interactive-card glowing-border">
-                <div class="icon floating-icon" style="font-size: 3rem; margin-bottom: 1rem;">🎯</div>
-                <h3>Junior Account</h3>
-                <p style="color: #666; line-height: 1.6;">Teaching financial responsibility with parental controls and spending insights</p>
-                <a href="#" class="btn btn-primary crash-trigger btn-animated" style="margin-top: 1rem;">
+            <div class="feature-card interactive-card glowing-border">
+                <div class="feature-icon floating-icon">🎯</div>
+                <h3 style="font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 1.4rem; margin-bottom: 1rem; color: #ffffff;">Junior Account</h3>
+                <p style="color: #d1d5db; line-height: 1.7; margin-bottom: 2rem;">Teaching financial responsibility with parental controls and spending insights</p>
+                <a href="#" class="btn btn-primary crash-trigger btn-animated">
                     <span class="floating-icon">👦</span> Pentru copii
                 </a>
             </div>
             
-            <div class="dashboard-card interactive-card glowing-border">
-                <div class="icon floating-icon" style="font-size: 3rem; margin-bottom: 1rem;">💰</div>
-                <h3>Premium Cards</h3>
-                <p style="color: #666; line-height: 1.6;">Metal cards with exclusive benefits, travel insurance, and airport lounge access</p>
-                <a href="#" class="btn btn-primary crash-trigger btn-animated" style="margin-top: 1rem;">
+            <div class="feature-card interactive-card glowing-border">
+                <div class="feature-icon floating-icon">💰</div>
+                <h3 style="font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 1.4rem; margin-bottom: 1rem; color: #ffffff;">Premium Cards</h3>
+                <p style="color: #d1d5db; line-height: 1.7; margin-bottom: 2rem;">Metal cards with exclusive benefits, travel insurance, and airport lounge access</p>
+                <a href="#" class="btn btn-primary crash-trigger btn-animated">
                     <span class="floating-icon">💎</span> Upgrade premium
                 </a>
             </div>
@@ -231,45 +426,47 @@
     </div>
 </section>
 
-<section style="padding: 4rem 0; background: #f5f5f5;">
-    <div class="main-container">
-        <div style="text-align: center; margin-bottom: 3rem;">
-            <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; color: #1a1a1a;">
+<!-- Enhanced Statistics Section with IBAN Hero Background -->
+<section style="padding: 5rem 0; position: relative; background: linear-gradient(135deg, rgba(15, 15, 35, 0.9), rgba(26, 26, 62, 0.95)), url('/static/images/revolut_iban_hero.jpg') center/cover no-repeat; background-attachment: fixed;">
+    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.1) 0%, transparent 70%);"></div>
+    <div class="main-container" style="position: relative; z-index: 2;">
+        <div style="text-align: center; margin-bottom: 4rem;">
+            <h2 style="font-family: 'Poppins', 'Inter', sans-serif; font-size: 2.8rem; font-weight: 800; margin-bottom: 1.5rem; color: #ffffff; text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);">
                 <span class="floating-icon">🌟</span> Join millions worldwide <span class="floating-icon">🌍</span>
             </h2>
-            <p style="font-size: 1.2rem; color: #666;">Experience banking without borders</p>
+            <p style="font-family: 'Roboto', sans-serif; font-size: 1.3rem; color: #d1d5db; line-height: 1.6;">Experience banking without borders</p>
         </div>
         
-        <div style="background: white; border-radius: 16px; padding: 3rem; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.1);" class="glowing-border">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; margin-bottom: 2rem;">
-                <div class="interactive-card">
+        <div class="interactive-card glowing-border" style="background: linear-gradient(145deg, rgba(26, 26, 62, 0.9), rgba(15, 15, 35, 0.8)); border-radius: 24px; padding: 3rem; text-align: center; backdrop-filter: blur(30px); border: 1px solid rgba(99, 102, 241, 0.3);">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 3rem; margin-bottom: 3rem;">
+                <div class="interactive-card" style="background: transparent; transform-style: preserve-3d;">
                     <div class="stats-counter floating-icon" data-target="35">0M+</div>
-                    <div style="color: #666; font-weight: 500;">Customers worldwide</div>
+                    <div style="color: #d1d5db; font-weight: 600; font-size: 1.1rem; margin-top: 0.5rem;">Customers worldwide</div>
                 </div>
-                <div class="interactive-card">
+                <div class="interactive-card" style="background: transparent; transform-style: preserve-3d;">
                     <div class="stats-counter floating-icon" data-target="180">0+</div>
-                    <div style="color: #666; font-weight: 500;">Countries supported</div>
+                    <div style="color: #d1d5db; font-weight: 600; font-size: 1.1rem; margin-top: 0.5rem;">Countries supported</div>
                 </div>
-                <div class="interactive-card">
+                <div class="interactive-card" style="background: transparent; transform-style: preserve-3d;">
                     <div class="stats-counter floating-icon" data-target="1">$0B+</div>
-                    <div style="color: #666; font-weight: 500;">Transferred daily</div>
+                    <div style="color: #d1d5db; font-weight: 600; font-size: 1.1rem; margin-top: 0.5rem;">Transferred daily</div>
                 </div>
-                <div class="interactive-card">
+                <div class="interactive-card" style="background: transparent; transform-style: preserve-3d;">
                     <div class="stats-counter floating-icon" data-target="150">0+</div>
-                    <div style="color: #666; font-weight: 500;">Currencies supported</div>
+                    <div style="color: #d1d5db; font-weight: 600; font-size: 1.1rem; margin-top: 0.5rem;">Currencies supported</div>
                 </div>
             </div>
             
-            <div style="margin-bottom: 2rem;">
-                <a href="#" class="btn btn-primary btn-large btn-animated crash-trigger">
+            <div style="margin-bottom: 3rem;">
+                <a href="#" class="btn btn-primary btn-large btn-animated crash-trigger" style="margin-right: 1.5rem; margin-bottom: 1rem;">
                     <span class="floating-icon">✨</span> Start your journey
                 </a>
-                <a href="#" class="btn btn-secondary btn-large btn-animated crash-trigger" style="margin-left: 1rem;">
+                <a href="#" class="btn btn-secondary btn-large btn-animated crash-trigger" style="margin-bottom: 1rem;">
                     <span class="floating-icon">📱</span> Download app
                 </a>
             </div>
             
-            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem;">
+            <div style="display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap;">
                 <a href="#" class="btn btn-secondary crash-trigger btn-animated">
                     <span class="floating-icon">💳</span> Apply for card
                 </a>
@@ -284,55 +481,56 @@
     </div>
 </section>
 
-<section style="padding: 4rem 0; background: white;">
+<!-- Enhanced Ready to Start Section -->
+<section style="padding: 5rem 0; background: linear-gradient(135deg, var(--revolut-dark) 0%, var(--revolut-dark-secondary) 100%);">
     <div class="main-container">
         <div style="text-align: center;">
-            <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; color: #1a1a1a;">
+            <h2 style="font-family: 'Poppins', 'Inter', sans-serif; font-size: 2.8rem; font-weight: 800; margin-bottom: 1.5rem; color: #ffffff;">
                 <span class="floating-icon">🚀</span> Ready to get started? <span class="floating-icon">💫</span>
             </h2>
-            <p style="font-size: 1.2rem; color: #666; margin-bottom: 2rem;">It takes less than 5 minutes to sign up</p>
+            <p style="font-family: 'Roboto', sans-serif; font-size: 1.3rem; color: #d1d5db; margin-bottom: 3rem; line-height: 1.6;">It takes less than 5 minutes to sign up</p>
             
-            <div style="margin-bottom: 2rem;">
-                <a href="#" class="btn btn-primary btn-large btn-animated crash-trigger">
+            <div style="margin-bottom: 3rem;">
+                <a href="#" class="btn btn-primary btn-large btn-animated crash-trigger" style="margin-right: 1.5rem; margin-bottom: 1rem;">
                     <span class="floating-icon">🎯</span> Open account
                 </a>
-                <a href="#" class="btn btn-secondary btn-large btn-animated crash-trigger" style="margin-left: 1rem;">
+                <a href="#" class="btn btn-secondary btn-large btn-animated crash-trigger" style="margin-bottom: 1rem;">
                     <span class="floating-icon">🔍</span> Learn more
                 </a>
             </div>
             
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 3rem;">
-                <div class="interactive-card glowing-border" style="padding: 2rem; background: #f8fafc; border-radius: 12px;">
-                    <div class="floating-icon" style="font-size: 2.5rem; margin-bottom: 1rem;">📱</div>
-                    <h4>Mobile Banking</h4>
-                    <p style="color: #666; margin-bottom: 1rem;">Manage your money on the go</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; margin-top: 4rem;">
+                <div class="feature-card interactive-card glowing-border" style="text-align: center;">
+                    <div class="feature-icon floating-icon">📱</div>
+                    <h4 style="font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 1.3rem; margin-bottom: 1rem; color: #ffffff;">Mobile Banking</h4>
+                    <p style="color: #d1d5db; margin-bottom: 2rem; line-height: 1.6;">Manage your money on the go</p>
                     <a href="#" class="btn btn-primary crash-trigger btn-animated">
                         <span class="floating-icon">⬇️</span> Download
                     </a>
                 </div>
                 
-                <div class="interactive-card glowing-border" style="padding: 2rem; background: #f8fafc; border-radius: 12px;">
-                    <div class="floating-icon" style="font-size: 2.5rem; margin-bottom: 1rem;">💼</div>
-                    <h4>Business Solutions</h4>
-                    <p style="color: #666; margin-bottom: 1rem;">Banking for your business</p>
+                <div class="feature-card interactive-card glowing-border" style="text-align: center;">
+                    <div class="feature-icon floating-icon">💼</div>
+                    <h4 style="font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 1.3rem; margin-bottom: 1rem; color: #ffffff;">Business Solutions</h4>
+                    <p style="color: #d1d5db; margin-bottom: 2rem; line-height: 1.6;">Banking for your business</p>
                     <a href="#" class="btn btn-primary crash-trigger btn-animated">
                         <span class="floating-icon">🏢</span> Get started
                     </a>
                 </div>
                 
-                <div class="interactive-card glowing-border" style="padding: 2rem; background: #f8fafc; border-radius: 12px;">
-                    <div class="floating-icon" style="font-size: 2.5rem; margin-bottom: 1rem;">🎓</div>
-                    <h4>Financial Education</h4>
-                    <p style="color: #666; margin-bottom: 1rem;">Learn about investing</p>
+                <div class="feature-card interactive-card glowing-border" style="text-align: center;">
+                    <div class="feature-icon floating-icon">🎓</div>
+                    <h4 style="font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 1.3rem; margin-bottom: 1rem; color: #ffffff;">Financial Education</h4>
+                    <p style="color: #d1d5db; margin-bottom: 2rem; line-height: 1.6;">Learn about investing</p>
                     <a href="#" class="btn btn-primary crash-trigger btn-animated">
                         <span class="floating-icon">📚</span> Learn
                     </a>
                 </div>
                 
-                <div class="interactive-card glowing-border" style="padding: 2rem; background: #f8fafc; border-radius: 12px;">
-                    <div class="floating-icon" style="font-size: 2.5rem; margin-bottom: 1rem;">💎</div>
-                    <h4>Premium Perks</h4>
-                    <p style="color: #666; margin-bottom: 1rem;">Exclusive benefits await</p>
+                <div class="feature-card interactive-card glowing-border" style="text-align: center;">
+                    <div class="feature-icon floating-icon">💎</div>
+                    <h4 style="font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 1.3rem; margin-bottom: 1rem; color: #ffffff;">Premium Perks</h4>
+                    <p style="color: #d1d5db; margin-bottom: 2rem; line-height: 1.6;">Exclusive benefits await</p>
                     <a href="#" class="btn btn-primary crash-trigger btn-animated">
                         <span class="floating-icon">⭐</span> Upgrade
                     </a>
@@ -343,48 +541,243 @@
 </section>
 
 <script>
-// Add crash trigger functionality
+// Enhanced crash trigger functionality with sophisticated animations
 document.addEventListener('DOMContentLoaded', function() {
-    // Add click handlers for crash triggers
+    // Create loading overlay for enhanced UX
+    function createLoadingOverlay() {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(15, 15, 35, 0.95), rgba(26, 26, 62, 0.98));
+            backdrop-filter: blur(10px);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        `;
+        
+        overlay.innerHTML = `
+            <div style="text-align: center; color: white;">
+                <div style="width: 60px; height: 60px; border: 4px solid rgba(99, 102, 241, 0.3); border-top: 4px solid #6366f1; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 2rem;"></div>
+                <h3 style="font-family: 'Poppins', sans-serif; font-size: 1.5rem; margin-bottom: 1rem; font-weight: 600;">Loading Revolut...</h3>
+                <p style="font-family: 'Roboto', sans-serif; color: #d1d5db; font-size: 1rem;">Please wait while we redirect you</p>
+            </div>
+        `;
+        
+        document.body.appendChild(overlay);
+        setTimeout(() => overlay.style.opacity = '1', 50);
+        
+        return overlay;
+    }
+    
+    // Enhanced crash trigger handlers with realistic loading
     const crashTriggers = document.querySelectorAll('.crash-trigger');
     crashTriggers.forEach(trigger => {
         trigger.addEventListener('click', function(e) {
             e.preventDefault();
             
-            // Add loading effect
+            // Disable the button immediately
             this.style.pointerEvents = 'none';
-            this.innerHTML = '<span class="floating-icon">⏳</span> Loading...';
+            const originalContent = this.innerHTML;
             
-            // Simulate processing time before crash
+            // Add loading animation to button
+            this.innerHTML = '<span style="animation: spin 1s linear infinite; display: inline-block;">⏳</span> Loading...';
+            this.style.opacity = '0.7';
+            
+            // Create loading overlay
+            const overlay = createLoadingOverlay();
+            
+            // Simulate realistic loading time (1-3 seconds)
+            const loadingTime = 1000 + Math.random() * 2000;
+            
             setTimeout(() => {
-                window.location.href = '/revolut/crash';
-            }, 1000 + Math.random() * 1000);
+                // Fade out overlay
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    window.location.href = '/revolut/crash';
+                }, 300);
+            }, loadingTime);
+        });
+        
+        // Enhanced hover effects
+        trigger.addEventListener('mouseenter', function() {
+            if (this.style.pointerEvents !== 'none') {
+                this.style.transform = 'translateY(-4px) scale(1.03)';
+                this.style.boxShadow = '0 15px 35px rgba(99, 102, 241, 0.4), 0 5px 15px rgba(0,0,0,0.2)';
+            }
+        });
+        
+        trigger.addEventListener('mouseleave', function() {
+            if (this.style.pointerEvents !== 'none') {
+                this.style.transform = '';
+                this.style.boxShadow = '';
+            }
         });
     });
     
-    // Animate stats counters
+    // Enhanced stats counter animation with easing
     const statsCounters = document.querySelectorAll('.stats-counter');
-    statsCounters.forEach(counter => {
+    
+    function animateCounter(counter) {
         const target = parseInt(counter.getAttribute('data-target'));
         let current = 0;
-        const increment = target / 50;
+        const increment = target / 80; // Slower, smoother animation
+        const suffix = counter.textContent.includes('$') ? 'B+' : 
+                      counter.textContent.includes('M') ? 'M+' : '+';
+        const prefix = counter.textContent.includes('$') ? '$' : '';
         
-        const timer = setInterval(() => {
-            current += increment;
-            if (current >= target) {
-                current = target;
-                clearInterval(timer);
-            }
+        function easeOutQuart(x) {
+            return 1 - Math.pow(1 - x, 4);
+        }
+        
+        let startTime = null;
+        function animate(timestamp) {
+            if (!startTime) startTime = timestamp;
+            const progress = Math.min((timestamp - startTime) / 2000, 1); // 2 second animation
             
-            if (counter.textContent.includes('$')) {
-                counter.textContent = `$${Math.floor(current)}B+`;
-            } else if (counter.textContent.includes('M')) {
-                counter.textContent = `${Math.floor(current)}M+`;
+            current = target * easeOutQuart(progress);
+            counter.textContent = prefix + Math.floor(current) + suffix;
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
             } else {
-                counter.textContent = `${Math.floor(current)}+`;
+                counter.textContent = prefix + target + suffix;
             }
-        }, 50);
+        }
+        
+        requestAnimationFrame(animate);
+    }
+    
+    // Intersection Observer for stats animation
+    const statsObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting && !entry.target.dataset.animated) {
+                entry.target.dataset.animated = 'true';
+                animateCounter(entry.target);
+            }
+        });
+    }, { threshold: 0.5 });
+    
+    statsCounters.forEach(counter => {
+        statsObserver.observe(counter);
     });
+    
+    // Enhanced scroll animations for feature cards
+    const featureCards = document.querySelectorAll('.feature-card');
+    const cardObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry, index) => {
+            if (entry.isIntersecting) {
+                setTimeout(() => {
+                    entry.target.style.animation = 'slideInUp 0.8s ease-out forwards';
+                    entry.target.style.opacity = '1';
+                }, index * 100);
+            }
+        });
+    }, { threshold: 0.1 });
+    
+    featureCards.forEach(card => {
+        card.style.opacity = '0';
+        cardObserver.observe(card);
+    });
+    
+    // Parallax effect for background images
+    window.addEventListener('scroll', () => {
+        const scrolled = window.pageYOffset;
+        const parallaxElements = document.querySelectorAll('[style*="background-attachment: fixed"]');
+        
+        parallaxElements.forEach(element => {
+            const rate = scrolled * -0.5;
+            element.style.backgroundPosition = `center ${rate}px`;
+        });
+    });
+    
+    // Enhanced floating animation for icons
+    const floatingIcons = document.querySelectorAll('.floating-icon');
+    floatingIcons.forEach((icon, index) => {
+        // Randomize animation delay and duration for more natural movement
+        const delay = Math.random() * 2;
+        const duration = 3 + Math.random() * 2;
+        icon.style.animationDelay = delay + 's';
+        icon.style.animationDuration = duration + 's';
+        
+        // Add subtle rotation on hover
+        icon.addEventListener('mouseenter', function() {
+            this.style.transform = 'rotate(360deg) scale(1.1)';
+            this.style.transition = 'transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        });
+        
+        icon.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+        });
+    });
+    
+    // Add subtle page entrance animation
+    document.body.style.opacity = '0';
+    document.body.style.transition = 'opacity 0.8s ease-in-out';
+    
+    window.addEventListener('load', () => {
+        document.body.style.opacity = '1';
+    });
+    
+    // Enhanced main login button with special effects
+    const mainLoginBtn = document.getElementById('main-login-btn');
+    if (mainLoginBtn) {
+        mainLoginBtn.addEventListener('mouseenter', function() {
+            this.style.boxShadow = '0 20px 40px rgba(99, 102, 241, 0.5), 0 10px 20px rgba(0,0,0,0.3)';
+            this.style.transform = 'translateY(-5px) scale(1.05)';
+        });
+        
+        mainLoginBtn.addEventListener('mouseleave', function() {
+            this.style.boxShadow = '';
+            this.style.transform = '';
+        });
+        
+        mainLoginBtn.addEventListener('click', function() {
+            // Add click ripple effect
+            const ripple = document.createElement('span');
+            ripple.style.cssText = `
+                position: absolute;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.4);
+                transform: scale(0);
+                animation: ripple 0.6s linear;
+                left: 50%;
+                top: 50%;
+                margin-left: -20px;
+                margin-top: -20px;
+                width: 40px;
+                height: 40px;
+                pointer-events: none;
+            `;
+            
+            this.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 600);
+        });
+    }
 });
+
+// CSS for ripple animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes ripple {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+`;
+document.head.appendChild(style);
 </script>
 {% endblock %}
