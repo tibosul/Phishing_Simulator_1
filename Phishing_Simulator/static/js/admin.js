@@ -5,11 +5,12 @@
 
 class AdminInterface {
     constructor() {
-        this.apiBase = '/admin/api';  // FIXED: Changed from '/admin' to '/admin/api'
+        this.apiBase = '/admin';  // FIXED: Align with Flask blueprint structure
         this.realTimeEnabled = false;
         this.realTimeInterval = null;
         this.charts = {};
         this.lastUpdate = null;
+        this.debounceTimers = new Map();  // For debouncing operations
     }
 
     /**
@@ -36,6 +37,16 @@ class AdminInterface {
             }
         });
 
+        // Close mobile sidebar when clicking on nav links
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.sidebar .nav-link') && window.innerWidth < 992) {
+                // Add small delay to allow navigation to complete
+                setTimeout(() => {
+                    AdminInterface.closeMobileSidebar();
+                }, 100);
+            }
+        });
+
         // Real-time panel toggle
         window.toggleRealTimePanel = () => this.toggleRealTimePanel();
 
@@ -52,6 +63,19 @@ class AdminInterface {
 
         // Auto-refresh elements
         this.setupAutoRefresh();
+        
+        // Escape key handling
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                // Close mobile sidebar
+                AdminInterface.closeMobileSidebar();
+                // Close real-time panel
+                const realtimePanel = document.getElementById('realtime-panel');
+                if (realtimePanel && realtimePanel.classList.contains('open')) {
+                    this.toggleRealTimePanel();
+                }
+            }
+        });
     }
 
     /**
@@ -59,11 +83,15 @@ class AdminInterface {
      */
     async loadQuickStats() {
         try {
-            // FIXED: Updated endpoint path
-            const response = await fetch(`${this.apiBase}/stats`);
+            // FIXED: Use correct API endpoint structure
+            const response = await fetch(`${this.apiBase}/api/stats`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             const data = await response.json();
 
             if (data.error) {
+                console.error('Stats API error:', data.error);
                 document.getElementById('quick-stats').textContent = 'Error loading stats';
                 return;
             }
@@ -88,6 +116,7 @@ class AdminInterface {
             if (quickStatsElement) {
                 quickStatsElement.textContent = 'Stats unavailable';
             }
+            // Don't show toast for stats errors as they happen in background
         }
     }
 
@@ -112,8 +141,11 @@ class AdminInterface {
      */
     async initNotifications() {
         try {
-            // FIXED: Updated endpoint path
-            const response = await fetch(`${this.apiBase}/realtime`);
+            // FIXED: Use correct API endpoint structure
+            const response = await fetch(`${this.apiBase}/api/realtime`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             const data = await response.json();
 
             if (data.events && data.events.length > 0) {
@@ -121,6 +153,7 @@ class AdminInterface {
             }
         } catch (error) {
             console.error('Error loading notifications:', error);
+            // Silently fail for notifications as they're not critical
         }
     }
 
@@ -170,15 +203,23 @@ class AdminInterface {
     }
 
     /**
-     * Setup real-time updates
+     * Setup real-time updates with optimized frequency
      */
     setupRealTime() {
+        // FIXED: Reduced frequency from 30s to 60s for better performance
         this.realTimeInterval = setInterval(() => {
             if (this.realTimeEnabled) {
                 this.updateRealTimePanel();
             }
-            this.loadQuickStats(); // Refresh stats every 30 seconds
-        }, 30000);
+            this.loadQuickStats(); // Refresh stats every 60 seconds
+        }, 60000);
+        
+        // Cleanup interval on page unload
+        window.addEventListener('beforeunload', () => {
+            if (this.realTimeInterval) {
+                clearInterval(this.realTimeInterval);
+            }
+        });
     }
 
     /**
@@ -208,8 +249,11 @@ class AdminInterface {
         if (!content) return;
 
         try {
-            // FIXED: Updated endpoint path
-            const response = await fetch(`${this.apiBase}/realtime`);
+            // FIXED: Use correct API endpoint structure
+            const response = await fetch(`${this.apiBase}/api/realtime`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             const data = await response.json();
 
             if (data.events && data.events.length > 0) {
@@ -241,24 +285,56 @@ class AdminInterface {
     }
 
     /**
-     * Toggle sidebar for mobile
+     * Toggle sidebar for mobile with backdrop
      */
     toggleSidebar() {
         const sidebar = document.getElementById('sidebar-nav');
+        const backdrop = document.getElementById('sidebar-backdrop');
+        
         if (sidebar) {
-            sidebar.classList.toggle('show');
+            const isOpen = sidebar.classList.contains('show');
+            
+            if (isOpen) {
+                sidebar.classList.remove('show');
+                if (backdrop) {
+                    backdrop.classList.remove('show');
+                }
+            } else {
+                sidebar.classList.add('show');
+                if (backdrop) {
+                    backdrop.classList.add('show');
+                }
+            }
+        }
+    }
+    
+    /**
+     * Close mobile sidebar (static method for onclick)
+     */
+    static closeMobileSidebar() {
+        const sidebar = document.getElementById('sidebar-nav');
+        const backdrop = document.getElementById('sidebar-backdrop');
+        
+        if (sidebar) {
+            sidebar.classList.remove('show');
+        }
+        if (backdrop) {
+            backdrop.classList.remove('show');
         }
     }
 
     /**
-     * Export data functionality
+     * Export data functionality with improved error handling
      */
     async exportData() {
         this.showLoading();
 
         try {
-            // FIXED: Updated endpoint path
-            const response = await fetch(`${this.apiBase}/export`);
+            // FIXED: Use correct API endpoint structure
+            const response = await fetch(`${this.apiBase}/api/export`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             const data = await response.json();
 
             if (data.error) {
@@ -280,16 +356,23 @@ class AdminInterface {
             this.showToast('Data exported successfully!', 'success');
         } catch (error) {
             console.error('Export error:', error);
-            this.showToast('Export failed', 'error');
+            this.showToast('Export failed: ' + error.message, 'error');
         } finally {
             this.hideLoading();
         }
     }
 
     /**
-     * Submit AJAX forms
+     * Submit AJAX forms with improved error handling and validation
      */
     async submitAjaxForm(form) {
+        // Validate form before submission
+        const validationErrors = this.validateForm(form);
+        if (validationErrors.length > 0) {
+            this.showToast('Please fix the following errors:<br>' + validationErrors.join('<br>'), 'error');
+            return;
+        }
+        
         const formData = new FormData(form);
         const method = form.method || 'POST';
         const url = form.action;
@@ -299,8 +382,15 @@ class AdminInterface {
         try {
             const response = await fetch(url, {
                 method: method,
-                body: formData
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
 
             const data = await response.json();
 
@@ -319,7 +409,7 @@ class AdminInterface {
             }
         } catch (error) {
             console.error('Form submission error:', error);
-            this.showToast('Network error occurred', 'error');
+            this.showToast('Network error: ' + error.message, 'error');
         } finally {
             this.hideLoading();
         }
@@ -330,8 +420,15 @@ class AdminInterface {
      */
     async checkSystemHealth() {
         try {
-            // FIXED: Updated endpoint path - health check is directly under /admin/
-            const response = await fetch('/admin/health');
+            // FIXED: Health check endpoint is correct as is
+            const response = await fetch('/admin/health', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             const data = await response.json();
 
             const healthStatus = document.getElementById('health-status');
@@ -339,9 +436,11 @@ class AdminInterface {
                 if (data.status === 'healthy') {
                     healthStatus.className = 'badge bg-success ms-auto';
                     healthStatus.textContent = '●';
+                    healthStatus.title = 'System healthy';
                 } else {
                     healthStatus.className = 'badge bg-danger ms-auto';
                     healthStatus.textContent = '●';
+                    healthStatus.title = 'System unhealthy';
                 }
             }
         } catch (error) {
@@ -350,24 +449,32 @@ class AdminInterface {
             if (healthStatus) {
                 healthStatus.className = 'badge bg-warning ms-auto';
                 healthStatus.textContent = '●';
+                healthStatus.title = 'Health check failed';
             }
         }
     }
 
     /**
-     * Setup auto-refresh for elements
+     * Setup auto-refresh for elements with cleanup
      */
     setupAutoRefresh() {
         const autoRefreshElements = document.querySelectorAll('[data-auto-refresh]');
 
         autoRefreshElements.forEach(element => {
-            const interval = parseInt(element.dataset.autoRefresh) || 30000;
+            const interval = parseInt(element.dataset.autoRefresh) || 60000; // Default 60s
             const url = element.dataset.refreshUrl;
 
             if (url) {
-                setInterval(async () => {
+                const intervalId = setInterval(async () => {
                     try {
-                        const response = await fetch(url);
+                        const response = await fetch(url, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
                         const data = await response.json();
 
                         if (element.dataset.refreshType === 'text') {
@@ -376,10 +483,22 @@ class AdminInterface {
                             element.innerHTML = data.html || data;
                         }
                     } catch (error) {
-                        console.error('Auto-refresh error:', error);
+                        console.error('Auto-refresh error for element:', element, error);
                     }
                 }, interval);
+                
+                // Store interval ID for cleanup
+                element.dataset.intervalId = intervalId;
             }
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            autoRefreshElements.forEach(element => {
+                if (element.dataset.intervalId) {
+                    clearInterval(parseInt(element.dataset.intervalId));
+                }
+            });
         });
     }
 
@@ -432,6 +551,7 @@ class AdminInterface {
         const overlay = document.getElementById('loading-overlay');
         if (overlay) {
             overlay.classList.add('show');
+            overlay.style.display = 'flex'; // Ensure it's visible
         }
     }
 
@@ -439,6 +559,12 @@ class AdminInterface {
         const overlay = document.getElementById('loading-overlay');
         if (overlay) {
             overlay.classList.remove('show');
+            // Use timeout to allow CSS transition to complete
+            setTimeout(() => {
+                if (!overlay.classList.contains('show')) {
+                    overlay.style.display = 'none';
+                }
+            }, 300);
         }
     }
 
@@ -454,15 +580,16 @@ class AdminInterface {
         }
 
         // Create toast element
-        const toastId = 'toast-' + Date.now();
+        const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
         const bgClass = type === 'success' ? 'bg-success' : type === 'error' ? 'bg-danger' : 'bg-info';
+        const iconClass = type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle';
 
         const toastHtml = `
-            <div class="toast ${bgClass} text-white" id="${toastId}" role="alert">
+            <div class="toast ${bgClass} text-white" id="${toastId}" role="alert" aria-live="assertive" aria-atomic="true">
                 <div class="toast-header ${bgClass} text-white border-0">
-                    <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                    <i class="bi bi-${iconClass} me-2"></i>
                     <strong class="me-auto">Notification</strong>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>
                 <div class="toast-body">
                     ${message}
@@ -474,22 +601,52 @@ class AdminInterface {
 
         // Initialize and show toast
         const toastElement = document.getElementById(toastId);
-        const toast = new bootstrap.Toast(toastElement, { autohide: true, delay: 5000 });
-        toast.show();
+        if (toastElement && window.bootstrap) {
+            const toast = new bootstrap.Toast(toastElement, { 
+                autohide: true, 
+                delay: type === 'error' ? 8000 : 5000 // Error messages stay longer
+            });
+            toast.show();
 
-        // Remove from DOM after hide
-        toastElement.addEventListener('hidden.bs.toast', () => {
-            toastElement.remove();
-        });
+            // Remove from DOM after hide
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+        }
     }
 
-    refreshPageData() {
-        // Refresh page-specific data without full reload
-        if (typeof window.refreshData === 'function') {
-            window.refreshData();
-        } else {
-            this.loadQuickStats();
-        }
+    /**
+     * Input validation helpers
+     */
+    validateEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+    
+    validateRequired(value) {
+        return value && value.trim().length > 0;
+    }
+    
+    validateForm(form) {
+        const errors = [];
+        const requiredFields = form.querySelectorAll('[required]');
+        
+        requiredFields.forEach(field => {
+            if (!this.validateRequired(field.value)) {
+                errors.push(`${field.name || field.id || 'Field'} is required`);
+                field.classList.add('is-invalid');
+            } else {
+                field.classList.remove('is-invalid');
+            }
+            
+            // Email validation
+            if (field.type === 'email' && field.value && !this.validateEmail(field.value)) {
+                errors.push(`${field.name || field.id || 'Email field'} must be a valid email`);
+                field.classList.add('is-invalid');
+            }
+        });
+        
+        return errors;
     }
 
     /**
@@ -590,6 +747,22 @@ class AdminInterface {
             clearTimeout(timeout);
             timeout = setTimeout(later, wait);
         };
+    }
+    
+    /**
+     * Debounced wrapper for any function
+     */
+    debounce(key, func, wait = 300) {
+        if (this.debounceTimers.has(key)) {
+            clearTimeout(this.debounceTimers.get(key));
+        }
+        
+        const timeout = setTimeout(() => {
+            this.debounceTimers.delete(key);
+            func();
+        }, wait);
+        
+        this.debounceTimers.set(key, timeout);
     }
 
     static formatNumber(num) {

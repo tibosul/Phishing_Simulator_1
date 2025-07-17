@@ -31,7 +31,8 @@
             </a>
             
             <!-- Mobile toggle -->
-            <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-nav" aria-label="Toggle navigation" title="Toggle navigation menu">
+            <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-nav" 
+                    aria-expanded="false" aria-controls="sidebar-nav" aria-label="Toggle navigation menu" title="Toggle navigation menu">
                 <span class="navbar-toggler-icon"></span>
             </button>
             
@@ -165,6 +166,9 @@
             </div>
         </div>
     </div>
+    
+    <!-- Mobile sidebar backdrop -->
+    <div class="sidebar-backdrop d-lg-none" id="sidebar-backdrop" onclick="AdminInterface.closeMobileSidebar()"></div>
     
     <!-- Main Content Area -->
     <main class="main-content">
