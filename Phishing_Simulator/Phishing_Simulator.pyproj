@@ -44,11 +44,17 @@
     <Compile Include="services\sms_service.py" />
     <Compile Include="services\tracking_service.py" />
     <Compile Include="services\__init__.py" />
+    <Compile Include="tests\test_core_functionality.py" />
+    <Compile Include="tests\test_integration.py" />
+    <Compile Include="tests\__init__.py" />
     <Compile Include="test_routes.py" />
     <Compile Include="utils\database.py" />
     <Compile Include="utils\helpers.py" />
+    <Compile Include="utils\security.py" />
     <Compile Include="utils\validators.py" />
     <Compile Include="utils\__init__.py" />
+    <Compile Include="verify_installation.py" />
+    <Compile Include="__init__.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="models\" />
@@ -58,6 +64,7 @@
     <Folder Include="templates\admin\" />
     <Folder Include="templates\emails\" />
     <Folder Include="templates\revolut\" />
+    <Folder Include="tests\" />
     <Folder Include="utils\" />
     <Folder Include="static\" />
     <Folder Include="templates\" />
@@ -65,6 +72,7 @@
     <Folder Include="routes\" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include=".env.example" />
     <Content Include="requirements.txt" />
     <Content Include="routes\__init__.py" />
     <Content Include="static\css\admin.css" />
@@ -95,10 +103,12 @@
     <Content Include="templates\emails\revolut_promotion.html" />
     <Content Include="templates\emails\revolut_security.html" />
     <Content Include="templates\emails\revolut_update.html" />
-    <Content Include="templates\revolut\dashboard.html" />
+    <Content Include="templates\revolut\base.html" />
+    <Content Include="templates\revolut\crash.html" />
+    <Content Include="templates\revolut\home.html" />
     <Content Include="templates\revolut\login.html" />
-    <Content Include="templates\revolut\register.html" />
-    <Content Include="templates\revolut\verify.html" />
+    <Content Include="templates\revolut\login_step1.html" />
+    <Content Include="templates\revolut\login_step2.html" />
   </ItemGroup>
   <ItemGroup>
     <Interpreter Include="venv\">
