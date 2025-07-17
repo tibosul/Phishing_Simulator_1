@@ -13,7 +13,7 @@ def create_app(config_name=None):
         
     Returns:
         Flask: Aplicația configurată
-    """
+    """ 
     if config_name is None:
         config_name = os.environ.get('FLASK_ENV', 'development')
     
