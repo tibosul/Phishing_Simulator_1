@@ -68,6 +68,7 @@ def configure_security(app):
     """Configurează middleware-ul de securitate"""
     from utils.security import apply_security_headers, rate_limit_check, log_security_event
     from utils.helpers import get_client_ip
+    from utils.api_responses import rate_limit_response
     
     @app.before_request
     def security_middleware():
@@ -79,8 +80,8 @@ def configure_security(app):
         
         # Rate limiting pentru endpoint-uri critice
         if app.config.get('RATE_LIMIT_ENABLED', True):
-            # Endpoint-uri cu rate limiting strict
-            strict_endpoints = [
+            # Endpoint-uri cu rate limiting moderat pentru admin
+            admin_endpoints = [
                 'targets.create_target',
                 'templates.create_template',
                 'campaigns.create_campaign',
@@ -88,22 +89,41 @@ def configure_security(app):
                 'targets.api_bulk_import_targets'
             ]
             
-            if request.endpoint in strict_endpoints:
+            if request.endpoint in admin_endpoints:
                 client_ip = get_client_ip()
-                limit = app.config.get('RATE_LIMIT_STRICT_ENDPOINTS', 10)
+                # Increased limit for admin operations: 50 requests per hour
+                admin_limit = app.config.get('RATE_LIMIT_ADMIN_ENDPOINTS', 50)
                 
-                if not rate_limit_check(client_ip, limit=limit, window=3600):  # 1 hour window
+                allowed, remaining_time = rate_limit_check(client_ip, limit=admin_limit, window=3600)
+                if not allowed:
                     log_security_event('rate_limit_exceeded', 
-                                     f'Rate limit exceeded for endpoint {request.endpoint}',
-                                     additional_data={'endpoint': request.endpoint, 'ip': client_ip})
-                    return jsonify({'error': 'Rate limit exceeded. Please try again later.'}), 429
+                                     f'Rate limit exceeded for admin endpoint {request.endpoint}',
+                                     {'endpoint': request.endpoint, 'ip': client_ip})
+                    
+                    # Check if this is an AJAX request
+                    is_ajax = (request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 
+                              'application/json' in request.headers.get('Accept', ''))
+                    
+                    if is_ajax:
+                        return rate_limit_response(
+                            "You're doing that too often. Please wait before trying again.",
+                            retry_after=remaining_time
+                        )
+                    else:
+                        # For regular form submissions, use flash message and redirect
+                        from flask import flash, redirect, url_for
+                        minutes_remaining = max(1, remaining_time // 60)
+                        flash(f'You\'re doing that too often. Please wait {minutes_remaining} minute(s) before trying again.', 'warning')
+                        return redirect(url_for('dashboard.index'))
             
-            # Rate limiting general
+            # Rate limiting general (less strict for regular browsing)
             else:
                 client_ip = get_client_ip()
-                general_limit = app.config.get('RATE_LIMIT_DEFAULT', 100)
+                general_limit = app.config.get('RATE_LIMIT_DEFAULT', 200)  # Increased from 100
                 
-                if not rate_limit_check(client_ip, limit=general_limit, window=3600):
+                allowed, _ = rate_limit_check(client_ip, limit=general_limit, window=3600)
+                if not allowed:
+                    # For general rate limiting, just return JSON error
                     return jsonify({'error': 'Rate limit exceeded.'}), 429
     
     @app.after_request

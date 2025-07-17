@@ -406,7 +406,7 @@ def log_security_event(event_type, description, details=None):
 
 def rate_limit_check(key, limit=10, window=60):
     """
-    Simple rate limiting check
+    Simple rate limiting check with better feedback
     
     Args:
         key: Rate limit key (e.g., IP address)
@@ -414,7 +414,7 @@ def rate_limit_check(key, limit=10, window=60):
         window: Time window in seconds
         
     Returns:
-        bool: True if request is allowed
+        tuple: (is_allowed: bool, remaining_time: int) - remaining_time is seconds until reset
     """
     # This is a simplified implementation
     # In production, use Redis or similar
@@ -434,18 +434,30 @@ def rate_limit_check(key, limit=10, window=60):
     
     entry = cache[cache_key]
     
+    # Calculate remaining time in current window
+    window_end = entry['window_start'] + timedelta(seconds=window)
+    remaining_time = max(0, int((window_end - now).total_seconds()))
+    
     # Reset window if expired
     if now - entry['window_start'] > timedelta(seconds=window):
         entry['count'] = 0
         entry['window_start'] = now
+        remaining_time = 0
     
     # Check limit
     if entry['count'] >= limit:
         log_security_event('rate_limit_exceeded', f"Rate limit exceeded for {key}")
-        return False
+        return False, remaining_time
     
     entry['count'] += 1
-    return True
+    return True, remaining_time
+
+
+# Legacy function for backward compatibility
+def rate_limit_check_legacy(key, limit=10, window=60):
+    """Legacy rate limit check that returns only boolean"""
+    allowed, _ = rate_limit_check(key, limit, window)
+    return allowed
 
 
 def require_rate_limit(limit=10, window=60, key_func=None):
@@ -466,7 +478,7 @@ def require_rate_limit(limit=10, window=60, key_func=None):
             except:
                 key = "unknown"
             
-            if not rate_limit_check(key, limit, window):
+            if not rate_limit_check_legacy(key, limit, window):
                 from flask import abort
                 abort(429)  # Too Many Requests
             

@@ -59,8 +59,8 @@ class Config:
     
     # Rate limiting
     RATE_LIMIT_ENABLED = True
-    RATE_LIMIT_DEFAULT = 100  # requests per hour
-    RATE_LIMIT_STRICT_ENDPOINTS = 10  # for sensitive endpoints
+    RATE_LIMIT_DEFAULT = 200  # requests per hour for general browsing
+    RATE_LIMIT_ADMIN_ENDPOINTS = 50  # for admin operations like creating targets
     
     # === LOGGING SETTINGS ===
     LOG_LEVEL = os.environ.get('LOG_LEVEL') or 'INFO'
