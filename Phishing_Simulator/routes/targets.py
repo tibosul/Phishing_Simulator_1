@@ -8,7 +8,6 @@ from utils.database import db
 import logging
 import csv
 import io
-import sys
 
 # FIXED: URL prefix to match app.py registration
 bp = Blueprint('targets', __name__, url_prefix='/admin/targets')
@@ -418,111 +417,6 @@ def api_delete_target(target_id):
 
 
 # Additional routes continue as API endpoints...
-@bp.route('/test-debug')
-def test_debug():
-    """Simple test route to verify our code is being executed"""
-    print("=== TEST DEBUG ROUTE HIT ===", file=sys.stderr, flush=True)
-    return "TEST DEBUG WORKS"
-
-@bp.route('/upload', methods=['GET', 'POST'])
-def upload_targets():
-    """Standalone upload route that allows selecting any campaign for CSV upload"""
-    import sys
-    print("=== ENTERING upload_targets route ===", file=sys.stderr, flush=True)
-    try:
-        print("=== ENTERING upload_targets route TRY BLOCK ===", file=sys.stderr, flush=True)
-        logger.info("Accessing upload_targets route")
-        if request.method == 'GET':
-            print("=== GET request ===", file=sys.stderr, flush=True)
-            # Get all campaigns for selection dropdown
-            campaigns = Campaign.query.order_by(Campaign.name).all()
-            print(f"=== Found {len(campaigns)} campaigns for dropdown ===", file=sys.stderr, flush=True)
-            logger.info(f"Found {len(campaigns)} campaigns for dropdown")
-            for c in campaigns:
-                print(f"Campaign: {c.name} (ID: {c.id})", file=sys.stderr, flush=True)
-                logger.info(f"Campaign: {c.name} (ID: {c.id})")
-            print("=== ABOUT TO RENDER TEMPLATE ===", file=sys.stderr, flush=True)
-            return render_template('admin/upload_targets.html', campaigns=campaigns)
-    except Exception as e:
-        print(f"=== ERROR IN UPLOAD_TARGETS: {e} ===", file=sys.stderr, flush=True)
-        import traceback
-        print(f"=== TRACEBACK: {traceback.format_exc()} ===", file=sys.stderr, flush=True)
-        raise
-        
-        # POST - handle the CSV upload
-        campaign_id = request.form.get('campaign_id')
-        if not campaign_id:
-            flash('Please select a campaign', 'error')
-            campaigns = Campaign.query.order_by(Campaign.name).all()
-            return render_template('admin/upload_targets.html', campaigns=campaigns)
-        
-        # Verifică dacă campania există
-        campaign = db.session.get(Campaign, campaign_id)
-        if not campaign:
-            flash('Selected campaign not found', 'error')
-            campaigns = Campaign.query.order_by(Campaign.name).all()
-            return render_template('admin/upload_targets.html', campaigns=campaigns)
-        
-        # Verifică dacă fișierul a fost uploadat
-        if 'csv_file' not in request.files:
-            flash('No file selected', 'error')
-            campaigns = Campaign.query.order_by(Campaign.name).all()
-            return render_template('admin/upload_targets.html', campaigns=campaigns, selected_campaign=campaign)
-        
-        file = request.files['csv_file']
-        if file.filename == '':
-            flash('No file selected', 'error')
-            campaigns = Campaign.query.order_by(Campaign.name).all()
-            return render_template('admin/upload_targets.html', campaigns=campaigns, selected_campaign=campaign)
-        
-        # Verifică extensia
-        if not file.filename.lower().endswith('.csv'):
-            flash('Please upload a CSV file', 'error')
-            campaigns = Campaign.query.order_by(Campaign.name).all()
-            return render_template('admin/upload_targets.html', campaigns=campaigns, selected_campaign=campaign)
-        
-        # Citește conținutul
-        csv_content = file.read().decode('utf-8')
-        
-        # Opțiuni
-        skip_duplicates = request.form.get('skip_duplicates') == 'on'
-        
-        # Procesează CSV-ul
-        stats = CampaignService.add_targets_from_csv(
-            campaign_id=campaign_id,
-            csv_content=csv_content,
-            skip_duplicates=skip_duplicates
-        )
-        
-        # Afișează rezultatele
-        if stats['added'] > 0:
-            flash(f'Successfully added {stats["added"]} targets to campaign "{campaign.name}"', 'success')
-        
-        if stats['skipped'] > 0:
-            flash(f'{stats["skipped"]} targets were skipped (duplicates)', 'info')
-        
-        if stats['errors']:
-            flash(f'{len(stats["errors"])} errors occurred during import', 'warning')
-        
-        log_security_event('targets_uploaded', f'{stats["added"]} targets added to campaign "{campaign.name}"', get_client_ip())
-        
-        campaigns = Campaign.query.order_by(Campaign.name).all()
-        return render_template('admin/upload_targets.html', 
-                             campaigns=campaigns, 
-                             selected_campaign=campaign,
-                             upload_stats=stats)
-        
-    except ValidationError as e:
-        flash(str(e), 'error')
-        campaigns = Campaign.query.order_by(Campaign.name).all()
-        return render_template('admin/upload_targets.html', campaigns=campaigns)
-    except Exception as e:
-        logger.error(f"Error uploading targets: {str(e)}")
-        flash('Error processing CSV file', 'error')
-        campaigns = Campaign.query.order_by(Campaign.name).all()
-        return render_template('admin/upload_targets.html', campaigns=campaigns)
-
-
 @bp.route('/api/bulk-import', methods=['POST'])
 def api_bulk_import_targets():
     """API endpoint pentru import în masă din CSV"""
