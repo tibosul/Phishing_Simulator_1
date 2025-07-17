@@ -106,6 +106,25 @@
     background: rgba(0, 0, 0, 0.1);
 }
 
+/* Mobile sidebar backdrop */
+.sidebar-backdrop {
+    position: fixed;
+    top: var(--navbar-height);
+    left: 0;
+    width: 100%;
+    height: calc(100vh - var(--navbar-height));
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1035;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar-backdrop.show {
+    display: block;
+    opacity: 1;
+}
+
 /* Main Content */
 .main-content {
     margin-left: var(--sidebar-width);
@@ -286,7 +305,7 @@
 }
 
 /* =============================================================================
-   Loading States
+   Loading States - Improved
    ============================================================================= */
 
 .loading-overlay {
@@ -300,10 +319,13 @@
     justify-content: center;
     align-items: center;
     z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
 .loading-overlay.show {
     display: flex;
+    opacity: 1;
 }
 
 .loading-content {
@@ -312,12 +334,17 @@
     border-radius: 10px;
     text-align: center;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    max-width: 300px;
+    width: 90%;
 }
 
 .skeleton-loader {
     background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
     background-size: 200% 100%;
     animation: loading 1.5s infinite;
+    border-radius: 4px;
+    height: 1rem;
+    margin: 0.5rem 0;
 }
 
 @keyframes loading {
@@ -350,16 +377,23 @@
 }
 
 /* =============================================================================
-   Responsive Design
+   Responsive Design - Improved Mobile Support
    ============================================================================= */
 
 @media (max-width: 991.98px) {
     .sidebar {
         transform: translateX(-100%);
+        z-index: 1040; /* Higher than navbar */
+        transition: transform 0.3s ease;
     }
     
     .sidebar.show {
         transform: translateX(0);
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+    }
+    
+    .sidebar-backdrop.show {
+        display: block;
     }
     
     .main-content {
@@ -370,6 +404,25 @@
     .realtime-panel {
         width: 100%;
         right: -100%;
+    }
+    
+    .realtime-panel.open {
+        right: 0;
+    }
+    
+    /* Mobile navbar improvements */
+    .navbar-toggler {
+        border: none;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .navbar-toggler:focus {
+        box-shadow: none;
+    }
+    
+    /* Close sidebar when clicking links on mobile */
+    .sidebar .nav-link {
+        position: relative;
     }
 }
 
@@ -384,10 +437,30 @@
     
     .content-wrapper {
         padding: 1rem;
+        margin: 0.5rem 0;
     }
     
     .stats-card .card-body {
         padding: 1rem;
+    }
+    
+    /* Mobile-friendly forms */
+    .form-floating > .form-control,
+    .form-floating > .form-select {
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+    
+    /* Toast adjustments for mobile */
+    .toast-container {
+        left: 1rem !important;
+        right: 1rem !important;
+        width: auto !important;
+    }
+    
+    /* Loading overlay adjustments */
+    .loading-content {
+        margin: 1rem;
+        padding: 1.5rem;
     }
 }
 
@@ -435,7 +508,7 @@
 }
 
 /* =============================================================================
-   Forms
+   Forms - Enhanced with validation
    ============================================================================= */
 
 .form-control:focus {
@@ -450,6 +523,36 @@
 
 .form-floating > label {
     color: #6c757d;
+}
+
+/* Enhanced validation styles */
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: var(--danger-color);
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.form-control.is-valid,
+.form-select.is-valid {
+    border-color: var(--success-color);
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+/* Custom validation feedback */
+.invalid-feedback {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--danger-color);
+}
+
+.valid-feedback {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--success-color);
 }
 
 /* File Upload */
@@ -470,6 +573,11 @@
 .file-upload-area.dragover {
     border-color: var(--success-color);
     background-color: rgba(40, 167, 69, 0.1);
+}
+
+.file-upload-area.error {
+    border-color: var(--danger-color);
+    background-color: rgba(220, 53, 69, 0.05);
 }
 
 /* =============================================================================
@@ -510,16 +618,59 @@
     transition: width 0.3s ease;
 }
 
-/* Toast notifications */
+/* Toast notifications - Enhanced */
 .toast {
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: none;
+    min-width: 300px;
 }
 
 .toast-header {
-    background: var(--primary-color);
-    color: white;
     border-bottom: none;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+}
+
+.toast-body {
+    padding: 0.75rem 1rem;
+    line-height: 1.4;
+}
+
+.toast.bg-success .toast-header {
+    background-color: var(--success-color) !important;
+}
+
+.toast.bg-danger .toast-header {
+    background-color: var(--danger-color) !important;
+}
+
+.toast.bg-info .toast-header {
+    background-color: var(--info-color) !important;
+}
+
+.toast.bg-warning .toast-header {
+    background-color: var(--warning-color) !important;
+    color: #000 !important;
+}
+
+.toast-container {
+    z-index: 9999 !important;
+}
+
+/* Animation for toasts */
+.toast.showing {
+    transform: translateX(100%);
+}
+
+.toast.show {
+    transform: translateX(0);
+    transition: transform 0.3s ease-in-out;
+}
+
+.toast.hiding {
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
 }
 
 /* Custom scrollbar */
