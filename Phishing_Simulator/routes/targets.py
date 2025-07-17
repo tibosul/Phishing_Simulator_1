@@ -11,7 +11,7 @@ import csv
 import io
 import sys
 
-# Blueprint for targets management
+# FIXED: URL prefix to match app.py registration
 bp = Blueprint('targets', __name__, url_prefix='/admin/targets')
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ def is_ajax_request():
 
 @bp.route('/')
 def list_targets():
-    """Lista cu toate țintele din sistem - returnează HTML"""
+    """Lista cu toate țintele din sistem - FIXED: returnează HTML"""
     try:
         # Parametri de căutare și filtrare
         search_query = request.args.get('q', '').strip()
@@ -93,7 +93,7 @@ def list_targets():
         # Lista campaniilor pentru dropdown filter
         campaigns = Campaign.query.order_by(Campaign.name).all()
         
-        # Returnează HTML template în loc de JSON
+        # FIXED: Returnează HTML template în loc de JSON
         return render_template('admin/targets.html',
                              targets=paginated_targets,
                              pagination={
@@ -207,7 +207,7 @@ def api_list_targets():
     'phone': lambda x: validate_phone_number(x) if x else True
 })
 def create_target():
-    """Creează o nouă țintă - GET returnează form, POST procesează"""
+    """FIXED: Creează o nouă țintă - GET returnează form, POST procesează"""
     if request.method == 'GET':
         # Returnează form pentru crearea target-ului
         campaigns = Campaign.query.order_by(Campaign.name).all()
@@ -305,7 +305,7 @@ def create_target():
 
 @bp.route('/<int:target_id>')
 def view_target(target_id):
-    """Returnează detaliile complete ale unei ținte - HTML page"""
+    """FIXED: Returnează detaliile complete ale unei ținte - HTML page"""
     try:
         target = Target.query.get_or_404(target_id)
         

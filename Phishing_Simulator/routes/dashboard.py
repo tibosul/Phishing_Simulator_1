@@ -99,7 +99,7 @@ def index():
             'total': mobile_events + desktop_events
         }
         
-        # Return HTML template for browser requests
+        # FIXED: Return HTML template instead of JSON
         return render_template('admin/dashboard.html',
                              dashboard_stats=dashboard_stats,
                              active_campaigns=active_campaigns,
@@ -244,7 +244,7 @@ def analytics():
         # Password analysis
         password_analysis = credential_service.get_campaign_credential_analysis(None)
         
-        # Return HTML template for browser requests  
+        # FIXED: Return HTML template instead of JSON
         return render_template('admin/analytics.html',
                              daily_activity=daily_activity,
                              campaign_performance=campaign_performance,
@@ -296,82 +296,7 @@ def api_realtime():
 
 
 @bp.route('/health')
-def health_page():
-    """
-    Health check page for browser access
-    
-    Returns HTML page that displays system health information
-    """
-    try:
-        # Fetch health data from the API endpoint
-        from utils.database import db
-        from sqlalchemy import text
-        
-        # Test database
-        db.session.execute(text('SELECT 1'))
-        
-        # Basic counts
-        total_campaigns = Campaign.query.count()
-        total_targets = Target.query.count()
-        
-        # Check recent activity
-        last_hour = datetime.utcnow() - timedelta(hours=1)
-        recent_events = Tracking.query.filter(Tracking.timestamp >= last_hour).count()
-        
-        health_data = {
-            'status': 'healthy',
-            'timestamp': datetime.utcnow().isoformat(),
-            'database': 'connected',
-            'statistics': {
-                'campaigns': total_campaigns,
-                'targets': total_targets,
-                'recent_activity': recent_events
-            },
-            'services': {
-                'tracking': 'operational',
-                'email': 'operational',
-                'sms': 'operational',
-                'credential_capture': 'operational'
-            },
-            'client_info': {
-                'ip': get_client_ip(),
-                'user_agent': request.headers.get('User-Agent', 'Unknown')
-            }
-        }
-        
-        # Return HTML template for browser requests
-        return render_template('admin/health.html', health_data=health_data)
-        
-    except Exception as e:
-        logger.error(f"Health check failed: {str(e)}")
-        error_data = {
-            'status': 'unhealthy',
-            'timestamp': datetime.utcnow().isoformat(),
-            'error': str(e),
-            'database': 'disconnected',
-            'statistics': {
-                'campaigns': 0,
-                'targets': 0,
-                'recent_activity': 0
-            },
-            'services': {
-                'tracking': 'error',
-                'email': 'error',
-                'sms': 'error',
-                'credential_capture': 'error'
-            },
-            'client_info': {
-                'ip': get_client_ip(),
-                'user_agent': request.headers.get('User-Agent', 'Unknown')
-            }
-        }
-        
-        # Return HTML template with error for browser requests
-        return render_template('admin/health.html', health_data=error_data), 500
-
-
-@bp.route('/api/health')
-def api_health_check():
+def health_check():
     """
     Health check pentru monitoring
     
@@ -415,13 +340,13 @@ def api_health_check():
             }
         }
         
-        # Always return JSON for API endpoint
+        # Check if this is an AJAX request
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
            'application/json' in request.headers.get('Accept', ''):
             return jsonify(health_data)
         
-        # For regular browser requests, also return JSON since this is an API endpoint
-        return jsonify(health_data)
+        # Return HTML template for browser requests
+        return render_template('admin/health.html', health_data=health_data)
         
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
@@ -447,13 +372,13 @@ def api_health_check():
             }
         }
         
-        # Always return JSON for API endpoint  
+        # Check if this is an AJAX request
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
            'application/json' in request.headers.get('Accept', ''):
             return jsonify(error_data), 500
         
-        # For regular browser requests, also return JSON since this is an API endpoint
-        return jsonify(error_data), 500
+        # Return HTML template with error for browser requests
+        return render_template('admin/health.html', health_data=error_data), 500
 
 
 @bp.route('/api/export')
