@@ -749,8 +749,7 @@ function importTargets() {
         statusText.textContent = `Processing... ${Math.round(progress)}%`;
     }, 200);
     
-    // Here you would make the actual API call to import the targets
-    /*
+    // Make the actual API call to import the targets
     fetch('/admin/targets/upload', {
         method: 'POST',
         body: formData
@@ -769,7 +768,6 @@ function importTargets() {
         modal.hide();
         alert('Error importing targets: ' + error.message);
     });
-    */
 }
 </script>
 {% endblock %}
