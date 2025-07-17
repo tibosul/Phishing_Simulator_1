@@ -785,49 +785,85 @@ function importTargets() {
     formData.append('campaign_id', document.getElementById('campaign_id').value);
     formData.append('field_mappings', JSON.stringify(fieldMappings));
     formData.append('csv_data', JSON.stringify(csvData));
+    formData.append('skip_duplicates', 'on'); // Default to skip duplicates
     
-    // Simulate progress (replace with actual API call)
-    let progress = 0;
-    const progressBar = document.getElementById('importProgress');
-    const statusText = document.getElementById('importStatus');
-    
-    const interval = setInterval(() => {
-        progress += Math.random() * 15;
-        if (progress >= 100) {
-            progress = 100;
-            clearInterval(interval);
-            
-            // Simulate completion
-            setTimeout(() => {
-                modal.hide();
-                alert('Targets imported successfully!');
-                window.location.href = "{{ url_for('targets.list_targets') }}";
-            }, 1000);
-        }
-        
-        progressBar.style.width = progress + '%';
-        statusText.textContent = `Processing... ${Math.round(progress)}%`;
-    }, 200);
+    // Add actual CSV file data for backend processing
+    const csvContent = generateCSVFromMappedData();
+    const csvBlob = new Blob([csvContent], { type: 'text/csv' });
+    formData.append('csv_file', csvBlob, 'upload.csv');
     
     // Make the actual API call to import the targets
     fetch('/admin/targets/upload', {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'  // Indicate this is an AJAX request
+        }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
     .then(data => {
         modal.hide();
         if (data.success) {
-            alert(`Successfully imported ${data.imported} targets`);
+            // Show success message with statistics
+            let message = data.message || 'Targets imported successfully!';
+            if (data.stats) {
+                message += `\n\nAdded: ${data.stats.added}`;
+                if (data.stats.skipped > 0) {
+                    message += `\nSkipped: ${data.stats.skipped}`;
+                }
+                if (data.stats.errors > 0) {
+                    message += `\nErrors: ${data.stats.errors}`;
+                }
+            }
+            alert(message);
+            
+            // Redirect to targets list
             window.location.href = "{{ url_for('targets.list_targets') }}";
         } else {
-            alert('Error importing targets: ' + data.error);
+            let errorMsg = data.error || 'Error importing targets';
+            if (data.details) {
+                errorMsg += `\nDetails: ${data.details}`;
+            }
+            alert(errorMsg);
         }
     })
     .catch(error => {
         modal.hide();
+        console.error('Import error:', error);
         alert('Error importing targets: ' + error.message);
     });
+}
+
+function generateCSVFromMappedData() {
+    // Generate CSV content from mapped data
+    if (!fieldMappings.email) {
+        throw new Error('Email mapping is required');
+    }
+    
+    // Create header row with mapped fields
+    const headers = Object.keys(fieldMappings).map(field => fieldMappings[field]);
+    let csvContent = headers.join(',') + '\n';
+    
+    // Add data rows
+    csvData.forEach(row => {
+        const values = Object.keys(fieldMappings).map(field => {
+            const csvColumn = fieldMappings[field];
+            const value = row[csvColumn] || '';
+            // Escape commas and quotes in CSV
+            if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+                return '"' + value.replace(/"/g, '""') + '"';
+            }
+            return value;
+        });
+        csvContent += values.join(',') + '\n';
+    });
+    
+    return csvContent;
 }
 </script>
 {% endblock %}
