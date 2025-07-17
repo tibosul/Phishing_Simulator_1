@@ -132,21 +132,32 @@ def forbidden_response(message="Access forbidden"):
     )
 
 
-def rate_limit_response(message="Rate limit exceeded"):
+def rate_limit_response(message="You're doing that too often. Please wait before trying again.", retry_after=None):
     """
-    Returnează un răspuns pentru rate limiting
+    Returnează un răspuns user-friendly pentru rate limiting
     
     Args:
-        message: Mesajul de eroare
+        message: Mesajul de eroare user-friendly
+        retry_after: Timpul până când utilizatorul poate încerca din nou (în secunde)
         
     Returns:
         tuple: (response, status_code)
     """
-    return error_response(
-        message=message,
-        status_code=429,
-        error_type="rate_limit"
-    )
+    response = {
+        'success': False,
+        'error': message,
+        'error_type': 'rate_limit',
+        'user_friendly': True
+    }
+    
+    if retry_after:
+        response['retry_after'] = retry_after
+        response['details'] = f"Please wait {retry_after} seconds before trying again."
+    
+    # Log the rate limit for monitoring
+    logging.warning(f"Rate limit exceeded: {message}")
+    
+    return jsonify(response), 429
 
 
 def server_error_response(message="Internal server error"):

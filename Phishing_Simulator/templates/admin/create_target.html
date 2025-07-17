@@ -451,11 +451,70 @@ function submitForm() {
     }
     
     // Show loading state
+    const originalText = submitBtn.innerHTML;
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
     submitBtn.disabled = true;
     
-    // Submit the form
-    form.submit();
+    // Add error handling for AJAX-like behavior
+    const formData = new FormData(form);
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            // If response is successful, redirect to targets list
+            window.location.href = response.url || '{{ url_for("targets.list_targets") }}';
+        } else if (response.status === 429) {
+            // Handle rate limiting
+            return response.json().then(data => {
+                showRateLimitError(data);
+            });
+        } else {
+            // For other errors, fall back to regular form submission
+            form.submit();
+        }
+    })
+    .catch(error => {
+        console.error('Error submitting form:', error);
+        // Fall back to regular form submission
+        form.submit();
+    })
+    .finally(() => {
+        // Reset button state
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+function showRateLimitError(data) {
+    // Show user-friendly rate limit error
+    const errorMessage = data.error || "You're doing that too often. Please wait before trying again.";
+    const retryAfter = data.retry_after;
+    
+    // Create and show alert
+    const alertContainer = document.createElement('div');
+    alertContainer.className = 'alert alert-warning alert-dismissible fade show mt-3';
+    alertContainer.innerHTML = `
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>Rate Limit Exceeded:</strong> ${errorMessage}
+        ${retryAfter ? `<br><small>Please wait ${Math.ceil(retryAfter / 60)} minute(s) before trying again.</small>` : ''}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Insert alert before the form
+    form.parentNode.insertBefore(alertContainer, form);
+    
+    // Auto-dismiss after 10 seconds
+    setTimeout(() => {
+        if (alertContainer.parentNode) {
+            alertContainer.remove();
+        }
+    }, 10000);
 }
 
 // Auto-complete company names (placeholder for future enhancement)
