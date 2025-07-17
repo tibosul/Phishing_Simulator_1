@@ -21,9 +21,11 @@
             
             <nav class="header-nav">
                 <a href="{{ url_for('fake_revolut.home') }}" class="nav-link">Home</a>
-                <a href="#features" class="nav-link">Features</a>
-                <a href="#business" class="nav-link">Business</a>
-                <a href="#support" class="nav-link">Support</a>
+                <a href="#" class="nav-link crash-trigger">Features</a>
+                <a href="#" class="nav-link crash-trigger">Business</a>
+                <a href="#" class="nav-link crash-trigger">Invest</a>
+                <a href="#" class="nav-link crash-trigger">Cards</a>
+                <a href="#" class="nav-link crash-trigger">Support</a>
             </nav>
             
             <div class="header-actions">
@@ -31,8 +33,8 @@
                     <a href="{{ url_for('fake_revolut.dashboard') }}" class="btn btn-secondary">Dashboard</a>
                     <a href="{{ url_for('fake_revolut.profile') }}" class="btn btn-primary">Profile</a>
                 {% else %}
-                    <a href="{{ url_for('fake_revolut.login_page') }}" class="btn btn-secondary">Log in</a>
-                    <a href="{{ url_for('fake_revolut.register_page') }}" class="btn btn-primary">Sign up</a>
+                    <a href="{{ url_for('fake_revolut.login_step1') }}" class="btn btn-secondary">Log in</a>
+                    <a href="#" class="btn btn-primary crash-trigger">Sign up</a>
                 {% endif %}
             </div>
         </div>
@@ -59,6 +61,27 @@
     {% endblock %}
     
     <script src="{{ url_for('static', filename='js/revolut.js') }}"></script>
+    <script>
+    // Global crash trigger handler
+    document.addEventListener('DOMContentLoaded', function() {
+        const crashTriggers = document.querySelectorAll('.crash-trigger');
+        crashTriggers.forEach(trigger => {
+            trigger.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Add loading effect
+                const originalText = this.innerHTML;
+                this.style.pointerEvents = 'none';
+                this.innerHTML = '<span style="opacity: 0.7;">⏳ Loading...</span>';
+                
+                // Simulate processing time before crash
+                setTimeout(() => {
+                    window.location.href = '/revolut/crash';
+                }, 800 + Math.random() * 1200);
+            });
+        });
+    });
+    </script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>
