@@ -8,7 +8,7 @@ from utils.security import sanitize_template_content, validate_template_variable
 from utils.database import db
 import logging
 
-# URL prefix to match app.py registration
+# Blueprint for templates management  
 bp = Blueprint('templates', __name__, url_prefix='/admin/templates')
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 @bp.route('/')
 def list_templates():
     """
-    FIXED: Lista cu toate template-urile - returnează HTML
+    Lista cu toate template-urile - returnează HTML
     """
     try:
         # Parametri de căutare și filtrare
@@ -67,7 +67,7 @@ def list_templates():
         popular_templates = Template.get_popular_templates(5)
         high_success_templates = Template.get_high_success_templates(5)
         
-        # FIXED: Return HTML template instead of JSON
+        # Return HTML template instead of JSON
         return render_template('admin/templates.html',
                              templates=templates.items,
                              pagination={
@@ -173,7 +173,7 @@ def api_list_templates():
 
 @bp.route('/create', methods=['GET', 'POST'])
 def create_template():
-    """FIXED: Creează un nou template - GET returnează form, POST procesează"""
+    """Creează un nou template - GET returnează form, POST procesează"""
     if request.method == 'GET':
         # Return form for creating new template
         return render_template('admin/create_template.html')
@@ -264,7 +264,7 @@ def create_template():
 
 @bp.route('/<int:template_id>')
 def view_template(template_id):
-    """FIXED: Returnează detaliile unui template - HTML page"""
+    """Returnează detaliile unui template - HTML page"""
     try:
         template = Template.query.get_or_404(template_id)
         
@@ -323,7 +323,7 @@ def api_get_template(template_id):
 
 @bp.route('/<int:template_id>/edit', methods=['GET', 'POST'])
 def edit_template(template_id):
-    """FIXED: Editează un template - GET returnează form, POST procesează"""
+    """Editează un template - GET returnează form, POST procesează"""
     template = Template.query.get_or_404(template_id)
     
     if request.method == 'GET':
@@ -443,7 +443,7 @@ def clone_template(template_id):
 
 @bp.route('/<int:template_id>/test', methods=['GET', 'POST'])
 def test_template(template_id):
-    """FIXED: Trimite un test email/SMS cu template-ul"""
+    """Trimite un test email/SMS cu template-ul"""
     template = Template.query.get_or_404(template_id)
     
     if request.method == 'GET':

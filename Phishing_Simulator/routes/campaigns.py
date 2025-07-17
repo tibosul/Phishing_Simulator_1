@@ -12,7 +12,7 @@ from utils.helpers import get_client_ip, log_security_event
 from utils.database import db
 import logging
 
-# FIXED: Added url_prefix='/admin/campaigns' to match app.py registration
+# Blueprint for campaigns management with consistent URL prefix
 bp = Blueprint('campaigns', __name__, url_prefix='/admin/campaigns')
 
 
