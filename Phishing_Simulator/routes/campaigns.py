@@ -10,6 +10,7 @@ from services.campaign_service import CampaignService
 from utils.validators import ValidationError
 from utils.helpers import get_client_ip, log_security_event
 from utils.database import db
+from utils.security import require_csrf
 import logging
 
 # FIXED: Added url_prefix='/admin/campaigns' to match app.py registration
@@ -242,6 +243,7 @@ def edit_campaign(campaign_id):
 
 
 @bp.route('/<int:campaign_id>/delete', methods=['POST'])
+@require_csrf
 def delete_campaign(campaign_id):
     """
     Șterge o campanie

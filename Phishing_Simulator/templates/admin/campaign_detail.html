@@ -54,6 +54,9 @@
             <a href="{{ url_for('campaigns.export_campaign', campaign_id=campaign.id) }}" class="btn btn-outline-secondary">
                 <i class="bi bi-download me-1"></i>Export
             </a>
+            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteCampaignModal">
+                <i class="bi bi-trash me-1"></i>Delete
+            </button>
         </div>
     </div>
 </div>
@@ -319,6 +322,65 @@
     </div>
 </div>
 
+<!-- Delete Campaign Modal -->
+<div class="modal fade" id="deleteCampaignModal" tabindex="-1" aria-labelledby="deleteCampaignModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteCampaignModalLabel">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Delete Campaign
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('campaigns.delete_campaign', campaign_id=campaign.id) }}" id="deleteCampaignForm">
+                {% if csrf_token %}
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% endif %}
+                <div class="modal-body">
+                    <div class="alert alert-danger d-flex align-items-center">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <div>
+                            <strong>Warning:</strong> This action cannot be undone!
+                        </div>
+                    </div>
+                    
+                    <p>You are about to permanently delete the campaign <strong>"{{ campaign.name }}"</strong> and all associated data including:</p>
+                    
+                    <ul class="mb-3">
+                        <li>{{ stats.targets.total or 0 }} target(s)</li>
+                        <li>All tracking data and statistics</li>
+                        <li>{{ stats.performance.total_credentials or 0 }} captured credential(s)</li>
+                        <li>All activity logs for this campaign</li>
+                    </ul>
+                    
+                    <div class="mb-3">
+                        <label for="confirmText" class="form-label">
+                            To confirm deletion, please type <strong>DELETE</strong> in the box below:
+                        </label>
+                        <input type="text" class="form-control" id="confirmText" name="confirm" 
+                               placeholder="Type DELETE to confirm" autocomplete="off" required>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="forceDelete" name="force">
+                        <label class="form-check-label" for="forceDelete">
+                            Force delete (ignore dependencies and relationships)
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-danger" id="deleteConfirmBtn" disabled>
+                        <i class="bi bi-trash me-1"></i>Delete Campaign
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -351,6 +413,41 @@ document.getElementById('addTargetForm').addEventListener('submit', async functi
     } catch (error) {
         alert('Network error occurred');
     }
+});
+
+// Delete campaign confirmation handling
+document.getElementById('confirmText').addEventListener('input', function() {
+    const deleteBtn = document.getElementById('deleteConfirmBtn');
+    const confirmText = this.value.trim();
+    
+    if (confirmText === 'DELETE') {
+        deleteBtn.disabled = false;
+        deleteBtn.classList.remove('btn-outline-danger');
+        deleteBtn.classList.add('btn-danger');
+    } else {
+        deleteBtn.disabled = true;
+        deleteBtn.classList.remove('btn-danger');
+        deleteBtn.classList.add('btn-outline-danger');
+    }
+});
+
+// Handle delete form submission
+document.getElementById('deleteCampaignForm').addEventListener('submit', function(e) {
+    const confirmText = document.getElementById('confirmText').value.trim();
+    
+    if (confirmText !== 'DELETE') {
+        e.preventDefault();
+        alert('Please type DELETE to confirm deletion');
+        return false;
+    }
+    
+    // Show loading state
+    const deleteBtn = document.getElementById('deleteConfirmBtn');
+    deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Deleting...';
+    deleteBtn.disabled = true;
+    
+    // The form will submit normally to the backend
+    return true;
 });
 
 // Auto-refresh every 30 seconds

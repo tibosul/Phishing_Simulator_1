@@ -191,6 +191,20 @@ def register_context_processors(app):
         }
     
     @app.context_processor
+    def inject_csrf_token():
+        """Inject CSRF token for templates"""
+        try:
+            from utils.security import generate_csrf_token
+            return {
+                'csrf_token': generate_csrf_token
+            }
+        except Exception as e:
+            app.logger.error(f"Error generating CSRF token: {str(e)}")
+            return {
+                'csrf_token': lambda: ''
+            }
+    
+    @app.context_processor
     def inject_sidebar_stats():
         """Injectează statistici pentru sidebar în toate paginile admin"""
         try:

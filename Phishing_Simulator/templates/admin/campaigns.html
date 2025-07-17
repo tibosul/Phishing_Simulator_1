@@ -178,6 +178,11 @@
                                        class="btn btn-outline-secondary btn-sm" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </a>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" 
+                                            title="Delete Campaign"
+                                            onclick="showDeleteModal('{{ campaign.id }}', '{{ campaign.name|e }}')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
                                     {% if campaign.status == 'draft' %}
                                     <form method="POST" action="{{ url_for('campaigns.start_campaign', campaign_id=campaign.id) }}" 
                                           class="d-inline" onsubmit="return confirm('Start this campaign?')">
@@ -263,6 +268,58 @@
     </div>
 </div>
 
+<!-- Delete Campaign Modal -->
+<div class="modal fade" id="deleteCampaignModal" tabindex="-1" aria-labelledby="deleteCampaignModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteCampaignModalLabel">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Delete Campaign
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" id="deleteCampaignForm">
+                {% if csrf_token %}
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% endif %}
+                <div class="modal-body">
+                    <div class="alert alert-danger d-flex align-items-center">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <div>
+                            <strong>Warning:</strong> This action cannot be undone!
+                        </div>
+                    </div>
+                    
+                    <p>You are about to permanently delete the campaign <strong id="campaignNameToDelete"></strong> and all associated data.</p>
+                    
+                    <div class="mb-3">
+                        <label for="confirmText" class="form-label">
+                            To confirm deletion, please type <strong>DELETE</strong> in the box below:
+                        </label>
+                        <input type="text" class="form-control" id="confirmText" name="confirm" 
+                               placeholder="Type DELETE to confirm" autocomplete="off" required>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="forceDelete" name="force">
+                        <label class="form-check-label" for="forceDelete">
+                            Force delete (ignore dependencies and relationships)
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-danger" id="deleteConfirmBtn" disabled>
+                        <i class="bi bi-trash me-1"></i>Delete Campaign
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -285,6 +342,60 @@ setInterval(function() {
 function confirmDelete(campaignName) {
     return confirm(`Are you sure you want to delete the campaign "${campaignName}"? This action cannot be undone.`);
 }
+
+// Show delete modal with campaign details
+function showDeleteModal(campaignId, campaignName) {
+    // Set the form action URL
+    const form = document.getElementById('deleteCampaignForm');
+    form.action = `/admin/campaigns/${campaignId}/delete`;
+    
+    // Set the campaign name in the modal
+    document.getElementById('campaignNameToDelete').textContent = `"${campaignName}"`;
+    
+    // Reset form
+    document.getElementById('confirmText').value = '';
+    document.getElementById('forceDelete').checked = false;
+    document.getElementById('deleteConfirmBtn').disabled = true;
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('deleteCampaignModal'));
+    modal.show();
+}
+
+// Delete confirmation handling
+document.getElementById('confirmText').addEventListener('input', function() {
+    const deleteBtn = document.getElementById('deleteConfirmBtn');
+    const confirmText = this.value.trim();
+    
+    if (confirmText === 'DELETE') {
+        deleteBtn.disabled = false;
+        deleteBtn.classList.remove('btn-outline-danger');
+        deleteBtn.classList.add('btn-danger');
+    } else {
+        deleteBtn.disabled = true;
+        deleteBtn.classList.remove('btn-danger');
+        deleteBtn.classList.add('btn-outline-danger');
+    }
+});
+
+// Handle delete form submission
+document.getElementById('deleteCampaignForm').addEventListener('submit', function(e) {
+    const confirmText = document.getElementById('confirmText').value.trim();
+    
+    if (confirmText !== 'DELETE') {
+        e.preventDefault();
+        alert('Please type DELETE to confirm deletion');
+        return false;
+    }
+    
+    // Show loading state
+    const deleteBtn = document.getElementById('deleteConfirmBtn');
+    deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Deleting...';
+    deleteBtn.disabled = true;
+    
+    // The form will submit normally to the backend
+    return true;
+});
 
 // Quick search functionality
 document.getElementById('search').addEventListener('input', function() {

@@ -223,20 +223,33 @@ class AdminInterface {
     }
 
     /**
-     * Toggle real-time panel
+     * Toggle real-time panel with improved state management
      */
     toggleRealTimePanel() {
         const panel = document.getElementById('realtime-panel');
-        if (!panel) return;
+        const indicator = document.getElementById('realtime-indicator');
+        
+        if (!panel) {
+            console.warn('Real-time panel not found');
+            return;
+        }
 
         const isOpen = panel.classList.contains('open');
 
         if (isOpen) {
             panel.classList.remove('open');
             this.realTimeEnabled = false;
+            if (indicator) {
+                indicator.classList.remove('pulse');
+                indicator.style.color = '#6c757d';
+            }
         } else {
             panel.classList.add('open');
             this.realTimeEnabled = true;
+            if (indicator) {
+                indicator.classList.add('pulse');
+                indicator.style.color = '#28a745';
+            }
             this.updateRealTimePanel();
         }
     }
@@ -331,11 +344,7 @@ class AdminInterface {
 
         try {
             // FIXED: Use correct API endpoint structure
-            const response = await fetch(`${this.apiBase}/api/export`);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            const data = await response.json();
+            const data = await this.apiCall(`${this.apiBase}/api/export`);
 
             if (data.error) {
                 this.showToast('Export failed: ' + data.error, 'error');
@@ -653,6 +662,10 @@ class AdminInterface {
      * API helper methods
      */
 
+    /**
+     * Enhanced API helper methods with better error handling
+     */
+
     async apiCall(endpoint, options = {}) {
         const defaultOptions = {
             headers: {
@@ -661,13 +674,33 @@ class AdminInterface {
             }
         };
 
-        const response = await fetch(endpoint, { ...defaultOptions, ...options });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        try {
+            const response = await fetch(endpoint, { ...defaultOptions, ...options });
+            
+            // Handle different response types
+            const contentType = response.headers.get('content-type');
+            let data;
+            
+            if (contentType && contentType.includes('application/json')) {
+                data = await response.json();
+            } else {
+                // For non-JSON responses (redirects, HTML), create a mock response
+                data = {
+                    success: response.ok,
+                    status: response.status,
+                    statusText: response.statusText
+                };
+            }
+            
+            if (!response.ok) {
+                throw new Error(data.error || data.message || `HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('API call failed:', endpoint, error);
+            throw error;
         }
-
-        return await response.json();
     }
 
     async get(endpoint) {
@@ -720,6 +753,90 @@ class AdminInterface {
     }
 
     /**
+     * Delete campaign functionality
+     */
+    async deleteCampaign(campaignId, campaignName) {
+        try {
+            // Show confirmation modal if not already shown
+            const confirmed = await this.showDeleteConfirmation(campaignName);
+            if (!confirmed) return false;
+
+            this.showLoading();
+
+            // Get CSRF token from meta tag or form
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                             document.querySelector('input[name="csrf_token"]')?.value ||
+                             '';
+
+            const formData = new FormData();
+            formData.append('confirm', 'DELETE');
+            if (csrfToken) {
+                formData.append('csrf_token', csrfToken);
+            }
+
+            const response = await fetch(`/admin/campaigns/${campaignId}/delete`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const contentType = response.headers.get('content-type');
+            
+            if (!response.ok) {
+                // Handle different response types
+                if (contentType && contentType.includes('application/json')) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            }
+
+            // Check if response is JSON or HTML (redirect)
+            if (contentType && contentType.includes('application/json')) {
+                const data = await response.json();
+                if (data.success) {
+                    this.showToast(`Campaign "${campaignName}" deleted successfully!`, 'success');
+                    // Redirect to campaigns list
+                    window.location.href = '/admin/campaigns/';
+                } else {
+                    this.showToast(data.error || 'Failed to delete campaign', 'error');
+                }
+            } else {
+                // If not JSON, assume successful redirect
+                this.showToast(`Campaign "${campaignName}" deleted successfully!`, 'success');
+                window.location.href = '/admin/campaigns/';
+            }
+
+        } catch (error) {
+            console.error('Delete campaign error:', error);
+            this.showToast('Error deleting campaign: ' + error.message, 'error');
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    /**
+     * Show delete confirmation dialog
+     */
+    showDeleteConfirmation(campaignName) {
+        return new Promise((resolve) => {
+            const confirmed = confirm(
+                `Are you sure you want to delete the campaign "${campaignName}"?\n\n` +
+                'This will permanently delete:\n' +
+                '• All campaign data\n' +
+                '• All target information\n' +
+                '• All tracking data\n' +
+                '• All captured credentials\n\n' +
+                'This action cannot be undone!'
+            );
+            resolve(confirmed);
+        });
+    }
+
+    /**
      * Static utility methods
      */
 
@@ -750,9 +867,10 @@ class AdminInterface {
     }
     
     /**
-     * Debounced wrapper for any function
+     * Debounced wrapper for any function with cleanup
      */
     debounce(key, func, wait = 300) {
+        // Clear existing timer for this key
         if (this.debounceTimers.has(key)) {
             clearTimeout(this.debounceTimers.get(key));
         }
@@ -763,6 +881,23 @@ class AdminInterface {
         }, wait);
         
         this.debounceTimers.set(key, timeout);
+    }
+    
+    /**
+     * Cleanup all debounce timers (call on page unload)
+     */
+    cleanup() {
+        // Clear all debounce timers
+        this.debounceTimers.forEach((timeout) => {
+            clearTimeout(timeout);
+        });
+        this.debounceTimers.clear();
+        
+        // Clear real-time interval
+        if (this.realTimeInterval) {
+            clearInterval(this.realTimeInterval);
+            this.realTimeInterval = null;
+        }
     }
 
     static formatNumber(num) {
@@ -777,10 +912,29 @@ class AdminInterface {
 
 // Initialize when DOM is loaded
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => AdminInterface.init());
+    document.addEventListener('DOMContentLoaded', () => {
+        window.adminInterface = AdminInterface.init();
+    });
 } else {
-    AdminInterface.init();
+    window.adminInterface = AdminInterface.init();
 }
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (window.adminInterface && typeof window.adminInterface.cleanup === 'function') {
+        window.adminInterface.cleanup();
+    }
+});
 
 // Global reference for external use
 window.AdminInterface = AdminInterface;
+
+// Global helper functions
+window.deleteCampaign = function(campaignId, campaignName) {
+    if (window.adminInterface) {
+        return window.adminInterface.deleteCampaign(campaignId, campaignName);
+    } else {
+        console.error('Admin interface not initialized');
+        return false;
+    }
+};
