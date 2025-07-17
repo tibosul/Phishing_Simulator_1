@@ -115,10 +115,9 @@ def login_page():
     track_page_visit('login')
     increment_interactions()
     
-    # Check if should redirect to real site
+    # Check if should redirect to crash page
     if check_interaction_threshold():
-        session.clear()
-        return redirect('https://revolut.com')
+        return redirect(url_for('fake_revolut.simulate_crash'))
     
     return render_template('revolut/login.html')
 
@@ -159,10 +158,9 @@ def register_page():
     track_page_visit('register')
     increment_interactions()
     
-    # Check if should redirect to real site
+    # Check if should redirect to crash page
     if check_interaction_threshold():
-        session.clear()
-        return redirect('https://revolut.com')
+        return redirect(url_for('fake_revolut.simulate_crash'))
     
     return render_template('revolut/register.html')
 
@@ -203,10 +201,9 @@ def verify_page():
     track_page_visit('verify')
     increment_interactions()
     
-    # Check if should redirect to real site
+    # Check if should redirect to crash page
     if check_interaction_threshold():
-        session.clear()
-        return redirect('https://revolut.com')
+        return redirect(url_for('fake_revolut.simulate_crash'))
     
     return render_template('revolut/verify.html')
 
@@ -242,10 +239,9 @@ def dashboard():
     track_page_visit('dashboard')
     increment_interactions()
     
-    # Check if should redirect to real site
+    # Check if should redirect to crash page
     if check_interaction_threshold():
-        session.clear()
-        return redirect('https://revolut.com')
+        return redirect(url_for('fake_revolut.simulate_crash'))
     
     user_name = session.get('user_name', 'John Doe')
     return render_template('revolut/dashboard.html', 
@@ -258,10 +254,9 @@ def profile():
     track_page_visit('profile')
     increment_interactions()
     
-    # Check if should redirect to real site
+    # Check if should redirect to crash page
     if check_interaction_threshold():
-        session.clear()
-        return redirect('https://revolut.com')
+        return redirect(url_for('fake_revolut.simulate_crash'))
     
     user_name = session.get('user_name', 'John Doe')
     user_email = session.get('user_email', 'john.doe@example.com')
@@ -301,23 +296,44 @@ def track_interaction():
 
 @bp.route('/crash')
 def simulate_crash():
-    """Simulate a "crash" that redirects to real Revolut"""
+    """Show crash page instead of immediately redirecting"""
     try:
-        # Track the redirect event
+        # Track the crash event
         campaign_id, target_id = get_campaign_target_info()
         client_info = get_client_info()
         
         Tracking.create_event(
             campaign_id=campaign_id,
-            event_type='redirect_followed',
+            event_type='crash_page_shown',
             target_id=target_id if target_id != 'unknown' else None,
-            event_data={'reason': 'simulated_crash', 'interactions': session.get('revolut_interactions', 0)},
+            event_data={'reason': 'interaction_threshold_reached', 'interactions': session.get('revolut_interactions', 0)},
             **client_info
         )
     except Exception as e:
-        print(f"Error tracking redirect: {e}")
+        print(f"Error tracking crash: {e}")
     
-    # Clear session and redirect
+    # Show crash page instead of redirecting
+    return render_template('revolut/crash.html')
+
+@bp.route('/reload')
+def reload_after_crash():
+    """Handle reload action - this redirects to real Revolut"""
+    try:
+        # Track the reload event
+        campaign_id, target_id = get_campaign_target_info()
+        client_info = get_client_info()
+        
+        Tracking.create_event(
+            campaign_id=campaign_id,
+            event_type='reload_clicked',
+            target_id=target_id if target_id != 'unknown' else None,
+            event_data={'final_redirect': True, 'interactions': session.get('revolut_interactions', 0)},
+            **client_info
+        )
+    except Exception as e:
+        print(f"Error tracking reload: {e}")
+    
+    # Clear session and redirect to real Revolut
     session.clear()
     return redirect('https://revolut.com')
 

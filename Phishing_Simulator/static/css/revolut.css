@@ -1,14 +1,18 @@
-/* Revolut Style CSS */
+/* Revolut Style CSS - Updated with authentic dark indigo/violet theme */
 :root {
-    --revolut-blue: #0066cc;
-    --revolut-dark-blue: #004499;
-    --revolut-light-blue: #e6f2ff;
-    --revolut-black: #1a1a1a;
-    --revolut-gray: #666666;
-    --revolut-light-gray: #f5f5f5;
-    --revolut-success: #00cc88;
-    --revolut-error: #ff4444;
-    --revolut-border: #e0e0e0;
+    --revolut-primary: #6366f1;
+    --revolut-primary-dark: #4f46e5;
+    --revolut-primary-light: #eef2ff;
+    --revolut-secondary: #8b5cf6;
+    --revolut-dark: #0f0f23;
+    --revolut-dark-secondary: #1a1a3e;
+    --revolut-black: #0a0a14;
+    --revolut-gray: #6b7280;
+    --revolut-light-gray: #f8fafc;
+    --revolut-success: #10b981;
+    --revolut-error: #ef4444;
+    --revolut-border: #e5e7eb;
+    --revolut-border-dark: #374151;
 }
 
 * {
@@ -19,15 +23,15 @@
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background-color: #ffffff;
-    color: var(--revolut-black);
+    background-color: var(--revolut-dark);
+    color: #ffffff;
     line-height: 1.6;
 }
 
 /* Header */
 .revolut-header {
-    background: white;
-    border-bottom: 1px solid var(--revolut-border);
+    background: var(--revolut-dark-secondary);
+    border-bottom: 1px solid var(--revolut-border-dark);
     padding: 1rem 0;
     position: sticky;
     top: 0;
@@ -48,14 +52,14 @@ body {
     align-items: center;
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--revolut-black);
+    color: #ffffff;
     text-decoration: none;
 }
 
 .revolut-logo .logo-icon {
     width: 32px;
     height: 32px;
-    background: var(--revolut-blue);
+    background: var(--revolut-primary);
     border-radius: 8px;
     margin-right: 0.5rem;
     display: flex;
@@ -72,14 +76,14 @@ body {
 }
 
 .nav-link {
-    color: var(--revolut-gray);
+    color: #d1d5db;
     text-decoration: none;
     font-weight: 500;
     transition: color 0.2s;
 }
 
 .nav-link:hover {
-    color: var(--revolut-blue);
+    color: var(--revolut-primary);
 }
 
 .header-actions {
@@ -104,23 +108,24 @@ body {
 }
 
 .btn-primary {
-    background: var(--revolut-blue);
+    background: var(--revolut-primary);
     color: white;
 }
 
 .btn-primary:hover {
-    background: var(--revolut-dark-blue);
+    background: var(--revolut-primary-dark);
     transform: translateY(-1px);
 }
 
 .btn-secondary {
     background: transparent;
-    color: var(--revolut-blue);
-    border: 1px solid var(--revolut-blue);
+    color: var(--revolut-primary);
+    border: 1px solid var(--revolut-primary);
 }
 
 .btn-secondary:hover {
-    background: var(--revolut-light-blue);
+    background: var(--revolut-primary-light);
+    color: var(--revolut-primary-dark);
 }
 
 .btn-large {
@@ -137,7 +142,7 @@ body {
 
 /* Hero Section */
 .hero-section {
-    background: linear-gradient(135deg, var(--revolut-blue) 0%, var(--revolut-dark-blue) 100%);
+    background: linear-gradient(135deg, var(--revolut-primary) 0%, var(--revolut-secondary) 100%);
     color: white;
     padding: 4rem 0;
     text-align: center;
@@ -164,28 +169,29 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--revolut-light-gray);
+    background: var(--revolut-dark);
 }
 
 .auth-card {
-    background: white;
+    background: var(--revolut-dark-secondary);
     border-radius: 16px;
     padding: 3rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     width: 100%;
     max-width: 400px;
     text-align: center;
+    border: 1px solid var(--revolut-border-dark);
 }
 
 .auth-card h2 {
     font-size: 1.8rem;
     font-weight: 700;
     margin-bottom: 0.5rem;
-    color: var(--revolut-black);
+    color: #ffffff;
 }
 
 .auth-card .subtitle {
-    color: var(--revolut-gray);
+    color: #d1d5db;
     margin-bottom: 2rem;
 }
 
@@ -198,27 +204,28 @@ body {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
-    color: var(--revolut-black);
+    color: #ffffff;
 }
 
 .form-input {
     width: 100%;
     padding: 16px;
-    border: 1px solid var(--revolut-border);
+    border: 1px solid var(--revolut-border-dark);
     border-radius: 8px;
     font-size: 1rem;
     transition: border-color 0.2s;
-    background: white;
+    background: var(--revolut-dark);
+    color: #ffffff;
 }
 
 .form-input:focus {
     outline: none;
-    border-color: var(--revolut-blue);
-    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    border-color: var(--revolut-primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .form-input::placeholder {
-    color: #999;
+    color: #9ca3af;
 }
 
 .form-submit {
@@ -230,11 +237,11 @@ body {
     text-align: center;
     margin-top: 2rem;
     padding-top: 2rem;
-    border-top: 1px solid var(--revolut-border);
+    border-top: 1px solid var(--revolut-border-dark);
 }
 
 .auth-links a {
-    color: var(--revolut-blue);
+    color: var(--revolut-primary);
     text-decoration: none;
 }
 
@@ -244,8 +251,8 @@ body {
 
 /* Dashboard */
 .dashboard-header {
-    background: white;
-    border-bottom: 1px solid var(--revolut-border);
+    background: var(--revolut-dark-secondary);
+    border-bottom: 1px solid var(--revolut-border-dark);
     padding: 2rem 0;
 }
 
@@ -275,18 +282,18 @@ body {
 }
 
 .dashboard-card {
-    background: white;
+    background: var(--revolut-dark-secondary);
     border-radius: 12px;
     padding: 2rem;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    border: 1px solid var(--revolut-border);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--revolut-border-dark);
 }
 
 .dashboard-card h3 {
     font-size: 1.2rem;
     font-weight: 600;
     margin-bottom: 1rem;
-    color: var(--revolut-black);
+    color: #ffffff;
 }
 
 .quick-actions {
@@ -297,19 +304,19 @@ body {
 }
 
 .quick-action {
-    background: white;
-    border: 1px solid var(--revolut-border);
+    background: var(--revolut-dark-secondary);
+    border: 1px solid var(--revolut-border-dark);
     border-radius: 8px;
     padding: 1.5rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s;
     text-decoration: none;
-    color: var(--revolut-black);
+    color: #ffffff;
 }
 
 .quick-action:hover {
-    border-color: var(--revolut-blue);
+    border-color: var(--revolut-primary);
     transform: translateY(-2px);
 }
 
@@ -320,18 +327,18 @@ body {
 
 /* Profile Page */
 .profile-section {
-    background: white;
+    background: var(--revolut-dark-secondary);
     border-radius: 12px;
     padding: 2rem;
     margin-bottom: 2rem;
-    border: 1px solid var(--revolut-border);
+    border: 1px solid var(--revolut-border-dark);
 }
 
 .profile-section h3 {
     font-size: 1.3rem;
     font-weight: 600;
     margin-bottom: 1.5rem;
-    color: var(--revolut-black);
+    color: #ffffff;
 }
 
 .profile-info {
@@ -345,7 +352,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 1rem 0;
-    border-bottom: 1px solid var(--revolut-border);
+    border-bottom: 1px solid var(--revolut-border-dark);
 }
 
 .info-item:last-child {
@@ -354,15 +361,107 @@ body {
 
 .info-label {
     font-weight: 500;
-    color: var(--revolut-gray);
+    color: #d1d5db;
 }
 
 .info-value {
     font-weight: 600;
-    color: var(--revolut-black);
+    color: #ffffff;
 }
 
-/* Responsive */
+/* Crash Page */
+.crash-container {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--revolut-dark);
+    padding: 2rem;
+}
+
+.crash-card {
+    background: var(--revolut-dark-secondary);
+    border-radius: 16px;
+    padding: 3rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: 500px;
+    text-align: center;
+    border: 1px solid var(--revolut-border-dark);
+}
+
+.crash-icon {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    color: var(--revolut-error);
+}
+
+.crash-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #ffffff;
+}
+
+.crash-message {
+    color: #d1d5db;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+.crash-details {
+    background: var(--revolut-dark);
+    border: 1px solid var(--revolut-border-dark);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: #9ca3af;
+    text-align: left;
+}
+
+.reload-button {
+    background: var(--revolut-primary);
+    color: white;
+    border: none;
+    padding: 16px 32px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 150px;
+}
+
+.reload-button:hover {
+    background: var(--revolut-primary-dark);
+    transform: translateY(-1px);
+}
+
+.reload-button:active {
+    transform: translateY(0);
+}
+
+/* Add responsive design updates */
+@media (max-width: 768px) {
+    .crash-card {
+        margin: 1rem;
+        padding: 2rem;
+    }
+    
+    .crash-title {
+        font-size: 1.5rem;
+    }
+    
+    .crash-icon {
+        font-size: 3rem;
+    }
+}
 @media (max-width: 768px) {
     .header-container {
         padding: 0 1rem;

