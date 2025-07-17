@@ -12,6 +12,7 @@ from models.credential import Credential
 from utils.database import db
 from utils.validators import validate_campaign_name, validate_csv_format, ValidationError
 from utils.helpers import sanitize_input, log_security_event
+from utils.security import sanitize_input as secure_sanitize_input
 import logging
 
 
@@ -47,9 +48,9 @@ class CampaignService:
             # Validează numele campaniei
             validate_campaign_name(name)
             
-            # Sanitizează input-urile
-            name = sanitize_input(name)
-            description = sanitize_input(description) if description else None
+            # Sanitizează input-urile cu funcția securizată
+            name = secure_sanitize_input(name, allow_html=False, strict=True)
+            description = secure_sanitize_input(description, allow_html=True, strict=False) if description else None
             
             # Verifică dacă numele este unic
             existing = Campaign.query.filter_by(name=name).first()
