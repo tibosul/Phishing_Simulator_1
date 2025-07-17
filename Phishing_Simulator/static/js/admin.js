@@ -223,20 +223,33 @@ class AdminInterface {
     }
 
     /**
-     * Toggle real-time panel
+     * Toggle real-time panel with improved state management
      */
     toggleRealTimePanel() {
         const panel = document.getElementById('realtime-panel');
-        if (!panel) return;
+        const indicator = document.getElementById('realtime-indicator');
+        
+        if (!panel) {
+            console.warn('Real-time panel not found');
+            return;
+        }
 
         const isOpen = panel.classList.contains('open');
 
         if (isOpen) {
             panel.classList.remove('open');
             this.realTimeEnabled = false;
+            if (indicator) {
+                indicator.classList.remove('pulse');
+                indicator.style.color = '#6c757d';
+            }
         } else {
             panel.classList.add('open');
             this.realTimeEnabled = true;
+            if (indicator) {
+                indicator.classList.add('pulse');
+                indicator.style.color = '#28a745';
+            }
             this.updateRealTimePanel();
         }
     }
@@ -331,11 +344,7 @@ class AdminInterface {
 
         try {
             // FIXED: Use correct API endpoint structure
-            const response = await fetch(`${this.apiBase}/api/export`);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            const data = await response.json();
+            const data = await this.apiCall(`${this.apiBase}/api/export`);
 
             if (data.error) {
                 this.showToast('Export failed: ' + data.error, 'error');
@@ -653,6 +662,10 @@ class AdminInterface {
      * API helper methods
      */
 
+    /**
+     * Enhanced API helper methods with better error handling
+     */
+
     async apiCall(endpoint, options = {}) {
         const defaultOptions = {
             headers: {
@@ -661,13 +674,33 @@ class AdminInterface {
             }
         };
 
-        const response = await fetch(endpoint, { ...defaultOptions, ...options });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        try {
+            const response = await fetch(endpoint, { ...defaultOptions, ...options });
+            
+            // Handle different response types
+            const contentType = response.headers.get('content-type');
+            let data;
+            
+            if (contentType && contentType.includes('application/json')) {
+                data = await response.json();
+            } else {
+                // For non-JSON responses (redirects, HTML), create a mock response
+                data = {
+                    success: response.ok,
+                    status: response.status,
+                    statusText: response.statusText
+                };
+            }
+            
+            if (!response.ok) {
+                throw new Error(data.error || data.message || `HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('API call failed:', endpoint, error);
+            throw error;
         }
-
-        return await response.json();
     }
 
     async get(endpoint) {
@@ -834,9 +867,10 @@ class AdminInterface {
     }
     
     /**
-     * Debounced wrapper for any function
+     * Debounced wrapper for any function with cleanup
      */
     debounce(key, func, wait = 300) {
+        // Clear existing timer for this key
         if (this.debounceTimers.has(key)) {
             clearTimeout(this.debounceTimers.get(key));
         }
@@ -847,6 +881,23 @@ class AdminInterface {
         }, wait);
         
         this.debounceTimers.set(key, timeout);
+    }
+    
+    /**
+     * Cleanup all debounce timers (call on page unload)
+     */
+    cleanup() {
+        // Clear all debounce timers
+        this.debounceTimers.forEach((timeout) => {
+            clearTimeout(timeout);
+        });
+        this.debounceTimers.clear();
+        
+        // Clear real-time interval
+        if (this.realTimeInterval) {
+            clearInterval(this.realTimeInterval);
+            this.realTimeInterval = null;
+        }
     }
 
     static formatNumber(num) {
@@ -867,6 +918,13 @@ if (document.readyState === 'loading') {
 } else {
     window.adminInterface = AdminInterface.init();
 }
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (window.adminInterface && typeof window.adminInterface.cleanup === 'function') {
+        window.adminInterface.cleanup();
+    }
+});
 
 // Global reference for external use
 window.AdminInterface = AdminInterface;
