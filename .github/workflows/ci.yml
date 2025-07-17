@@ -1,0 +1,41 @@
+name: CI Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, '3.10', 3.11, 3.12]
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        cd Phishing_Simulator
+        pip install -r requirements.txt
+    
+    - name: Run tests
+      run: |
+        cd Phishing_Simulator
+        python -m unittest discover tests -v
+      
+    - name: Test basic application startup
+      run: |
+        cd Phishing_Simulator
+        timeout 10s python app.py &
+        sleep 5
+        curl -f http://localhost:5000/admin/health || true

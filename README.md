@@ -47,6 +47,30 @@ Unauthorized use of this tool may violate computer crime laws. The developers as
 - Security event logging
 - Secure file upload handling
 
+## 🚀 Quick Demo
+
+Want to try the simulator immediately? Follow these steps for a quick demo:
+
+1. **Clone and setup (5 minutes)**
+   ```bash
+   git clone https://github.com/tibosul/Phishing_Simulator_1.git
+   cd Phishing_Simulator_1/Phishing_Simulator
+   python -m venv venv && source venv/bin/activate  # Linux/macOS
+   # Or: venv\Scripts\activate  # Windows
+   pip install -r requirements.txt
+   ```
+
+2. **Initialize and run**
+   ```bash
+   python -c "from app import create_app; from utils.database import db; app = create_app(); app.app_context().push(); db.create_all()"
+   python app.py
+   ```
+
+3. **Access demo**
+   - Open: http://localhost:5000/admin/
+   - Use the included `../demo_targets.csv` for quick testing
+   - Browse pre-loaded email templates in the Templates section
+
 ## 📋 Requirements
 
 ### System Requirements
@@ -265,13 +289,81 @@ Use these variables in your templates for personalization:
 - `{{current_date}}` - Current date
 - `{{current_year}}` - Current year
 
+### Example Email Templates
+
+**1. IT Security Update Template**
+```html
+Subject: [URGENT] Security System Update Required - Action Needed
+
+Dear {{target_first_name}},
+
+Our IT security team has detected unauthorized access attempts on your account. 
+Immediate action is required to secure your {{target_company}} credentials.
+
+Please click here to verify your account: {{tracking_link}}
+
+This security update must be completed by {{current_date}} to maintain access.
+
+Best regards,
+IT Security Team
+{{tracking_pixel}}
+```
+
+**2. HR Policy Update Template**
+```html
+Subject: Important: Updated Employee Handbook - Review Required
+
+Hello {{target_first_name}},
+
+As part of {{target_company}}'s ongoing compliance updates, all {{target_position}} 
+staff must review the updated employee handbook.
+
+Access the new handbook here: {{tracking_link}}
+
+Please complete your review by end of day to maintain compliance.
+
+HR Department
+{{target_company}}
+{{tracking_pixel}}
+```
+
+**3. Financial Services Template**
+```html
+Subject: Account Verification Required - Temporary Restriction Applied
+
+Dear {{target_name}},
+
+Your account has been temporarily restricted due to suspicious activity.
+To restore full access, please verify your identity immediately.
+
+Verify Account: {{tracking_link}}
+
+If not completed within 24 hours, your account may be permanently suspended.
+
+Security Team
+{{tracking_pixel}}
+```
+
 ### CSV Target Format
 
+**Basic format (required columns):**
 ```csv
-email,first_name,last_name,company,position
-john.doe@example.com,John,Doe,Acme Corp,Manager
-jane.smith@example.com,Jane,Smith,Tech Inc,Developer
+email,first_name,last_name
+john.doe@example.com,John,Doe
+jane.smith@example.com,Jane,Smith
 ```
+
+**Extended format (recommended for better targeting):**
+```csv
+email,first_name,last_name,company,position,phone
+john.doe@example.com,John,Doe,Acme Corporation,Marketing Manager,+1-555-0123
+jane.smith@example.com,Jane,Smith,TechStart Inc,Software Developer,+1-555-0456
+mike.johnson@example.com,Mike,Johnson,Global Solutions,IT Administrator,+1-555-0789
+sarah.brown@example.com,Sarah,Brown,InnovateCorp,HR Director,+1-555-0321
+alex.wilson@example.com,Alex,Wilson,SecureBank,Security Analyst,+1-555-0654
+```
+
+**💡 Quick Start:** Use the provided `demo_targets.csv` file in the repository root for immediate testing!
 
 ### Analytics and Reporting
 
@@ -291,11 +383,26 @@ jane.smith@example.com,Jane,Smith,Tech Inc,Developer
    - Detailed reports
    - Credential captures (if applicable)
 
-## 🧪 Testing
+## 🧪 Testing & Quality Assurance
 
-### Running Tests
+### Automated Testing (CI/CD)
+
+This repository includes automated testing with GitHub Actions that runs on every push and pull request:
+- **Multi-Python version testing** (3.8, 3.9, 3.10, 3.11, 3.12)
+- **Automated test suite execution** 
+- **Basic application startup verification**
+
+The CI workflow ensures code quality and catches issues early. Check the "Actions" tab in GitHub to see test results.
+
+### Running Tests Locally
 
 ```bash
+# Navigate to the application directory
+cd Phishing_Simulator
+
+# Install dependencies (if not already done)
+pip install -r requirements.txt
+
 # Run all tests
 python -m unittest discover tests -v
 
@@ -304,16 +411,21 @@ python -m unittest tests.test_core_functionality -v
 
 # Run integration tests
 python -m unittest tests.test_integration -v
+
+# Quick smoke test (verify app starts)
+python app.py &
+curl http://localhost:5000/admin/health
 ```
 
 ### Test Coverage
 
-The test suite includes:
-- Unit tests for all models
-- Service layer testing
-- Integration tests for API endpoints
-- Security feature validation
-- Campaign workflow testing
+The comprehensive test suite includes:
+- **Unit tests** for all models (Campaign, Target, Template, etc.)
+- **Service layer testing** (email, campaign management)
+- **Integration tests** for API endpoints
+- **Security feature validation** (CSRF, input sanitization, rate limiting)
+- **Campaign workflow testing** (complete lifecycle)
+- **Webhook and tracking functionality**
 
 ### Creating Test Data
 
