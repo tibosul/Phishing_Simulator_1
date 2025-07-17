@@ -720,6 +720,90 @@ class AdminInterface {
     }
 
     /**
+     * Delete campaign functionality
+     */
+    async deleteCampaign(campaignId, campaignName) {
+        try {
+            // Show confirmation modal if not already shown
+            const confirmed = await this.showDeleteConfirmation(campaignName);
+            if (!confirmed) return false;
+
+            this.showLoading();
+
+            // Get CSRF token from meta tag or form
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                             document.querySelector('input[name="csrf_token"]')?.value ||
+                             '';
+
+            const formData = new FormData();
+            formData.append('confirm', 'DELETE');
+            if (csrfToken) {
+                formData.append('csrf_token', csrfToken);
+            }
+
+            const response = await fetch(`/admin/campaigns/${campaignId}/delete`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const contentType = response.headers.get('content-type');
+            
+            if (!response.ok) {
+                // Handle different response types
+                if (contentType && contentType.includes('application/json')) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            }
+
+            // Check if response is JSON or HTML (redirect)
+            if (contentType && contentType.includes('application/json')) {
+                const data = await response.json();
+                if (data.success) {
+                    this.showToast(`Campaign "${campaignName}" deleted successfully!`, 'success');
+                    // Redirect to campaigns list
+                    window.location.href = '/admin/campaigns/';
+                } else {
+                    this.showToast(data.error || 'Failed to delete campaign', 'error');
+                }
+            } else {
+                // If not JSON, assume successful redirect
+                this.showToast(`Campaign "${campaignName}" deleted successfully!`, 'success');
+                window.location.href = '/admin/campaigns/';
+            }
+
+        } catch (error) {
+            console.error('Delete campaign error:', error);
+            this.showToast('Error deleting campaign: ' + error.message, 'error');
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    /**
+     * Show delete confirmation dialog
+     */
+    showDeleteConfirmation(campaignName) {
+        return new Promise((resolve) => {
+            const confirmed = confirm(
+                `Are you sure you want to delete the campaign "${campaignName}"?\n\n` +
+                'This will permanently delete:\n' +
+                '• All campaign data\n' +
+                '• All target information\n' +
+                '• All tracking data\n' +
+                '• All captured credentials\n\n' +
+                'This action cannot be undone!'
+            );
+            resolve(confirmed);
+        });
+    }
+
+    /**
      * Static utility methods
      */
 
@@ -777,10 +861,22 @@ class AdminInterface {
 
 // Initialize when DOM is loaded
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => AdminInterface.init());
+    document.addEventListener('DOMContentLoaded', () => {
+        window.adminInterface = AdminInterface.init();
+    });
 } else {
-    AdminInterface.init();
+    window.adminInterface = AdminInterface.init();
 }
 
 // Global reference for external use
 window.AdminInterface = AdminInterface;
+
+// Global helper functions
+window.deleteCampaign = function(campaignId, campaignName) {
+    if (window.adminInterface) {
+        return window.adminInterface.deleteCampaign(campaignId, campaignName);
+    } else {
+        console.error('Admin interface not initialized');
+        return false;
+    }
+};
