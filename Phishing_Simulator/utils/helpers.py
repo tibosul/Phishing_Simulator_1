@@ -150,14 +150,20 @@ def get_client_ip():
     Returns:
         str: Adresa IP a clientului
     """
-    if request.headers.getlist("X-Forwarded-For"):
-        ip = request.headers.getlist("X-Forwarded-For")[0]
-    elif request.headers.get("X-Real-IP"):
-        ip = request.headers.get("X-Real-IP")
-    else:
-        ip = request.remote_addr
-    
-    return ip or "Unknown"
+    try:
+        if request and request.headers.getlist("X-Forwarded-For"):
+            ip = request.headers.getlist("X-Forwarded-For")[0]
+        elif request and request.headers.get("X-Real-IP"):
+            ip = request.headers.get("X-Real-IP")
+        elif request:
+            ip = request.remote_addr
+        else:
+            ip = None
+        
+        return ip or "Unknown"
+    except RuntimeError:
+        # Outside of request context (e.g., in tests)
+        return "127.0.0.1"
 
 
 def get_user_agent():
@@ -167,7 +173,11 @@ def get_user_agent():
     Returns:
         str: User-Agent string
     """
-    return request.headers.get('User-Agent', 'Unknown')
+    try:
+        return request.headers.get('User-Agent', 'Unknown') if request else 'Test-Agent'
+    except RuntimeError:
+        # Outside of request context (e.g., in tests)
+        return "Test-Agent"
 
 
 def is_safe_url(target):

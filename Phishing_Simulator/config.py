@@ -50,9 +50,17 @@ class Config:
     BASE_URL = os.environ.get('BASE_URL') or 'http://localhost:5000'
     
     # === SECURITY SETTINGS ===
-    WTF_CSRF_ENABLED = False
+    WTF_CSRF_ENABLED = True  # Enable CSRF protection
     WTF_CSRF_TIME_LIMIT = 3600  # 1 hour
     BCRYPT_LOG_ROUNDS = 12
+    
+    # Security headers
+    SECURITY_HEADERS_ENABLED = True
+    
+    # Rate limiting
+    RATE_LIMIT_ENABLED = True
+    RATE_LIMIT_DEFAULT = 100  # requests per hour
+    RATE_LIMIT_STRICT_ENDPOINTS = 10  # for sensitive endpoints
     
     # === LOGGING SETTINGS ===
     LOG_LEVEL = os.environ.get('LOG_LEVEL') or 'INFO'

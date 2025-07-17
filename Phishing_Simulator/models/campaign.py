@@ -299,6 +299,10 @@ class Campaign(db.Model):
         if self.type not in ['email', 'sms', 'both']:
             raise ValueError("Campaign type must be 'email', 'sms', or 'both'")
         
+        # Set default status if not set
+        if self.status is None:
+            self.status = 'draft'
+        
         if self.status not in ['draft', 'active', 'paused', 'completed']:
             raise ValueError("Invalid campaign status")
         
