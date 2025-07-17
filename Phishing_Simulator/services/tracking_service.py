@@ -384,7 +384,8 @@ class TrackingService:
             # Calculează ratele de conversie
             total_sent = funnel_data.get('email_sent', 0)
             if total_sent > 0:
-                for step, count in funnel_data.items():
+                # Create a copy of the items to avoid modifying dict during iteration
+                for step, count in list(funnel_data.items()):
                     funnel_data[f'{step}_rate'] = round((count / total_sent) * 100, 2)
             
             return funnel_data

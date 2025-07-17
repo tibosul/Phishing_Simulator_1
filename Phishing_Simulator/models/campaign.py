@@ -291,20 +291,22 @@ class Campaign(db.Model):
         Validează datele campaniei
         
         Raises:
-            ValueError: Dacă datele nu sunt valide
+            ValidationError: Dacă datele nu sunt valide
         """
+        from utils.validators import ValidationError
+        
         if not self.name or len(self.name.strip()) < 3:
-            raise ValueError("Campaign name must be at least 3 characters")
+            raise ValidationError("Campaign name must be at least 3 characters")
         
         if self.type not in ['email', 'sms', 'both']:
-            raise ValueError("Campaign type must be 'email', 'sms', or 'both'")
+            raise ValidationError("Campaign type must be 'email', 'sms', or 'both'")
         
         # Set default status if not set
         if self.status is None:
             self.status = 'draft'
         
         if self.status not in ['draft', 'active', 'paused', 'completed']:
-            raise ValueError("Invalid campaign status")
+            raise ValidationError("Invalid campaign status")
         
         return True
     
