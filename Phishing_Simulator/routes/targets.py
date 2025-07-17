@@ -16,6 +16,21 @@ bp = Blueprint('targets', __name__, url_prefix='/admin/targets')
 logger = logging.getLogger(__name__)
 
 
+def is_ajax_request():
+    """
+    Helper function to detect if the current request is an AJAX request
+    
+    Checks for common AJAX indicators:
+    - X-Requested-With header
+    - Accept header containing application/json
+    
+    Returns:
+        bool: True if request appears to be AJAX, False otherwise
+    """
+    return (request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 
+            'application/json' in request.headers.get('Accept', ''))
+
+
 @bp.route('/')
 def list_targets():
     """Lista cu toate țintele din sistem - FIXED: returnează HTML"""
@@ -485,39 +500,79 @@ def upload_targets():
         # POST - handle the CSV upload
         print("=== POST request for CSV upload ===", file=sys.stderr, flush=True)
         
+        # Detect if this is an AJAX request
+        is_ajax = is_ajax_request()
+        print(f"=== Is AJAX request: {is_ajax} ===", file=sys.stderr, flush=True)
+        
         # Check if campaigns exist first
         campaigns = Campaign.query.order_by(Campaign.name).all()
         if not campaigns:
-            flash('No campaigns available! Please create a campaign first.', 'error')
+            error_msg = 'No campaigns available! Please create a campaign first.'
+            flash(error_msg, 'error')
+            if is_ajax:
+                return jsonify({
+                    'success': False,
+                    'error': error_msg
+                }), 400
             return render_template('admin/upload_targets.html', campaigns=[])
         
         campaign_id = request.form.get('campaign_id')
         if not campaign_id:
-            flash('Please select a campaign', 'error')
+            error_msg = 'Please select a campaign'
+            flash(error_msg, 'error')
+            if is_ajax:
+                return jsonify({
+                    'success': False,
+                    'error': error_msg
+                }), 400
             return render_template('admin/upload_targets.html', campaigns=campaigns)
         
         # Verifică dacă campania există
         campaign = db.session.get(Campaign, campaign_id)
         if not campaign:
-            flash('Selected campaign not found', 'error')
+            error_msg = 'Selected campaign not found'
+            flash(error_msg, 'error')
+            if is_ajax:
+                return jsonify({
+                    'success': False,
+                    'error': error_msg
+                }), 404
             campaigns = Campaign.query.order_by(Campaign.name).all()
             return render_template('admin/upload_targets.html', campaigns=campaigns)
         
         # Verifică dacă fișierul a fost uploadat
         if 'csv_file' not in request.files:
-            flash('No file selected', 'error')
+            error_msg = 'No file selected'
+            flash(error_msg, 'error')
+            if is_ajax:
+                return jsonify({
+                    'success': False,
+                    'error': error_msg
+                }), 400
             campaigns = Campaign.query.order_by(Campaign.name).all()
             return render_template('admin/upload_targets.html', campaigns=campaigns, selected_campaign=campaign)
         
         file = request.files['csv_file']
         if file.filename == '':
-            flash('No file selected', 'error')
+            error_msg = 'No file selected'
+            flash(error_msg, 'error')
+            if is_ajax:
+                return jsonify({
+                    'success': False,
+                    'error': error_msg
+                }), 400
             campaigns = Campaign.query.order_by(Campaign.name).all()
             return render_template('admin/upload_targets.html', campaigns=campaigns, selected_campaign=campaign)
         
         # Verifică extensia și mărimea fișierului
         if not file.filename.lower().endswith('.csv'):
-            flash('Please upload a CSV file', 'error')
+            error_msg = 'Please upload a CSV file'
+            flash(error_msg, 'error')
+            if is_ajax:
+                return jsonify({
+                    'success': False,
+                    'error': error_msg
+                }), 400
             campaigns = Campaign.query.order_by(Campaign.name).all()
             return render_template('admin/upload_targets.html', campaigns=campaigns, selected_campaign=campaign)
         
@@ -528,7 +583,13 @@ def upload_targets():
         file.seek(0)  # Reset to beginning
         
         if file_size > max_file_size:
-            flash(f'File too large. Maximum size allowed: {max_file_size // 1024 // 1024}MB', 'error')
+            error_msg = f'File too large. Maximum size allowed: {max_file_size // 1024 // 1024}MB'
+            flash(error_msg, 'error')
+            if is_ajax:
+                return jsonify({
+                    'success': False,
+                    'error': error_msg
+                }), 400
             campaigns = Campaign.query.order_by(Campaign.name).all()
             return render_template('admin/upload_targets.html', campaigns=campaigns, selected_campaign=campaign)
         
@@ -539,7 +600,13 @@ def upload_targets():
         row_count = len(csv_content.split('\n')) - 1  # -1 for header
         max_rows = 10000
         if row_count > max_rows:
-            flash(f'CSV has too many rows. Maximum allowed: {max_rows}', 'error')
+            error_msg = f'CSV has too many rows. Maximum allowed: {max_rows}'
+            flash(error_msg, 'error')
+            if is_ajax:
+                return jsonify({
+                    'success': False,
+                    'error': error_msg
+                }), 400
             campaigns = Campaign.query.order_by(Campaign.name).all()
             return render_template('admin/upload_targets.html', campaigns=campaigns, selected_campaign=campaign)
         
@@ -553,7 +620,47 @@ def upload_targets():
             skip_duplicates=skip_duplicates
         )
         
-        # Afișează rezultatele
+        # Log the activity
+        log_security_event('targets_uploaded', f'{stats["added"]} targets added to campaign "{campaign.name}"', get_client_ip())
+        log_admin_action('csv_upload', 'targets', campaign.id, 
+                        f'Campaign: {campaign.name}, Added: {stats["added"]}, Skipped: {stats["skipped"]}, Errors: {len(stats["errors"])}')
+        
+        # For AJAX requests, return JSON response
+        if is_ajax:
+            success_msg = []
+            info_msg = []
+            warning_msg = []
+            
+            if stats['added'] > 0:
+                success_msg.append(f'Successfully added {stats["added"]} targets to campaign "{campaign.name}"')
+            
+            if stats['skipped'] > 0:
+                info_msg.append(f'{stats["skipped"]} targets were skipped (duplicates)')
+            
+            if stats['errors']:
+                warning_msg.append(f'{len(stats["errors"])} errors occurred during import')
+            
+            return jsonify({
+                'success': True,
+                'message': 'Targets imported successfully',
+                'stats': {
+                    'added': stats['added'],
+                    'skipped': stats['skipped'],
+                    'errors': len(stats['errors']),
+                    'error_details': stats['errors'][:10] if stats['errors'] else []  # Limit error details
+                },
+                'campaign': {
+                    'id': campaign.id,
+                    'name': campaign.name
+                },
+                'messages': {
+                    'success': success_msg,
+                    'info': info_msg,
+                    'warning': warning_msg
+                }
+            })
+        
+        # For regular form submissions, return HTML template with flash messages
         if stats['added'] > 0:
             flash(f'Successfully added {stats["added"]} targets to campaign "{campaign.name}"', 'success')
         
@@ -563,10 +670,6 @@ def upload_targets():
         if stats['errors']:
             flash(f'{len(stats["errors"])} errors occurred during import', 'warning')
         
-        log_security_event('targets_uploaded', f'{stats["added"]} targets added to campaign "{campaign.name}"', get_client_ip())
-        log_admin_action('csv_upload', 'targets', campaign.id, 
-                        f'Campaign: {campaign.name}, Added: {stats["added"]}, Skipped: {stats["skipped"]}, Errors: {len(stats["errors"])}')
-        
         campaigns = Campaign.query.order_by(Campaign.name).all()
         return render_template('admin/upload_targets.html', 
                              campaigns=campaigns, 
@@ -574,12 +677,25 @@ def upload_targets():
                              upload_stats=stats)
         
     except ValidationError as e:
-        flash(str(e), 'error')
+        error_msg = str(e)
+        if is_ajax_request():
+            return jsonify({
+                'success': False,
+                'error': error_msg
+            }), 400
+        flash(error_msg, 'error')
         campaigns = Campaign.query.order_by(Campaign.name).all()
         return render_template('admin/upload_targets.html', campaigns=campaigns)
     except Exception as e:
         logger.error(f"Error uploading targets: {str(e)}")
-        flash('Error processing CSV file', 'error')
+        error_msg = 'Error processing CSV file'
+        if is_ajax_request():
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'details': str(e) if logger.level <= logging.DEBUG else None
+            }), 500
+        flash(error_msg, 'error')
         campaigns = Campaign.query.order_by(Campaign.name).all()
         return render_template('admin/upload_targets.html', campaigns=campaigns)
 
