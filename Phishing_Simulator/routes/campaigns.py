@@ -9,6 +9,7 @@ from models.target import Target
 from services.campaign_service import CampaignService
 from utils.validators import ValidationError
 from utils.helpers import get_client_ip, log_security_event
+from utils.database import db
 import logging
 
 # FIXED: Added url_prefix='/admin/campaigns' to match app.py registration
@@ -33,18 +34,42 @@ def list_campaigns():
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 10))
         
-        # SIMPLE VERSION - just return empty campaigns for now
-        campaigns = []
+        # Query campaigns from database
+        campaigns_query = Campaign.query
         
-        total_campaigns = 0
-        total_pages = 1
+        # Apply search filter
+        if search_query:
+            campaigns_query = campaigns_query.filter(
+                db.or_(
+                    Campaign.name.contains(search_query),
+                    Campaign.description.contains(search_query)
+                )
+            )
         
-        # Statistici rapide pentru dashboard
+        # Apply status filter
+        if status_filter:
+            campaigns_query = campaigns_query.filter_by(status=status_filter)
+        
+        # Apply type filter
+        if type_filter:
+            campaigns_query = campaigns_query.filter_by(type=type_filter)
+        
+        # Get total count for pagination
+        total_campaigns = campaigns_query.count()
+        
+        # Apply pagination
+        paginated_result = campaigns_query.order_by(Campaign.created_at.desc())\
+            .paginate(page=page, per_page=per_page, error_out=False)
+        
+        campaigns = paginated_result.items
+        total_pages = paginated_result.pages
+        
+        # Calculate quick stats
         stats = {
-            'total': 0,
-            'active': 0,
-            'draft': 0,
-            'completed': 0
+            'total': Campaign.query.count(),
+            'active': Campaign.query.filter_by(status='active').count(),
+            'draft': Campaign.query.filter_by(status='draft').count(),
+            'completed': Campaign.query.filter_by(status='completed').count()
         }
         
         return render_template('admin/campaigns.html',
@@ -257,22 +282,27 @@ def upload_targets(campaign_id):
         campaign = Campaign.query.get_or_404(campaign_id)
         
         if request.method == 'GET':
-            return render_template('admin/upload_targets.html', campaign=campaign)
+            # Also provide campaigns list in case template needs it
+            campaigns = Campaign.query.order_by(Campaign.name).all()
+            return render_template('admin/upload_targets.html', campaign=campaign, campaigns=campaigns, selected_campaign=campaign)
         
         # Verifică dacă fișierul a fost uploadat
         if 'csv_file' not in request.files:
             flash('No file selected', 'error')
-            return render_template('admin/upload_targets.html', campaign=campaign)
+            campaigns = Campaign.query.order_by(Campaign.name).all()
+            return render_template('admin/upload_targets.html', campaign=campaign, campaigns=campaigns, selected_campaign=campaign)
         
         file = request.files['csv_file']
         if file.filename == '':
             flash('No file selected', 'error')
-            return render_template('admin/upload_targets.html', campaign=campaign)
+            campaigns = Campaign.query.order_by(Campaign.name).all()
+            return render_template('admin/upload_targets.html', campaign=campaign, campaigns=campaigns, selected_campaign=campaign)
         
         # Verifică extensia
         if not file.filename.lower().endswith('.csv'):
             flash('Please upload a CSV file', 'error')
-            return render_template('admin/upload_targets.html', campaign=campaign)
+            campaigns = Campaign.query.order_by(Campaign.name).all()
+            return render_template('admin/upload_targets.html', campaign=campaign, campaigns=campaigns, selected_campaign=campaign)
         
         # Citește conținutul
         csv_content = file.read().decode('utf-8')
@@ -300,17 +330,22 @@ def upload_targets(campaign_id):
         
         log_security_event('targets_uploaded', f'{stats["added"]} targets added to campaign "{campaign.name}"', get_client_ip())
         
+        campaigns = Campaign.query.order_by(Campaign.name).all()
         return render_template('admin/upload_targets.html', 
                              campaign=campaign, 
+                             campaigns=campaigns,
+                             selected_campaign=campaign,
                              upload_stats=stats)
         
     except ValidationError as e:
         flash(str(e), 'error')
-        return render_template('admin/upload_targets.html', campaign=campaign)
+        campaigns = Campaign.query.order_by(Campaign.name).all()
+        return render_template('admin/upload_targets.html', campaign=campaign, campaigns=campaigns, selected_campaign=campaign)
     except Exception as e:
         logging.error(f"Error uploading targets for campaign {campaign_id}: {str(e)}")
         flash('Error processing CSV file', 'error')
-        return render_template('admin/upload_targets.html', campaign=campaign)
+        campaigns = Campaign.query.order_by(Campaign.name).all()
+        return render_template('admin/upload_targets.html', campaign=campaign, campaigns=campaigns, selected_campaign=campaign)
 
 
 @bp.route('/<int:campaign_id>/targets/add', methods=['POST'])
