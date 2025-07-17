@@ -196,14 +196,16 @@ class CampaignService:
             raise
     
     @staticmethod
-    def add_targets_from_csv(campaign_id, csv_content, skip_duplicates=True):
+    def add_targets_from_csv(campaign_id, csv_content, skip_duplicates=True, max_rows=10000, max_file_size=5*1024*1024):
         """
-        Adaugă ținte dintr-un fișier CSV
+        Adaugă ținte dintr-un fișier CSV cu limite de securitate
         
         Args:
             campaign_id: ID-ul campaniei
             csv_content: Conținutul fișierului CSV
             skip_duplicates: Sare peste duplicatele de email
+            max_rows: Numărul maxim de rânduri permise (default: 10000)
+            max_file_size: Mărimea maximă a fișierului în bytes (default: 5MB)
             
         Returns:
             dict: Statistici despre import (added, skipped, errors)
@@ -213,9 +215,14 @@ class CampaignService:
             if not campaign:
                 raise ValidationError(f"Campaign with ID {campaign_id} not found")
             
-            # Validează CSV-ul
+            # Validează CSV-ul cu limite de securitate
             required_columns = ['email']
-            validate_csv_format(csv_content, required_columns)
+            validate_csv_format(csv_content, required_columns, max_rows, max_file_size)
+            
+            # Log pentru securitate
+            log_security_event('csv_upload_started', 
+                             f"CSV upload started for campaign {campaign.name}", 
+                             {'campaign_id': campaign_id, 'file_size': len(csv_content)})
             
             # Parsează CSV-ul
             csv_file = io.StringIO(csv_content)
@@ -227,13 +234,33 @@ class CampaignService:
                 'errors': []
             }
             
-            for row_num, row in enumerate(reader, start=2):  # Start from 2 (after header)
+            # Validate row count again after parsing (double-check)
+            rows = list(reader)
+            if len(rows) > max_rows:
+                raise ValidationError(f"CSV has too many rows. Maximum allowed: {max_rows}")
+            
+            for row_num, row in enumerate(rows, start=2):  # Start from 2 (after header)
                 try:
                     # Verifică duplicatele
                     email = row.get('email', '').strip().lower()
                     if not email:
                         stats['errors'].append(f"Row {row_num}: Email is required")
                         continue
+                    
+                    # Backend validation pentru email
+                    try:
+                        validate_email(email)
+                    except ValidationError as e:
+                        stats['errors'].append(f"Row {row_num}: Invalid email - {str(e)}")
+                        continue
+                    
+                    # Validate phone if present
+                    if 'phone' in row and row['phone'].strip():
+                        try:
+                            validate_phone_number(row['phone'].strip())
+                        except ValidationError as e:
+                            stats['errors'].append(f"Row {row_num}: Invalid phone - {str(e)}")
+                            continue
                     
                     if skip_duplicates:
                         existing = Target.get_by_email_and_campaign(email, campaign_id)
@@ -255,6 +282,9 @@ class CampaignService:
             if stats['added'] > 0:
                 db.session.commit()
                 logging.info(f"Added {stats['added']} targets to campaign {campaign.name}")
+                log_security_event('csv_upload_completed', 
+                                 f"CSV upload completed for campaign {campaign.name}", 
+                                 {'campaign_id': campaign_id, 'targets_added': stats['added']})
             else:
                 db.session.rollback()
             
@@ -263,6 +293,8 @@ class CampaignService:
         except Exception as e:
             db.session.rollback()
             logging.error(f"Error importing CSV for campaign {campaign_id}: {str(e)}")
+            log_security_event('csv_upload_failed', 
+                             f"CSV upload failed for campaign {campaign_id}: {str(e)}")
             raise
     
     @staticmethod

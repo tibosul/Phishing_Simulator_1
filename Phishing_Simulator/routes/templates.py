@@ -3,7 +3,8 @@ from models.template import Template
 from services.email_service import EmailService
 from services.sms_service import SMSService
 from utils.validators import ValidationError
-from utils.helpers import get_client_ip, log_security_event
+from utils.helpers import get_client_ip, log_security_event, log_admin_action
+from utils.security import sanitize_template_content, validate_template_variables
 from utils.database import db
 import logging
 
@@ -197,6 +198,23 @@ def create_template():
         difficulty_level = data.get('difficulty_level', 'medium')
         language = data.get('language', 'en')
         
+        # Sanitizare și validare securizată pentru conținut
+        try:
+            # Validează variabilele template
+            validate_template_variables(content)
+            
+            # Sanitizează conținutul pentru prevenirea XSS
+            content = sanitize_template_content(content, template_type)
+            
+            # Sanitizează și alte câmpuri
+            if subject:
+                validate_template_variables(subject)
+                subject = sanitize_template_content(subject, 'text')
+                
+        except ValidationError as e:
+            flash(f'Template security validation failed: {str(e)}', 'error')
+            return render_template('admin/create_template.html')
+        
         # Validări specifice
         if template_type not in ['email', 'sms']:
             flash('Invalid template type', 'error')
@@ -230,6 +248,7 @@ def create_template():
         db.session.commit()
         
         log_security_event('template_created', f'Template "{template.name}" created', get_client_ip())
+        log_admin_action('create', 'template', template.id, f'Name: {template.name}, Type: {template.type}')
         
         flash(f'Template "{template.name}" created successfully!', 'success')
         return redirect(url_for('templates.view_template', template_id=template.id))
@@ -330,13 +349,32 @@ def edit_template(template_id):
         updatable_fields = ['subject', 'content', 'description', 'category', 'difficulty_level', 'language']
         for field in updatable_fields:
             if field in data:
-                setattr(template, field, data[field])
+                value = data[field]
+                
+                # Sanitizare specială pentru content și subject
+                if field in ['content', 'subject']:
+                    try:
+                        # Validează variabilele template
+                        validate_template_variables(value)
+                        
+                        # Sanitizează conținutul
+                        if field == 'content':
+                            value = sanitize_template_content(value, template.type)
+                        else:  # subject
+                            value = sanitize_template_content(value, 'text')
+                            
+                    except ValidationError as e:
+                        flash(f'Template security validation failed for {field}: {str(e)}', 'error')
+                        return render_template('admin/edit_template.html', template=template)
+                
+                setattr(template, field, value)
         
         # Validează și salvează
         template.validate()
         db.session.commit()
         
         log_security_event('template_updated', f'Template "{template.name}" updated', get_client_ip())
+        log_admin_action('update', 'template', template.id, f'Name: {template.name}')
         
         flash(f'Template "{template.name}" updated successfully!', 'success')
         return redirect(url_for('templates.view_template', template_id=template_id))

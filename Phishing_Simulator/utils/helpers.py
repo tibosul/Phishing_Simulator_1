@@ -291,23 +291,89 @@ def generate_random_user_agent():
     return secrets.choice(user_agents)
 
 
-def log_security_event(event_type, details, ip_address=None):
+def log_security_event(event_type, details, ip_address=None, additional_data=None):
     """
-    Loggează evenimente de securitate
+    Loggează evenimente de securitate cu informații detaliate
     
     Args:
-        event_type: Tipul evenimentului
+        event_type: Tipul evenimentului (login, target_created, csv_upload, etc.)
         details: Detaliile evenimentului
         ip_address: IP-ul de unde vine evenimentul
+        additional_data: Date suplimentare pentru context
     """
     if not ip_address:
         ip_address = get_client_ip()
     
     timestamp = datetime.utcnow().isoformat()
     
-    log_entry = f"[SECURITY] {timestamp} | {event_type} | IP: {ip_address} | {details}"
+    # Informații despre request
+    user_agent = 'Unknown'
+    endpoint = 'Unknown'
+    method = 'Unknown'
     
+    if request:
+        user_agent = request.headers.get('User-Agent', 'Unknown')[:100]  # Limit length
+        endpoint = request.endpoint or 'Unknown'
+        method = request.method
+    
+    # Construiește entry-ul de log
+    log_entry_parts = [
+        f"[SECURITY]",
+        f"Timestamp: {timestamp}",
+        f"Event: {event_type}",
+        f"IP: {ip_address}",
+        f"Endpoint: {endpoint}",
+        f"Method: {method}",
+        f"Details: {details}"
+    ]
+    
+    if additional_data:
+        log_entry_parts.append(f"Extra: {additional_data}")
+    
+    log_entry = " | ".join(log_entry_parts)
+    
+    # Log la nivel WARNING pentru toate evenimentele de securitate
     logging.warning(log_entry)
+    
+    # Pentru evenimente critice, log și la nivel ERROR
+    critical_events = [
+        'login_failed', 'multiple_login_attempts', 'file_upload_blocked',
+        'xss_attempt', 'injection_attempt', 'rate_limit_exceeded',
+        'unauthorized_access', 'admin_action_failed'
+    ]
+    
+    if event_type in critical_events:
+        logging.error(f"CRITICAL SECURITY EVENT: {log_entry}")
+
+
+def log_admin_action(action, resource_type, resource_id=None, details=None):
+    """
+    Loggează acțiuni administrative pentru auditare
+    
+    Args:
+        action: Acțiunea efectuată (create, update, delete, etc.)
+        resource_type: Tipul resursei (campaign, target, template, etc.)
+        resource_id: ID-ul resursei (opțional)
+        details: Detalii suplimentare
+    """
+    resource_info = f"{resource_type}"
+    if resource_id:
+        resource_info += f" (ID: {resource_id})"
+    
+    log_message = f"Admin action: {action} {resource_info}"
+    if details:
+        log_message += f" - {details}"
+    
+    log_security_event(
+        event_type=f"admin_{action}",
+        details=log_message,
+        additional_data={
+            'action': action,
+            'resource_type': resource_type,
+            'resource_id': resource_id,
+            'admin_details': details
+        }
+    )
 
 
 def create_pagination_info(page, per_page, total):

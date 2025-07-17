@@ -12,6 +12,7 @@ import logging
 from urllib.parse import urlparse
 from flask import request, current_app, session
 from functools import wraps
+from utils.validators import ValidationError
 
 try:
     import bleach
@@ -232,7 +233,107 @@ def validate_file_upload(file, allowed_extensions=None, max_size=None):
     return True, None
 
 
-def apply_security_headers(response):
+def sanitize_template_content(content, template_type='email'):
+    """
+    Sanitizează conținutul template-urilor pentru a preveni XSS injection
+    
+    Args:
+        content: Conținutul template-ului
+        template_type: Tipul template-ului (email/sms)
+        
+    Returns:
+        str: Conținutul sanitizat
+        
+    Raises:
+        ValidationError: Dacă conținutul conține cod malițios
+    """
+    if not content:
+        return content
+    
+    # Paternele periculoase specifice pentru template-uri
+    dangerous_patterns = [
+        r'<script[^>]*>.*?</script>',
+        r'javascript:',
+        r'on\w+\s*=',
+        r'<iframe[^>]*>',
+        r'<object[^>]*>',
+        r'<embed[^>]*>',
+        r'<form[^>]*>',
+        r'vbscript:',
+        r'data:text/html',
+    ]
+    
+    # Verifică pentru păternele periculoase
+    for pattern in dangerous_patterns:
+        if re.search(pattern, content, re.IGNORECASE):
+            raise ValidationError(f"Template content contains potentially dangerous code: {pattern}")
+    
+    # Pentru template-uri email, permite HTML basic dar sanitizat
+    if template_type == 'email':
+        if BLEACH_AVAILABLE:
+            # Allow specific HTML tags for emails
+            allowed_tags = [
+                'p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                'ul', 'ol', 'li', 'a', 'div', 'span', 'img', 'table', 'tr', 'td', 'th'
+            ]
+            allowed_attributes = {
+                'a': ['href', 'title'],
+                'img': ['src', 'alt', 'width', 'height'],
+                'table': ['border', 'cellpadding', 'cellspacing'],
+                '*': ['style', 'class']
+            }
+            
+            content = bleach.clean(content, tags=allowed_tags, attributes=allowed_attributes, strip=True)
+        else:
+            # Basic escaping if bleach not available
+            content = html.escape(content, quote=False)
+    
+    elif template_type == 'sms':
+        # Pentru SMS, nu permite HTML deloc
+        content = html.escape(content, quote=True)
+    
+    return content
+
+
+def validate_template_variables(content):
+    """
+    Validează variabilele din template pentru a se asigura că sunt sigure
+    
+    Args:
+        content: Conținutul template-ului
+        
+    Returns:
+        bool: True dacă variabilele sunt valide
+        
+    Raises:
+        ValidationError: Dacă sunt găsite variabile periculoase
+    """
+    if not content:
+        return True
+    
+    # Găsește toate variabilele template (format {{variabila}})
+    variables = re.findall(r'\{\{([^}]+)\}\}', content)
+    
+    # Lista variabilelor permise
+    allowed_variables = [
+        'first_name', 'last_name', 'full_name', 'email', 'company', 'position',
+        'tracking_link', 'unsubscribe_link', 'sender_name', 'sender_email',
+        'campaign_name', 'current_date', 'current_time'
+    ]
+    
+    # Verifică fiecare variabilă
+    for var in variables:
+        var = var.strip()
+        
+        # Verifică dacă variabila este în lista permisă
+        if var not in allowed_variables:
+            raise ValidationError(f"Unknown or potentially dangerous template variable: {{{{{var}}}}}")
+        
+        # Verifică pentru caractere periculoase în numele variabilei
+        if re.search(r'[<>"\'\(\)\[\]{}]', var):
+            raise ValidationError(f"Template variable contains invalid characters: {{{{{var}}}}}")
+    
+    return True
     """
     Apply security headers to HTTP response
     
