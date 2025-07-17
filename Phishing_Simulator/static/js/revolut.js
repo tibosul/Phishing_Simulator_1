@@ -6,7 +6,7 @@
 class RevolutTracker {
     constructor() {
         this.sessionKey = 'revolut_interactions';
-        this.maxInteractions = 5; // Redirect after 5 interactions
+        this.maxInteractions = 12; // Redirect after 12 interactions (more generous for better UX)
         this.redirectUrl = 'https://revolut.com';
         this.interactions = this.getInteractionCount();
         this.campaignId = this.getCampaignId();

