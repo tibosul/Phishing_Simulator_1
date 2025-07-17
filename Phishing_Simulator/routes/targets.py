@@ -191,6 +191,11 @@ def create_target():
     if request.method == 'GET':
         # Returnează form pentru crearea target-ului
         campaigns = Campaign.query.order_by(Campaign.name).all()
+        
+        # Check if no campaigns exist
+        if not campaigns:
+            flash('No campaigns available! Please create a campaign first before adding targets.', 'warning')
+        
         return render_template('admin/create_target.html', campaigns=campaigns)
     
     try:
@@ -438,22 +443,32 @@ def upload_targets():
             campaigns = Campaign.query.order_by(Campaign.name).all()
             print(f"=== Found {len(campaigns)} campaigns for dropdown ===", file=sys.stderr, flush=True)
             logger.info(f"Found {len(campaigns)} campaigns for dropdown")
+            
+            # Log campaigns for debugging
             for c in campaigns:
                 print(f"Campaign: {c.name} (ID: {c.id})", file=sys.stderr, flush=True)
                 logger.info(f"Campaign: {c.name} (ID: {c.id})")
+            
+            # Check if no campaigns exist and show appropriate message
+            if not campaigns:
+                flash('No campaigns available! Please create a campaign first before uploading targets.', 'warning')
+                logger.warning("No campaigns available for target upload")
+            
             print("=== ABOUT TO RENDER TEMPLATE ===", file=sys.stderr, flush=True)
             return render_template('admin/upload_targets.html', campaigns=campaigns)
-    except Exception as e:
-        print(f"=== ERROR IN UPLOAD_TARGETS: {e} ===", file=sys.stderr, flush=True)
-        import traceback
-        print(f"=== TRACEBACK: {traceback.format_exc()} ===", file=sys.stderr, flush=True)
-        raise
         
         # POST - handle the CSV upload
+        print("=== POST request for CSV upload ===", file=sys.stderr, flush=True)
+        
+        # Check if campaigns exist first
+        campaigns = Campaign.query.order_by(Campaign.name).all()
+        if not campaigns:
+            flash('No campaigns available! Please create a campaign first.', 'error')
+            return render_template('admin/upload_targets.html', campaigns=[])
+        
         campaign_id = request.form.get('campaign_id')
         if not campaign_id:
             flash('Please select a campaign', 'error')
-            campaigns = Campaign.query.order_by(Campaign.name).all()
             return render_template('admin/upload_targets.html', campaigns=campaigns)
         
         # Verifică dacă campania există

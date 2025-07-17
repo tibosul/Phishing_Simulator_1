@@ -132,7 +132,20 @@
                                 Select Campaign <span class="text-danger">*</span>
                             </label>
                             <!-- DEBUG: campaigns variable = {{ campaigns|length if campaigns else 'NONE' }} -->
-                            {% if selected_campaign %}
+                            {% if not campaigns %}
+                            <!-- No campaigns available -->
+                            <div class="alert alert-warning" role="alert">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>No campaigns available!</strong>
+                                <p class="mb-2">You need to create at least one campaign before uploading targets.</p>
+                                <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-plus-circle me-1"></i>Create Your First Campaign
+                                </a>
+                            </div>
+                            <select class="form-select form-select-lg" id="campaign_id" name="campaign_id" required disabled>
+                                <option value="">No campaigns available</option>
+                            </select>
+                            {% elif selected_campaign %}
                             <!-- When uploading to a specific campaign, show it as selected and readonly -->
                             <select class="form-select form-select-lg" id="campaign_id" name="campaign_id" required>
                                 <option value="{{ selected_campaign.id }}" selected>
@@ -172,8 +185,10 @@
                         </div>
 
                         <!-- File Upload Zone -->
-                        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('csvFile').click()">
+                        <div class="upload-zone{% if not campaigns %} error{% endif %}" id="uploadZone" 
+                             {% if campaigns %}onclick="document.getElementById('csvFile').click()"{% endif %}>
                             <div id="uploadContent">
+                                {% if campaigns %}
                                 <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #007bff;"></i>
                                 <h5 class="mt-3">Drop your CSV file here</h5>
                                 <p class="text-muted">or click to browse files</p>
@@ -181,8 +196,13 @@
                                     Supported formats: .csv, .txt<br>
                                     Maximum file size: 10MB
                                 </p>
+                                {% else %}
+                                <i class="bi bi-exclamation-triangle" style="font-size: 3rem; color: #dc3545;"></i>
+                                <h5 class="mt-3 text-danger">Upload Disabled</h5>
+                                <p class="text-muted">Create a campaign first to upload targets</p>
+                                {% endif %}
                             </div>
-                            <input type="file" id="csvFile" name="csv_file" accept=".csv,.txt" style="display: none;">
+                            <input type="file" id="csvFile" name="csv_file" accept=".csv,.txt" style="display: none;" {% if not campaigns %}disabled{% endif %}>
                         </div>
 
                         <!-- File Information -->
@@ -205,9 +225,15 @@
 
                     <!-- Continue Button -->
                     <div class="text-end mt-4">
-                        <button type="button" class="btn btn-primary btn-lg" id="continueBtn" onclick="proceedToMapping()" disabled>
+                        <button type="button" class="btn btn-primary btn-lg" id="continueBtn" onclick="proceedToMapping()" 
+                                disabled{% if not campaigns %} title="No campaigns available"{% endif %}>
                             <i class="bi bi-arrow-right me-2"></i>Continue to Field Mapping
                         </button>
+                        {% if not campaigns %}
+                        <div class="form-text text-muted mt-2">
+                            <i class="bi bi-info-circle me-1"></i>Create a campaign first to enable target upload
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -475,7 +501,14 @@ function showError(message) {
 
 // Step navigation
 function proceedToMapping() {
-    if (!document.getElementById('campaign_id').value) {
+    const campaignSelect = document.getElementById('campaign_id');
+    
+    if (campaignSelect.disabled) {
+        alert('No campaigns available! Please create a campaign first.');
+        return;
+    }
+    
+    if (!campaignSelect.value) {
         alert('Please select a campaign first');
         return;
     }
