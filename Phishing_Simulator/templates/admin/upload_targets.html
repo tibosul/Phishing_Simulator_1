@@ -131,6 +131,7 @@
                             <label for="campaign_id" class="form-label fw-bold">
                                 Select Campaign <span class="text-danger">*</span>
                             </label>
+                            <!-- DEBUG: campaigns variable = {{ campaigns|length if campaigns else 'NONE' }} -->
                             {% if selected_campaign %}
                             <!-- When uploading to a specific campaign, show it as selected and readonly -->
                             <select class="form-select form-select-lg" id="campaign_id" name="campaign_id" required>

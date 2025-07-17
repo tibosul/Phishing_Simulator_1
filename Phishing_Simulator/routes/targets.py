@@ -8,6 +8,7 @@ from utils.database import db
 import logging
 import csv
 import io
+import sys
 
 # FIXED: URL prefix to match app.py registration
 bp = Blueprint('targets', __name__, url_prefix='/admin/targets')
@@ -417,22 +418,36 @@ def api_delete_target(target_id):
 
 
 # Additional routes continue as API endpoints...
+@bp.route('/test-debug')
+def test_debug():
+    """Simple test route to verify our code is being executed"""
+    print("=== TEST DEBUG ROUTE HIT ===", file=sys.stderr, flush=True)
+    return "TEST DEBUG WORKS"
+
 @bp.route('/upload', methods=['GET', 'POST'])
 def upload_targets():
     """Standalone upload route that allows selecting any campaign for CSV upload"""
+    import sys
+    print("=== ENTERING upload_targets route ===", file=sys.stderr, flush=True)
     try:
-        print("=== ENTERING upload_targets route ===")
+        print("=== ENTERING upload_targets route TRY BLOCK ===", file=sys.stderr, flush=True)
         logger.info("Accessing upload_targets route")
         if request.method == 'GET':
-            print("=== GET request ===")
+            print("=== GET request ===", file=sys.stderr, flush=True)
             # Get all campaigns for selection dropdown
             campaigns = Campaign.query.order_by(Campaign.name).all()
-            print(f"=== Found {len(campaigns)} campaigns for dropdown ===")
+            print(f"=== Found {len(campaigns)} campaigns for dropdown ===", file=sys.stderr, flush=True)
             logger.info(f"Found {len(campaigns)} campaigns for dropdown")
             for c in campaigns:
-                print(f"Campaign: {c.name} (ID: {c.id})")
+                print(f"Campaign: {c.name} (ID: {c.id})", file=sys.stderr, flush=True)
                 logger.info(f"Campaign: {c.name} (ID: {c.id})")
+            print("=== ABOUT TO RENDER TEMPLATE ===", file=sys.stderr, flush=True)
             return render_template('admin/upload_targets.html', campaigns=campaigns)
+    except Exception as e:
+        print(f"=== ERROR IN UPLOAD_TARGETS: {e} ===", file=sys.stderr, flush=True)
+        import traceback
+        print(f"=== TRACEBACK: {traceback.format_exc()} ===", file=sys.stderr, flush=True)
+        raise
         
         # POST - handle the CSV upload
         campaign_id = request.form.get('campaign_id')
