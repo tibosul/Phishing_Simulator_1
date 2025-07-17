@@ -480,14 +480,23 @@ def upload_targets():
         if request.method == 'GET':
             print("=== GET request ===", file=sys.stderr, flush=True)
             # Get all campaigns for selection dropdown
-            campaigns = Campaign.query.order_by(Campaign.name).all()
-            print(f"=== Found {len(campaigns)} campaigns for dropdown ===", file=sys.stderr, flush=True)
-            logger.info(f"Found {len(campaigns)} campaigns for dropdown")
-            
-            # Log campaigns for debugging
-            for c in campaigns:
-                print(f"Campaign: {c.name} (ID: {c.id})", file=sys.stderr, flush=True)
-                logger.info(f"Campaign: {c.name} (ID: {c.id})")
+            try:
+                campaigns = Campaign.query.order_by(Campaign.name).all()
+                print(f"=== Found {len(campaigns) if campaigns else 'None'} campaigns for dropdown ===", file=sys.stderr, flush=True)
+                logger.info(f"Found {len(campaigns) if campaigns else 'None'} campaigns for dropdown")
+                
+                # Log campaigns for debugging
+                if campaigns:
+                    for c in campaigns:
+                        print(f"Campaign: {c.name} (ID: {c.id})", file=sys.stderr, flush=True)
+                        logger.info(f"Campaign: {c.name} (ID: {c.id})")
+                else:
+                    print("=== campaigns is None or empty ===", file=sys.stderr, flush=True)
+                
+            except Exception as e:
+                print(f"=== ERROR querying campaigns: {e} ===", file=sys.stderr, flush=True)
+                logger.error(f"Error querying campaigns: {e}")
+                campaigns = []
             
             # Check if no campaigns exist and show appropriate message
             if not campaigns:
@@ -495,6 +504,7 @@ def upload_targets():
                 logger.warning("No campaigns available for target upload")
             
             print("=== ABOUT TO RENDER TEMPLATE ===", file=sys.stderr, flush=True)
+            print(f"=== campaigns variable type: {type(campaigns)}, value: {campaigns} ===", file=sys.stderr, flush=True)
             return render_template('admin/upload_targets.html', campaigns=campaigns)
         
         # POST - handle the CSV upload
