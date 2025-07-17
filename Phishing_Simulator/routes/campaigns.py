@@ -26,8 +26,20 @@ def list_campaigns():
     - Pagination
     """
     try:
-        # DEBUG: Simple response first
+        # Parametri de căutare și filtrare
+        search_query = request.args.get('q', '').strip()
+        status_filter = request.args.get('status', '')
+        type_filter = request.args.get('type', '')
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 10))
+        
+        # SIMPLE VERSION - just return empty campaigns for now
         campaigns = []
+        
+        total_campaigns = 0
+        total_pages = 1
+        
+        # Statistici rapide pentru dashboard
         stats = {
             'total': 0,
             'active': 0,
@@ -35,19 +47,17 @@ def list_campaigns():
             'completed': 0
         }
         
-        filters = {
-            'search_query': '',
-            'status_filter': '',
-            'type_filter': ''
-        }
-        
         return render_template('admin/campaigns.html',
                      campaigns=campaigns,
                      stats=stats,
-                     filters=filters,
-                     page=1,
-                     total_pages=1,
-                     total_campaigns=0)
+                     filters={
+                         'search_query': search_query,
+                         'status_filter': status_filter,
+                         'type_filter': type_filter
+                     },
+                     page=page,
+                     total_pages=total_pages,
+                     total_campaigns=total_campaigns)
         
     except Exception as e:
         logging.error(f"Error listing campaigns: {str(e)}")
