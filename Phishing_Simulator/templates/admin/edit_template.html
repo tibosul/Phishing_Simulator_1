@@ -1,18 +1,679 @@
-<!-- ===========================================
-     TEMPLATE: admin/edit_template.html
-     =========================================== -->
 {% extends "admin/base.html" %}
 
 {% block title %}Edit Template{% endblock %}
 
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('templates.list_templates') }}">Templates</a></li>
+<li class="breadcrumb-item active">Edit Template</li>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.preview-container {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: #f8f9fa;
+    min-height: 400px;
+    padding: 20px;
+}
+
+.template-editor {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 14px;
+}
+
+.form-validation {
+    border-left: 4px solid #dc3545;
+    background: #fff5f5;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.form-validation.success {
+    border-left-color: #28a745;
+    background: #f0fff4;
+}
+
+.difficulty-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.difficulty-star {
+    color: #ffc107;
+    font-size: 1.2em;
+}
+
+.category-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.preview-phone {
+    max-width: 320px;
+    margin: 0 auto;
+    border: 2px solid #333;
+    border-radius: 20px;
+    padding: 20px 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.preview-email {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <h1>✏️ Edit Template</h1>
-    
-    <div class="card">
-        <div class="card-body">
-            <p>STUB: Edit template form will be here</p>
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h3 mb-2">
+                    <i class="bi bi-pencil-square me-2"></i>
+                    Edit Template
+                </h1>
+                <p class="text-muted">Modify template details and content</p>
+            </div>
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-primary" onclick="previewTemplate()">
+                    <i class="bi bi-eye me-1"></i>Preview
+                </button>
+                <button type="button" class="btn btn-outline-success" onclick="testTemplate()">
+                    <i class="bi bi-send me-1"></i>Test
+                </button>
+                <a href="{{ url_for('templates.list_templates') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Templates
+                </a>
+            </div>
         </div>
     </div>
 </div>
+
+<form id="editTemplateForm" method="POST" action="{{ url_for('templates.edit_template', template_id=template.id if template else 'new') }}">
+    <div class="row">
+        <!-- Template Form -->
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Template Details</h6>
+                </div>
+                <div class="card-body">
+                    <!-- Validation Messages -->
+                    <div id="validationMessages" style="display: none;">
+                        <!-- Validation messages will be inserted here -->
+                    </div>
+
+                    <!-- Basic Information -->
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label for="name" class="form-label fw-bold">
+                                Template Name <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   value="{{ template.name if template else '' }}" 
+                                   placeholder="Enter template name" required>
+                            <div class="form-text">Choose a descriptive name for this template</div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="language" class="form-label fw-bold">Language</label>
+                            <select class="form-select" id="language" name="language">
+                                <option value="en" {{ 'selected' if template and template.language == 'en' else '' }}>English</option>
+                                <option value="ro" {{ 'selected' if template and template.language == 'ro' else '' }}>Romanian</option>
+                                <option value="es" {{ 'selected' if template and template.language == 'es' else '' }}>Spanish</option>
+                                <option value="fr" {{ 'selected' if template and template.language == 'fr' else '' }}>French</option>
+                                <option value="de" {{ 'selected' if template and template.language == 'de' else '' }}>German</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="category" class="form-label fw-bold">
+                                Category <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="category" name="category" required>
+                                <option value="">Select category...</option>
+                                <option value="banking" {{ 'selected' if template and template.category == 'banking' else '' }}>Banking & Finance</option>
+                                <option value="social_media" {{ 'selected' if template and template.category == 'social_media' else '' }}>Social Media</option>
+                                <option value="ecommerce" {{ 'selected' if template and template.category == 'ecommerce' else '' }}>E-commerce</option>
+                                <option value="it_support" {{ 'selected' if template and template.category == 'it_support' else '' }}>IT Support</option>
+                                <option value="hr" {{ 'selected' if template and template.category == 'hr' else '' }}>Human Resources</option>
+                                <option value="government" {{ 'selected' if template and template.category == 'government' else '' }}>Government</option>
+                                <option value="healthcare" {{ 'selected' if template and template.category == 'healthcare' else '' }}>Healthcare</option>
+                                <option value="education" {{ 'selected' if template and template.category == 'education' else '' }}>Education</option>
+                                <option value="other" {{ 'selected' if template and template.category == 'other' else '' }}>Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="difficulty_level" class="form-label fw-bold">
+                                Difficulty Level <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="difficulty_level" name="difficulty_level" required>
+                                <option value="">Select difficulty...</option>
+                                <option value="1" {{ 'selected' if template and template.difficulty_level == 1 else '' }}>
+                                    ⭐ Beginner - Easy to detect
+                                </option>
+                                <option value="2" {{ 'selected' if template and template.difficulty_level == 2 else '' }}>
+                                    ⭐⭐ Intermediate - Moderate sophistication
+                                </option>
+                                <option value="3" {{ 'selected' if template and template.difficulty_level == 3 else '' }}>
+                                    ⭐⭐⭐ Advanced - Hard to detect
+                                </option>
+                                <option value="4" {{ 'selected' if template and template.difficulty_level == 4 else '' }}>
+                                    ⭐⭐⭐⭐ Expert - Very sophisticated
+                                </option>
+                                <option value="5" {{ 'selected' if template and template.difficulty_level == 5 else '' }}>
+                                    ⭐⭐⭐⭐⭐ Master - Extremely sophisticated
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Email Subject (for email templates) -->
+                    <div class="mb-3">
+                        <label for="subject" class="form-label fw-bold">
+                            Email Subject <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="subject" name="subject" 
+                               value="{{ template.subject if template else '' }}" 
+                               placeholder="Enter email subject line" required>
+                        <div class="form-text">
+                            Use variables like {{target_name}} or {{company_name}} for personalization
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <label for="description" class="form-label fw-bold">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" 
+                                  placeholder="Describe the purpose and scenario of this template">{{ template.description if template else '' }}</textarea>
+                    </div>
+
+                    <!-- Template Content -->
+                    <div class="mb-3">
+                        <label for="content" class="form-label fw-bold">
+                            Template Content <span class="text-danger">*</span>
+                        </label>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <input type="radio" class="btn-check" name="content_type" id="html_mode" value="html" checked>
+                                <label class="btn btn-outline-primary" for="html_mode">HTML</label>
+                                
+                                <input type="radio" class="btn-check" name="content_type" id="text_mode" value="text">
+                                <label class="btn btn-outline-primary" for="text_mode">Plain Text</label>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertVariable()">
+                                    <i class="bi bi-plus"></i> Insert Variable
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-info" onclick="formatContent()">
+                                    <i class="bi bi-code"></i> Format
+                                </button>
+                            </div>
+                        </div>
+                        <textarea class="form-control template-editor" id="content" name="content" rows="12" 
+                                  placeholder="Enter template content (HTML or plain text)" required>{{ template.content if template else '' }}</textarea>
+                        <div class="form-text">
+                            Available variables: {{target_name}}, {{target_email}}, {{company_name}}, {{campaign_url}}, {{unsubscribe_url}}
+                        </div>
+                    </div>
+
+                    <!-- Advanced Options -->
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <button class="btn btn-link text-decoration-none p-0" type="button" 
+                                        data-bs-toggle="collapse" data-bs-target="#advancedOptions">
+                                    <i class="bi bi-chevron-down me-2"></i>Advanced Options
+                                </button>
+                            </h6>
+                        </div>
+                        <div id="advancedOptions" class="collapse">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="sender_name" class="form-label">Sender Name</label>
+                                        <input type="text" class="form-control" id="sender_name" name="sender_name" 
+                                               value="{{ template.sender_name if template else '' }}" 
+                                               placeholder="e.g., John Smith">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="sender_email" class="form-label">Sender Email</label>
+                                        <input type="email" class="form-control" id="sender_email" name="sender_email" 
+                                               value="{{ template.sender_email if template else '' }}" 
+                                               placeholder="e.g., no-reply@company.com">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="track_opens" name="track_opens" 
+                                                   {{ 'checked' if template and template.track_opens else '' }}>
+                                            <label class="form-check-label" for="track_opens">
+                                                Track Email Opens
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="track_clicks" name="track_clicks" 
+                                                   {{ 'checked' if template and template.track_clicks else '' }}>
+                                            <label class="form-check-label" for="track_clicks">
+                                                Track Link Clicks
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Panel -->
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Live Preview</h6>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <input type="radio" class="btn-check" name="preview_mode" id="desktop_preview" checked>
+                        <label class="btn btn-outline-secondary" for="desktop_preview" title="Desktop Preview">
+                            <i class="bi bi-laptop"></i>
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="preview_mode" id="mobile_preview">
+                        <label class="btn btn-outline-secondary" for="mobile_preview" title="Mobile Preview">
+                            <i class="bi bi-phone"></i>
+                        </label>
+                    </div>
+                </div>
+                <div class="card-body p-2">
+                    <div id="previewContainer" class="preview-container">
+                        <div id="emailPreview" class="preview-email">
+                            <div class="border-bottom p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong id="previewSender">Sender Name</strong>
+                                        <div class="small text-muted" id="previewSenderEmail">sender@example.com</div>
+                                    </div>
+                                    <div class="small text-muted">
+                                        <i class="bi bi-clock"></i> Now
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <strong id="previewSubject">Email Subject</strong>
+                                </div>
+                            </div>
+                            <div class="p-3" id="previewContent">
+                                <p class="text-muted">Content preview will appear here...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Preview Stats -->
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <div class="d-flex justify-content-between">
+                                <span>Content Length:</span>
+                                <span id="contentLength">0 characters</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Variables Used:</span>
+                                <span id="variableCount">0</span>
+                            </div>
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="validateTemplate()">
+                            <i class="bi bi-check-circle me-1"></i>Validate Template
+                        </button>
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="sendTestEmail()">
+                            <i class="bi bi-envelope me-1"></i>Send Test Email
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm" onclick="duplicateTemplate()">
+                            <i class="bi bi-files me-1"></i>Duplicate Template
+                        </button>
+                        <hr>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i>Save Template
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Reset Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Variable Insertion Modal -->
+<div class="modal fade" id="variableModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Insert Variable</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="list-group">
+                    <button type="button" class="list-group-item list-group-item-action" 
+                            onclick="insertVariableAtCursor('{{target_name}}')">
+                        <strong>{{target_name}}</strong> - Target's full name
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action" 
+                            onclick="insertVariableAtCursor('{{target_email}}')">
+                        <strong>{{target_email}}</strong> - Target's email address
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action" 
+                            onclick="insertVariableAtCursor('{{company_name}}')">
+                        <strong>{{company_name}}</strong> - Target's company name
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action" 
+                            onclick="insertVariableAtCursor('{{campaign_url}}')">
+                        <strong>{{campaign_url}}</strong> - Phishing campaign URL
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action" 
+                            onclick="insertVariableAtCursor('{{unsubscribe_url}}')">
+                        <strong>{{unsubscribe_url}}</strong> - Unsubscribe link
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Template editor functionality
+let originalFormData = {};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Save original form data for reset functionality
+    saveOriginalFormData();
+    
+    // Setup real-time preview
+    setupPreviewUpdates();
+    
+    // Setup form validation
+    setupFormValidation();
+    
+    // Initialize preview
+    updatePreview();
+});
+
+function saveOriginalFormData() {
+    const form = document.getElementById('editTemplateForm');
+    const formData = new FormData(form);
+    for (let [key, value] of formData.entries()) {
+        originalFormData[key] = value;
+    }
+}
+
+function setupPreviewUpdates() {
+    // Update preview when any form field changes
+    const inputs = document.querySelectorAll('#editTemplateForm input, #editTemplateForm textarea, #editTemplateForm select');
+    inputs.forEach(input => {
+        input.addEventListener('input', updatePreview);
+        input.addEventListener('change', updatePreview);
+    });
+    
+    // Content type toggle
+    document.querySelectorAll('input[name="content_type"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            updateContentEditor();
+            updatePreview();
+        });
+    });
+    
+    // Preview mode toggle
+    document.querySelectorAll('input[name="preview_mode"]').forEach(radio => {
+        radio.addEventListener('change', updatePreviewMode);
+    });
+}
+
+function setupFormValidation() {
+    const form = document.getElementById('editTemplateForm');
+    form.addEventListener('submit', function(e) {
+        if (!validateTemplateForm()) {
+            e.preventDefault();
+            return false;
+        }
+    });
+}
+
+function updatePreview() {
+    const senderName = document.getElementById('sender_name').value || 'Sender Name';
+    const senderEmail = document.getElementById('sender_email').value || 'sender@example.com';
+    const subject = document.getElementById('subject').value || 'Email Subject';
+    const content = document.getElementById('content').value || '<p class="text-muted">Content preview will appear here...</p>';
+    
+    // Update preview elements
+    document.getElementById('previewSender').textContent = senderName;
+    document.getElementById('previewSenderEmail').textContent = senderEmail;
+    document.getElementById('previewSubject').textContent = subject;
+    
+    // Process content with sample variables
+    let processedContent = content;
+    processedContent = processedContent.replace(/\{\{target_name\}\}/g, 'John Doe');
+    processedContent = processedContent.replace(/\{\{target_email\}\}/g, 'john.doe@example.com');
+    processedContent = processedContent.replace(/\{\{company_name\}\}/g, 'Example Corp');
+    processedContent = processedContent.replace(/\{\{campaign_url\}\}/g, '#campaign-link');
+    processedContent = processedContent.replace(/\{\{unsubscribe_url\}\}/g, '#unsubscribe');
+    
+    document.getElementById('previewContent').innerHTML = processedContent;
+    
+    // Update stats
+    updatePreviewStats();
+}
+
+function updatePreviewStats() {
+    const content = document.getElementById('content').value;
+    const contentLength = content.length;
+    const variableMatches = content.match(/\{\{[^}]+\}\}/g) || [];
+    const variableCount = variableMatches.length;
+    
+    document.getElementById('contentLength').textContent = `${contentLength} characters`;
+    document.getElementById('variableCount').textContent = variableCount;
+}
+
+function updateContentEditor() {
+    const contentType = document.querySelector('input[name="content_type"]:checked').value;
+    const textarea = document.getElementById('content');
+    
+    if (contentType === 'html') {
+        textarea.placeholder = 'Enter HTML content...';
+    } else {
+        textarea.placeholder = 'Enter plain text content...';
+    }
+}
+
+function updatePreviewMode() {
+    const previewMode = document.querySelector('input[name="preview_mode"]:checked').id;
+    const previewContainer = document.getElementById('previewContainer');
+    
+    if (previewMode === 'mobile_preview') {
+        previewContainer.innerHTML = `
+            <div class="preview-phone">
+                <div class="preview-email">
+                    ${document.getElementById('emailPreview').innerHTML}
+                </div>
+            </div>
+        `;
+    } else {
+        previewContainer.innerHTML = `
+            <div class="preview-email" id="emailPreview">
+                ${document.getElementById('emailPreview').innerHTML}
+            </div>
+        `;
+    }
+}
+
+function insertVariable() {
+    const modal = new bootstrap.Modal(document.getElementById('variableModal'));
+    modal.show();
+}
+
+function insertVariableAtCursor(variable) {
+    const textarea = document.getElementById('content');
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const value = textarea.value;
+    
+    textarea.value = value.substring(0, start) + variable + value.substring(end);
+    textarea.focus();
+    textarea.setSelectionRange(start + variable.length, start + variable.length);
+    
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('variableModal'));
+    modal.hide();
+    
+    // Update preview
+    updatePreview();
+}
+
+function formatContent() {
+    const content = document.getElementById('content');
+    const contentType = document.querySelector('input[name="content_type"]:checked').value;
+    
+    if (contentType === 'html') {
+        // Basic HTML formatting
+        let formatted = content.value;
+        formatted = formatted.replace(/></g, '>\n<');
+        formatted = formatted.replace(/\n\s*\n/g, '\n');
+        content.value = formatted;
+    }
+    
+    updatePreview();
+}
+
+function validateTemplate() {
+    const validation = validateTemplateForm();
+    const messagesDiv = document.getElementById('validationMessages');
+    
+    if (validation.isValid) {
+        messagesDiv.innerHTML = `
+            <div class="form-validation success">
+                <i class="bi bi-check-circle me-2"></i>
+                Template validation passed! No issues found.
+            </div>
+        `;
+    } else {
+        let messagesHtml = '<div class="form-validation">';
+        messagesHtml += '<i class="bi bi-exclamation-triangle me-2"></i>';
+        messagesHtml += '<strong>Validation Issues:</strong><ul class="mb-0 mt-2">';
+        validation.errors.forEach(error => {
+            messagesHtml += `<li>${error}</li>`;
+        });
+        messagesHtml += '</ul></div>';
+        messagesDiv.innerHTML = messagesHtml;
+    }
+    
+    messagesDiv.style.display = 'block';
+    messagesDiv.scrollIntoView({ behavior: 'smooth' });
+}
+
+function validateTemplateForm() {
+    const errors = [];
+    
+    // Required fields
+    const name = document.getElementById('name').value.trim();
+    const subject = document.getElementById('subject').value.trim();
+    const content = document.getElementById('content').value.trim();
+    const category = document.getElementById('category').value;
+    const difficulty = document.getElementById('difficulty_level').value;
+    
+    if (!name) errors.push('Template name is required');
+    if (!subject) errors.push('Email subject is required');
+    if (!content) errors.push('Template content is required');
+    if (!category) errors.push('Category is required');
+    if (!difficulty) errors.push('Difficulty level is required');
+    
+    // Content validation
+    if (content && content.length < 10) {
+        errors.push('Template content is too short (minimum 10 characters)');
+    }
+    
+    // Subject validation
+    if (subject && subject.length > 78) {
+        errors.push('Email subject is too long (maximum 78 characters recommended)');
+    }
+    
+    // Variable validation
+    const variables = content.match(/\{\{[^}]+\}\}/g) || [];
+    const validVariables = ['target_name', 'target_email', 'company_name', 'campaign_url', 'unsubscribe_url'];
+    
+    variables.forEach(variable => {
+        const varName = variable.replace(/\{\{|\}\}/g, '');
+        if (!validVariables.includes(varName)) {
+            errors.push(`Invalid variable: ${variable}`);
+        }
+    });
+    
+    return {
+        isValid: errors.length === 0,
+        errors: errors
+    };
+}
+
+function sendTestEmail() {
+    const validation = validateTemplateForm();
+    if (!validation.isValid) {
+        alert('Please fix validation errors before sending test email');
+        return;
+    }
+    
+    const email = prompt('Enter email address for test:');
+    if (!email) return;
+    
+    // Here you would make an AJAX call to send test email
+    alert(`Test email will be sent to: ${email}`);
+}
+
+function duplicateTemplate() {
+    if (confirm('Create a copy of this template?')) {
+        const nameField = document.getElementById('name');
+        nameField.value = nameField.value + ' (Copy)';
+        updatePreview();
+    }
+}
+
+function resetForm() {
+    if (confirm('Reset all changes to original values?')) {
+        Object.keys(originalFormData).forEach(key => {
+            const field = document.getElementById(key) || document.querySelector(`[name="${key}"]`);
+            if (field) {
+                field.value = originalFormData[key];
+            }
+        });
+        updatePreview();
+    }
+}
+
+function previewTemplate() {
+    window.open('#', '_blank');
+}
+
+function testTemplate() {
+    window.location.href = "{{ url_for('templates.test_template', template_id=template.id if template else 'new') }}";
+}
+</script>
 {% endblock %}

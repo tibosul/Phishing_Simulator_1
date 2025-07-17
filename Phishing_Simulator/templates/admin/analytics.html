@@ -1,18 +1,542 @@
-<!-- ===========================================
-     TEMPLATE: admin/analytics.html
-     =========================================== -->
 {% extends "admin/base.html" %}
 
 {% block title %}Analytics{% endblock %}
 
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Analytics</li>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <h1>📈 Analytics</h1>
-    
-    <div class="card">
-        <div class="card-body">
-            <p>STUB: Analytics charts will be here</p>
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h3 mb-3">
+            <i class="bi bi-graph-up me-2"></i>
+            Analytics Dashboard
+        </h1>
+        <p class="text-muted">Comprehensive analytics and insights for your phishing campaigns</p>
+    </div>
+</div>
+
+<!-- Quick Metrics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card border-left-primary">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Click Rate
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ analytics_data.click_rate or '0' }}%
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-cursor fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card border-left-success">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Credential Capture Rate
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ analytics_data.credential_rate or '0' }}%
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-shield-exclamation fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card border-left-info">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Total Interactions
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ analytics_data.total_interactions or '0' }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-activity fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card border-left-warning">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Active Campaigns
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ analytics_data.active_campaigns or '0' }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-envelope-paper fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Charts Row -->
+<div class="row">
+    <!-- Daily Activity Chart -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Daily Activity</h6>
+                <div class="dropdown no-arrow">
+                    <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink"
+                        data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="bi bi-three-dots-vertical text-gray-400"></i>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in">
+                        <a class="dropdown-item" href="#" onclick="exportChart('dailyActivity')">Export Chart</a>
+                        <a class="dropdown-item" href="#" onclick="refreshChart('dailyActivity')">Refresh Data</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-area">
+                    <canvas id="dailyActivityChart" width="100%" height="320"></canvas>
+                </div>
+                <hr class="my-4">
+                <div class="text-center small">
+                    <span class="me-2">
+                        <i class="bi bi-circle-fill text-primary"></i> Email Sent
+                    </span>
+                    <span class="me-2">
+                        <i class="bi bi-circle-fill text-success"></i> Links Clicked
+                    </span>
+                    <span class="me-2">
+                        <i class="bi bi-circle-fill text-warning"></i> Credentials Captured
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaign Performance Pie Chart -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Campaign Performance</h6>
+                <div class="dropdown no-arrow">
+                    <a class="dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-three-dots-vertical text-gray-400"></i>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right shadow">
+                        <a class="dropdown-item" href="#" onclick="exportChart('campaignPerformance')">Export Chart</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-pie pt-4 pb-2">
+                    <canvas id="campaignPerformanceChart" width="100%" height="245"></canvas>
+                </div>
+                <div class="mt-4 text-center small">
+                    <span class="me-2">
+                        <i class="bi bi-circle-fill text-primary"></i> Successful
+                    </span>
+                    <span class="me-2">
+                        <i class="bi bi-circle-fill text-success"></i> Partially Successful
+                    </span>
+                    <span class="me-2">
+                        <i class="bi bi-circle-fill text-info"></i> In Progress
+                    </span>
+                    <span>
+                        <i class="bi bi-circle-fill text-secondary"></i> Failed
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Template Statistics & Password Analysis Row -->
+<div class="row">
+    <!-- Template Stats -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Template Statistics</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-bar">
+                    <canvas id="templateStatsChart" width="100%" height="200"></canvas>
+                </div>
+                <hr class="my-4">
+                <div class="row">
+                    <div class="col-sm-6 text-center">
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ template_stats.most_effective or 'N/A' }}
+                        </div>
+                        <div class="small text-muted">Most Effective Template</div>
+                    </div>
+                    <div class="col-sm-6 text-center">
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ template_stats.total_templates or '0' }}
+                        </div>
+                        <div class="small text-muted">Total Templates</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Analysis -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Password Analysis</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-doughnut">
+                    <canvas id="passwordAnalysisChart" width="100%" height="200"></canvas>
+                </div>
+                <hr class="my-4">
+                <div class="row">
+                    {% for strength, count in password_analysis.items() %}
+                    <div class="col-6 col-md-3 text-center mb-2">
+                        <div class="h6 mb-0 font-weight-bold text-{% if strength == 'very_weak' or strength == 'weak' %}danger{% elif strength == 'medium' %}warning{% else %}success{% endif %}">
+                            {{ count or 0 }}
+                        </div>
+                        <div class="small text-muted">{{ strength.replace('_', ' ').title() }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Analytics Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Campaign Details</h6>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="exportTableData()">
+                        <i class="bi bi-download me-1"></i>Export
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="refreshTableData()">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="analyticsTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>Campaign Name</th>
+                                <th>Type</th>
+                                <th>Targets</th>
+                                <th>Emails Sent</th>
+                                <th>Clicks</th>
+                                <th>Credentials</th>
+                                <th>Success Rate</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for campaign in campaign_details %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('campaigns.view_campaign', campaign_id=campaign.id) }}">
+                                        {{ campaign.name }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ campaign.type }}</span>
+                                </td>
+                                <td>{{ campaign.total_targets }}</td>
+                                <td>{{ campaign.emails_sent }}</td>
+                                <td>{{ campaign.clicks }}</td>
+                                <td>{{ campaign.credentials_captured }}</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-{% if campaign.success_rate >= 70 %}success{% elif campaign.success_rate >= 40 %}warning{% else %}danger{% endif %}" 
+                                             style="width: {{ campaign.success_rate }}%">
+                                            {{ "%.1f"|format(campaign.success_rate) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if campaign.status == 'active' %}success{% elif campaign.status == 'draft' %}warning{% else %}secondary{% endif %}">
+                                        {{ campaign.status.title() }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if not campaign_details %}
+                <div class="text-center py-4">
+                    <i class="bi bi-inbox display-4 text-muted"></i>
+                    <p class="text-muted mt-2">No campaign data available</p>
+                    <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
+                        <i class="bi bi-plus"></i> Create First Campaign
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Analytics Charts Configuration
+let charts = {};
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCharts();
+    setupRealTimeUpdates();
+});
+
+function initializeCharts() {
+    // Daily Activity Chart
+    const dailyCtx = document.getElementById('dailyActivityChart').getContext('2d');
+    charts.dailyActivity = new Chart(dailyCtx, {
+        type: 'line',
+        data: {
+            labels: {{ daily_activity.labels | tojson }},
+            datasets: [{
+                label: 'Emails Sent',
+                data: {{ daily_activity.emails_sent | tojson }},
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                fill: true,
+                tension: 0.4
+            }, {
+                label: 'Links Clicked',
+                data: {{ daily_activity.clicks | tojson }},
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                fill: true,
+                tension: 0.4
+            }, {
+                label: 'Credentials Captured',
+                data: {{ daily_activity.credentials | tojson }},
+                borderColor: '#ffc107',
+                backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                title: {
+                    display: true,
+                    text: 'Last 30 Days Activity'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                }
+            }
+        }
+    });
+
+    // Campaign Performance Pie Chart
+    const campaignCtx = document.getElementById('campaignPerformanceChart').getContext('2d');
+    charts.campaignPerformance = new Chart(campaignCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Successful', 'Partially Successful', 'In Progress', 'Failed'],
+            datasets: [{
+                data: {{ campaign_performance.data | tojson }},
+                backgroundColor: ['#007bff', '#28a745', '#17a2b8', '#6c757d'],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Template Statistics Bar Chart
+    const templateCtx = document.getElementById('templateStatsChart').getContext('2d');
+    charts.templateStats = new Chart(templateCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ template_stats.labels | tojson }},
+            datasets: [{
+                label: 'Usage Count',
+                data: {{ template_stats.usage_data | tojson }},
+                backgroundColor: '#007bff',
+                borderColor: '#0056b3',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Password Analysis Doughnut Chart
+    const passwordCtx = document.getElementById('passwordAnalysisChart').getContext('2d');
+    charts.passwordAnalysis = new Chart(passwordCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Very Weak', 'Weak', 'Medium', 'Strong', 'Very Strong'],
+            datasets: [{
+                data: {{ password_analysis.chart_data | tojson }},
+                backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#28a745', '#20c997'],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function setupRealTimeUpdates() {
+    // Update analytics data every 30 seconds
+    setInterval(function() {
+        if (document.hasFocus()) {
+            refreshAnalyticsData();
+        }
+    }, 30000);
+}
+
+function refreshAnalyticsData() {
+    fetch('/admin/api/analytics/data')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Analytics data updated:', data);
+            updateChartsData(data);
+        })
+        .catch(error => console.error('Failed to refresh analytics:', error));
+}
+
+function updateChartsData(data) {
+    // Update daily activity chart
+    if (data.daily_activity && charts.dailyActivity) {
+        charts.dailyActivity.data.labels = data.daily_activity.labels;
+        charts.dailyActivity.data.datasets[0].data = data.daily_activity.emails_sent;
+        charts.dailyActivity.data.datasets[1].data = data.daily_activity.clicks;
+        charts.dailyActivity.data.datasets[2].data = data.daily_activity.credentials;
+        charts.dailyActivity.update();
+    }
+
+    // Update campaign performance chart
+    if (data.campaign_performance && charts.campaignPerformance) {
+        charts.campaignPerformance.data.datasets[0].data = data.campaign_performance.data;
+        charts.campaignPerformance.update();
+    }
+}
+
+function exportChart(chartName) {
+    if (charts[chartName]) {
+        const url = charts[chartName].toBase64Image();
+        const link = document.createElement('a');
+        link.download = `${chartName}_chart.png`;
+        link.href = url;
+        link.click();
+    }
+}
+
+function refreshChart(chartName) {
+    refreshAnalyticsData();
+}
+
+function exportTableData() {
+    // Export table data as CSV
+    const table = document.getElementById('analyticsTable');
+    let csv = [];
+    
+    // Headers
+    const headers = [];
+    table.querySelectorAll('thead th').forEach(th => {
+        headers.push(th.textContent.trim());
+    });
+    csv.push(headers.join(','));
+    
+    // Data
+    table.querySelectorAll('tbody tr').forEach(tr => {
+        const row = [];
+        tr.querySelectorAll('td').forEach(td => {
+            row.push('"' + td.textContent.trim().replace(/"/g, '""') + '"');
+        });
+        csv.push(row.join(','));
+    });
+    
+    // Download
+    const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = 'analytics_data.csv';
+    link.href = url;
+    link.click();
+    window.URL.revokeObjectURL(url);
+}
+
+function refreshTableData() {
+    window.location.reload();
+}
+</script>
 {% endblock %}
