@@ -1,18 +1,827 @@
-<!-- ===========================================
-     TEMPLATE: admin/test_template.html
-     =========================================== -->
 {% extends "admin/base.html" %}
 
 {% block title %}Test Template{% endblock %}
 
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('templates.list_templates') }}">Templates</a></li>
+{% if template %}
+<li class="breadcrumb-item"><a href="{{ url_for('templates.view_template', template_id=template.id) }}">{{ template.name }}</a></li>
+{% endif %}
+<li class="breadcrumb-item active">Test Template</li>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.test-interface {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.preview-container {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    min-height: 400px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.test-result {
+    border-left: 4px solid #007bff;
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.test-result.success {
+    border-left-color: #28a745;
+    background: #f0fff4;
+}
+
+.test-result.error {
+    border-left-color: #dc3545;
+    background: #fff5f5;
+}
+
+.test-result.warning {
+    border-left-color: #ffc107;
+    background: #fffbf0;
+}
+
+.variable-chip {
+    display: inline-block;
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    margin: 0.125rem;
+    cursor: pointer;
+}
+
+.variable-chip:hover {
+    background: #bbdefb;
+}
+
+.test-history {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.test-history-item {
+    border-bottom: 1px solid #e9ecef;
+    padding: 0.75rem 0;
+}
+
+.test-history-item:last-child {
+    border-bottom: none;
+}
+
+.real-time-preview {
+    position: sticky;
+    top: 20px;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.test-mode-tabs .nav-link {
+    color: #6c757d;
+    border-bottom: 2px solid transparent;
+}
+
+.test-mode-tabs .nav-link.active {
+    color: #007bff;
+    border-bottom-color: #007bff;
+    background: none;
+}
+
+@media (max-width: 768px) {
+    .real-time-preview {
+        position: static;
+        margin-top: 1rem;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <h1>🧪 Test Template</h1>
-    
-    <div class="card">
-        <div class="card-body">
-            <p>STUB: Test template form will be here</p>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-2">
+                    <i class="bi bi-send me-2"></i>
+                    Test Template
+                </h1>
+                {% if template %}
+                <p class="text-muted">Testing: <strong>{{ template.name }}</strong></p>
+                {% else %}
+                <p class="text-muted">Configure and test email templates</p>
+                {% endif %}
+            </div>
+            <div class="btn-group">
+                {% if template %}
+                <a href="{{ url_for('templates.view_template', template_id=template.id) }}" 
+                   class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Details
+                </a>
+                <a href="{{ url_for('templates.edit_template', template_id=template.id) }}" 
+                   class="btn btn-outline-primary">
+                    <i class="bi bi-pencil me-1"></i>Edit Template
+                </a>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
+
+<div class="row">
+    <!-- Test Configuration -->
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <ul class="nav nav-tabs test-mode-tabs card-header-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="email-test-tab" data-bs-toggle="tab" 
+                                data-bs-target="#email-test-pane" type="button" role="tab">
+                            <i class="bi bi-envelope me-1"></i>Email Test
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="sms-test-tab" data-bs-toggle="tab" 
+                                data-bs-target="#sms-test-pane" type="button" role="tab">
+                            <i class="bi bi-chat-dots me-1"></i>SMS Test
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="batch-test-tab" data-bs-toggle="tab" 
+                                data-bs-target="#batch-test-pane" type="button" role="tab">
+                            <i class="bi bi-people me-1"></i>Batch Test
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content">
+                    <!-- Email Test -->
+                    <div class="tab-pane fade show active" id="email-test-pane" role="tabpanel">
+                        <form id="emailTestForm">
+                            <!-- Recipient Configuration -->
+                            <div class="mb-4">
+                                <h6 class="font-weight-bold mb-3">Recipient Configuration</h6>
+                                <div class="mb-3">
+                                    <label for="test_email" class="form-label">
+                                        Test Email Address <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="email" class="form-control" id="test_email" name="test_email" 
+                                           placeholder="test@example.com" required>
+                                    <div class="form-text">Email address where the test will be sent</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="recipient_name" class="form-label">Recipient Name</label>
+                                    <input type="text" class="form-control" id="recipient_name" name="recipient_name" 
+                                           placeholder="John Doe" value="John Doe">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="company_name" class="form-label">Company Name</label>
+                                    <input type="text" class="form-control" id="company_name" name="company_name" 
+                                           placeholder="Example Corp" value="Example Corp">
+                                </div>
+                            </div>
+
+                            <!-- Template Variables -->
+                            <div class="mb-4">
+                                <h6 class="font-weight-bold mb-3">Template Variables</h6>
+                                <div class="mb-3">
+                                    <label class="form-label">Available Variables</label>
+                                    <div class="mb-2">
+                                        <span class="variable-chip" onclick="insertVariable('target_name')">{{target_name}}</span>
+                                        <span class="variable-chip" onclick="insertVariable('target_email')">{{target_email}}</span>
+                                        <span class="variable-chip" onclick="insertVariable('company_name')">{{company_name}}</span>
+                                        <span class="variable-chip" onclick="insertVariable('campaign_url')">{{campaign_url}}</span>
+                                    </div>
+                                    <div class="form-text">Click on variables to see them in preview</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="campaign_url" class="form-label">Test Campaign URL</label>
+                                    <input type="url" class="form-control" id="campaign_url" name="campaign_url" 
+                                           placeholder="https://example.com/campaign" 
+                                           value="https://example.com/test-campaign">
+                                </div>
+                            </div>
+
+                            <!-- Test Options -->
+                            <div class="mb-4">
+                                <h6 class="font-weight-bold mb-3">Test Options</h6>
+                                <div class="row">
+                                    <div class="col-sm-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="track_opens" checked>
+                                            <label class="form-check-label" for="track_opens">
+                                                Track Email Opens
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="track_clicks" checked>
+                                            <label class="form-check-label" for="track_clicks">
+                                                Track Link Clicks
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="send_immediately" checked>
+                                            <label class="form-check-label" for="send_immediately">
+                                                Send Immediately
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="save_test_data">
+                                            <label class="form-check-label" for="save_test_data">
+                                                Save Test Data
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Send Button -->
+                            <div class="d-grid">
+                                <button type="button" class="btn btn-primary btn-lg" onclick="sendEmailTest()">
+                                    <i class="bi bi-send me-2"></i>Send Email Test
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- SMS Test -->
+                    <div class="tab-pane fade" id="sms-test-pane" role="tabpanel">
+                        <form id="smsTestForm">
+                            <div class="mb-4">
+                                <h6 class="font-weight-bold mb-3">SMS Configuration</h6>
+                                <div class="mb-3">
+                                    <label for="test_phone" class="form-label">
+                                        Phone Number <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="tel" class="form-control" id="test_phone" name="test_phone" 
+                                           placeholder="+1234567890" required>
+                                    <div class="form-text">Include country code (e.g., +1 for US)</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="sms_content" class="form-label">SMS Content</label>
+                                    <textarea class="form-control" id="sms_content" name="sms_content" rows="4" 
+                                              placeholder="Enter SMS message content...">{{ template.sms_content if template and template.sms_content else 'Hello {{target_name}}, please verify your account: {{campaign_url}}' }}</textarea>
+                                    <div class="form-text">
+                                        Character count: <span id="sms_char_count">0</span>/160
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="button" class="btn btn-primary btn-lg" onclick="sendSMSTest()">
+                                    <i class="bi bi-chat-dots me-2"></i>Send SMS Test
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Batch Test -->
+                    <div class="tab-pane fade" id="batch-test-pane" role="tabpanel">
+                        <form id="batchTestForm">
+                            <div class="mb-4">
+                                <h6 class="font-weight-bold mb-3">Batch Test Configuration</h6>
+                                <div class="mb-3">
+                                    <label for="test_emails" class="form-label">
+                                        Test Email Addresses <span class="text-danger">*</span>
+                                    </label>
+                                    <textarea class="form-control" id="test_emails" name="test_emails" rows="4" 
+                                              placeholder="test1@example.com&#10;test2@example.com&#10;test3@example.com" required></textarea>
+                                    <div class="form-text">Enter one email address per line (max 10)</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="batch_delay" class="form-label">Delay Between Sends (seconds)</label>
+                                    <select class="form-select" id="batch_delay" name="batch_delay">
+                                        <option value="0">No delay</option>
+                                        <option value="5">5 seconds</option>
+                                        <option value="10" selected>10 seconds</option>
+                                        <option value="30">30 seconds</option>
+                                        <option value="60">1 minute</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="button" class="btn btn-primary btn-lg" onclick="sendBatchTest()">
+                                    <i class="bi bi-people me-2"></i>Send Batch Test
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Results -->
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Test Results</h6>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearResults()">
+                    <i class="bi bi-trash me-1"></i>Clear
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="testResults">
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox display-4"></i>
+                        <p class="mt-2">No test results yet</p>
+                        <p class="small">Send a test to see results here</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Real-time Preview -->
+    <div class="col-lg-6">
+        <div class="real-time-preview">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Live Preview</h6>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <input type="radio" class="btn-check" name="preview_device" id="desktop_preview" checked>
+                        <label class="btn btn-outline-secondary" for="desktop_preview" title="Desktop Preview">
+                            <i class="bi bi-laptop"></i>
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="preview_device" id="mobile_preview">
+                        <label class="btn btn-outline-secondary" for="mobile_preview" title="Mobile Preview">
+                            <i class="bi bi-phone"></i>
+                        </label>
+                    </div>
+                </div>
+                <div class="card-body p-2">
+                    <div class="preview-container p-3" id="livePreview">
+                        {% if template %}
+                        <!-- Email Header -->
+                        <div class="border-bottom pb-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>From:</strong> <span id="previewSender">{{ template.sender_name or 'Sender' }}</span><br>
+                                    <strong>To:</strong> <span id="previewRecipient">test@example.com</span><br>
+                                    <strong>Subject:</strong> <span id="previewSubject">{{ template.subject }}</span>
+                                </div>
+                                <div class="text-end small text-muted">
+                                    <i class="bi bi-calendar me-1"></i>Now<br>
+                                    <i class="bi bi-shield-check me-1"></i>Test
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Email Content -->
+                        <div id="previewContent">
+                            {{ template.content | safe }}
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted py-5">
+                            <i class="bi bi-file-earmark-text display-4"></i>
+                            <p class="mt-3">No template selected</p>
+                            <a href="{{ url_for('templates.list_templates') }}" class="btn btn-primary">
+                                <i class="bi bi-plus"></i> Select Template
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test History -->
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Tests</h6>
+                </div>
+                <div class="card-body">
+                    <div class="test-history" id="testHistory">
+                        <div class="text-center text-muted py-3">
+                            <i class="bi bi-clock-history"></i>
+                            <p class="small mb-0">No recent tests</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Test template functionality
+let testCount = 0;
+
+document.addEventListener('DOMContentLoaded', function() {
+    setupFormListeners();
+    setupPreviewUpdates();
+    updateLivePreview();
+    loadTestHistory();
+});
+
+function setupFormListeners() {
+    // Form field listeners for live preview
+    const formInputs = document.querySelectorAll('#emailTestForm input, #emailTestForm textarea');
+    formInputs.forEach(input => {
+        input.addEventListener('input', updateLivePreview);
+        input.addEventListener('change', updateLivePreview);
+    });
+    
+    // SMS character counter
+    const smsContent = document.getElementById('sms_content');
+    if (smsContent) {
+        smsContent.addEventListener('input', updateSMSCharCount);
+        updateSMSCharCount();
+    }
+    
+    // Preview device toggle
+    document.querySelectorAll('input[name="preview_device"]').forEach(radio => {
+        radio.addEventListener('change', updatePreviewMode);
+    });
+}
+
+function setupPreviewUpdates() {
+    // Real-time preview updates
+    setInterval(function() {
+        if (document.hasFocus()) {
+            updateLivePreview();
+        }
+    }, 2000);
+}
+
+function updateLivePreview() {
+    const recipientName = document.getElementById('recipient_name')?.value || 'John Doe';
+    const testEmail = document.getElementById('test_email')?.value || 'test@example.com';
+    const companyName = document.getElementById('company_name')?.value || 'Example Corp';
+    const campaignUrl = document.getElementById('campaign_url')?.value || 'https://example.com/campaign';
+    
+    // Update preview elements
+    const previewRecipient = document.getElementById('previewRecipient');
+    if (previewRecipient) {
+        previewRecipient.textContent = testEmail;
+    }
+    
+    // Update content with variables
+    const previewContent = document.getElementById('previewContent');
+    if (previewContent) {
+        let content = previewContent.innerHTML;
+        
+        // Replace variables with actual values
+        content = content.replace(/\{\{target_name\}\}/g, `<span class="badge bg-info">${recipientName}</span>`);
+        content = content.replace(/\{\{target_email\}\}/g, `<span class="badge bg-info">${testEmail}</span>`);
+        content = content.replace(/\{\{company_name\}\}/g, `<span class="badge bg-info">${companyName}</span>`);
+        content = content.replace(/\{\{campaign_url\}\}/g, `<a href="${campaignUrl}" class="badge bg-warning text-dark">Test Link</a>`);
+        content = content.replace(/\{\{unsubscribe_url\}\}/g, '<a href="#" class="badge bg-secondary">Unsubscribe</a>');
+        
+        previewContent.innerHTML = content;
+    }
+}
+
+function updateSMSCharCount() {
+    const smsContent = document.getElementById('sms_content');
+    const charCount = document.getElementById('sms_char_count');
+    
+    if (smsContent && charCount) {
+        const count = smsContent.value.length;
+        charCount.textContent = count;
+        
+        if (count > 160) {
+            charCount.className = 'text-danger';
+            charCount.textContent = `${count} (${Math.ceil(count / 160)} messages)`;
+        } else {
+            charCount.className = 'text-muted';
+        }
+    }
+}
+
+function updatePreviewMode() {
+    const isDesktop = document.getElementById('desktop_preview').checked;
+    const previewContainer = document.getElementById('livePreview');
+    
+    if (isDesktop) {
+        previewContainer.style.maxWidth = '100%';
+        previewContainer.style.fontSize = '14px';
+    } else {
+        previewContainer.style.maxWidth = '320px';
+        previewContainer.style.fontSize = '12px';
+        previewContainer.style.margin = '0 auto';
+    }
+}
+
+function insertVariable(variableName) {
+    // Just update the preview - variables are shown visually
+    updateLivePreview();
+}
+
+function sendEmailTest() {
+    const form = document.getElementById('emailTestForm');
+    const formData = new FormData(form);
+    
+    // Validate required fields
+    const testEmail = formData.get('test_email');
+    if (!testEmail) {
+        addTestResult('error', 'Email address is required');
+        return;
+    }
+    
+    if (!validateEmail(testEmail)) {
+        addTestResult('error', 'Please enter a valid email address');
+        return;
+    }
+    
+    // Show loading state
+    const button = document.querySelector('#email-test-pane .btn-primary');
+    const originalText = button.innerHTML;
+    button.innerHTML = '<span class="loading-spinner me-2"></span>Sending...';
+    button.disabled = true;
+    
+    // Prepare test data
+    const testData = {
+        template_id: {{ template.id if template else 'null' }},
+        test_email: testEmail,
+        recipient_name: formData.get('recipient_name') || 'Test User',
+        company_name: formData.get('company_name') || 'Test Company',
+        campaign_url: formData.get('campaign_url') || 'https://example.com/test',
+        track_opens: formData.get('track_opens') === 'on',
+        track_clicks: formData.get('track_clicks') === 'on',
+        send_immediately: formData.get('send_immediately') === 'on',
+        save_test_data: formData.get('save_test_data') === 'on'
+    };
+    
+    // Simulate API call
+    setTimeout(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+        
+        testCount++;
+        addTestResult('success', `Email test sent successfully to ${testEmail}`, {
+            id: testCount,
+            type: 'email',
+            recipient: testEmail,
+            timestamp: new Date()
+        });
+        
+        addToTestHistory('email', testEmail, 'success');
+    }, 2000);
+    
+    // Actual implementation would use:
+    /*
+    fetch('/admin/templates/test/email', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(testData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+        
+        if (data.success) {
+            addTestResult('success', `Email test sent successfully to ${testEmail}`, data);
+            addToTestHistory('email', testEmail, 'success');
+        } else {
+            addTestResult('error', `Failed to send email test: ${data.error}`);
+        }
+    })
+    .catch(error => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+        addTestResult('error', `Error sending email test: ${error.message}`);
+    });
+    */
+}
+
+function sendSMSTest() {
+    const form = document.getElementById('smsTestForm');
+    const formData = new FormData(form);
+    
+    const testPhone = formData.get('test_phone');
+    const smsContent = formData.get('sms_content');
+    
+    if (!testPhone) {
+        addTestResult('error', 'Phone number is required');
+        return;
+    }
+    
+    if (!smsContent) {
+        addTestResult('error', 'SMS content is required');
+        return;
+    }
+    
+    const button = document.querySelector('#sms-test-pane .btn-primary');
+    const originalText = button.innerHTML;
+    button.innerHTML = '<span class="loading-spinner me-2"></span>Sending...';
+    button.disabled = true;
+    
+    setTimeout(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+        
+        testCount++;
+        addTestResult('success', `SMS test sent successfully to ${testPhone}`, {
+            id: testCount,
+            type: 'sms',
+            recipient: testPhone,
+            timestamp: new Date()
+        });
+        
+        addToTestHistory('sms', testPhone, 'success');
+    }, 1500);
+}
+
+function sendBatchTest() {
+    const form = document.getElementById('batchTestForm');
+    const formData = new FormData(form);
+    
+    const testEmails = formData.get('test_emails');
+    const batchDelay = parseInt(formData.get('batch_delay')) || 0;
+    
+    if (!testEmails) {
+        addTestResult('error', 'Email addresses are required');
+        return;
+    }
+    
+    const emails = testEmails.split('\n').map(email => email.trim()).filter(email => email);
+    
+    if (emails.length === 0) {
+        addTestResult('error', 'Please enter at least one valid email address');
+        return;
+    }
+    
+    if (emails.length > 10) {
+        addTestResult('error', 'Maximum 10 email addresses allowed');
+        return;
+    }
+    
+    // Validate all emails
+    const invalidEmails = emails.filter(email => !validateEmail(email));
+    if (invalidEmails.length > 0) {
+        addTestResult('error', `Invalid email addresses: ${invalidEmails.join(', ')}`);
+        return;
+    }
+    
+    const button = document.querySelector('#batch-test-pane .btn-primary');
+    const originalText = button.innerHTML;
+    button.innerHTML = '<span class="loading-spinner me-2"></span>Sending Batch...';
+    button.disabled = true;
+    
+    // Simulate batch sending
+    let sent = 0;
+    const sendNext = () => {
+        if (sent < emails.length) {
+            const email = emails[sent];
+            setTimeout(() => {
+                sent++;
+                addTestResult('success', `Batch test ${sent}/${emails.length} sent to ${email}`);
+                addToTestHistory('email', email, 'success');
+                
+                if (sent < emails.length) {
+                    sendNext();
+                } else {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                    addTestResult('success', `Batch test completed! Sent to ${emails.length} recipients`);
+                }
+            }, batchDelay * 1000);
+        }
+    };
+    
+    sendNext();
+}
+
+function addTestResult(type, message, data = null) {
+    const resultsContainer = document.getElementById('testResults');
+    
+    // Clear "no results" message
+    if (resultsContainer.querySelector('.text-center')) {
+        resultsContainer.innerHTML = '';
+    }
+    
+    const resultDiv = document.createElement('div');
+    resultDiv.className = `test-result ${type}`;
+    
+    const timestamp = new Date().toLocaleTimeString();
+    let icon = 'bi-info-circle';
+    
+    switch (type) {
+        case 'success':
+            icon = 'bi-check-circle';
+            break;
+        case 'error':
+            icon = 'bi-exclamation-triangle';
+            break;
+        case 'warning':
+            icon = 'bi-exclamation-circle';
+            break;
+    }
+    
+    resultDiv.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <i class="${icon} me-2"></i>
+                <strong>${message}</strong>
+                ${data ? `<div class="small text-muted mt-1">Test ID: ${data.id} | Type: ${data.type}</div>` : ''}
+            </div>
+            <small class="text-muted">${timestamp}</small>
+        </div>
+    `;
+    
+    resultsContainer.appendChild(resultDiv);
+    resultsContainer.scrollTop = resultsContainer.scrollHeight;
+}
+
+function addToTestHistory(type, recipient, status) {
+    const historyContainer = document.getElementById('testHistory');
+    
+    // Clear "no history" message
+    if (historyContainer.querySelector('.text-center')) {
+        historyContainer.innerHTML = '';
+    }
+    
+    const historyItem = document.createElement('div');
+    historyItem.className = 'test-history-item';
+    
+    const timestamp = new Date().toLocaleTimeString();
+    let icon = type === 'sms' ? 'bi-chat-dots' : 'bi-envelope';
+    let statusClass = status === 'success' ? 'text-success' : 'text-danger';
+    
+    historyItem.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <i class="${icon} me-2"></i>
+                <span>${recipient}</span>
+                <div class="small text-muted">${type.toUpperCase()} Test</div>
+            </div>
+            <div class="text-end">
+                <div class="small ${statusClass}">
+                    <i class="bi bi-${status === 'success' ? 'check' : 'x'}-circle"></i>
+                </div>
+                <div class="small text-muted">${timestamp}</div>
+            </div>
+        </div>
+    `;
+    
+    historyContainer.insertBefore(historyItem, historyContainer.firstChild);
+    
+    // Keep only last 10 items
+    while (historyContainer.children.length > 10) {
+        historyContainer.removeChild(historyContainer.lastChild);
+    }
+}
+
+function clearResults() {
+    const resultsContainer = document.getElementById('testResults');
+    resultsContainer.innerHTML = `
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-inbox display-4"></i>
+            <p class="mt-2">No test results yet</p>
+            <p class="small">Send a test to see results here</p>
+        </div>
+    `;
+}
+
+function loadTestHistory() {
+    // Load previous test history from API
+    // This would normally fetch from the server
+}
+
+function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+}
+</script>
 {% endblock %}

@@ -1,18 +1,758 @@
-<!-- ===========================================
-     TEMPLATE: admin/statistics.html
-     =========================================== -->
 {% extends "admin/base.html" %}
 
 {% block title %}Statistics{% endblock %}
 
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Statistics</li>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <h1>📊 Statistics</h1>
-    
-    <div class="card">
-        <div class="card-body">
-            <p>STUB: Statistics will be here</p>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-2">
+                    <i class="bi bi-bar-chart me-2"></i>
+                    Statistics Overview
+                </h1>
+                <p class="text-muted">Comprehensive statistical analysis and reporting</p>
+            </div>
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="bi bi-calendar3 me-1"></i>
+                    {{ selected_period or 'Last 30 Days' }}
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="?period=today">Today</a></li>
+                    <li><a class="dropdown-item" href="?period=week">Last 7 Days</a></li>
+                    <li><a class="dropdown-item" href="?period=month">Last 30 Days</a></li>
+                    <li><a class="dropdown-item" href="?period=quarter">Last 90 Days</a></li>
+                    <li><a class="dropdown-item" href="?period=year">Last Year</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" onclick="showCustomDateRange()">Custom Range</a></li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Global Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-2 col-md-4 mb-4">
+        <div class="card stats-card border-left-primary">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Campaigns
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ stats.total_campaigns or 0 }}
+                        </div>
+                        <div class="small text-success">
+                            <i class="bi bi-arrow-up"></i>
+                            {{ stats.campaigns_growth or '0' }}% vs last period
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-envelope-paper fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 mb-4">
+        <div class="card stats-card border-left-success">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Emails Sent
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ stats.total_emails_sent or 0 }}
+                        </div>
+                        <div class="small text-success">
+                            <i class="bi bi-arrow-up"></i>
+                            {{ stats.emails_growth or '0' }}%
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-send fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 mb-4">
+        <div class="card stats-card border-left-info">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Total Clicks
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ stats.total_clicks or 0 }}
+                        </div>
+                        <div class="small text-info">
+                            {{ stats.click_rate or '0' }}% click rate
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-cursor fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 mb-4">
+        <div class="card stats-card border-left-warning">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Credentials
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ stats.total_credentials or 0 }}
+                        </div>
+                        <div class="small text-warning">
+                            {{ stats.credential_rate or '0' }}% capture rate
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-shield-exclamation fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 mb-4">
+        <div class="card stats-card border-left-danger">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col">
+                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                            Targets
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ stats.total_targets or 0 }}
+                        </div>
+                        <div class="small text-danger">
+                            {{ stats.active_targets or 0 }} active
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-people fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 mb-4">
+        <div class="card stats-card border-left-dark">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col">
+                        <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">
+                            Success Rate
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ stats.overall_success_rate or '0' }}%
+                        </div>
+                        <div class="small text-{% if stats.overall_success_rate >= 70 %}success{% elif stats.overall_success_rate >= 40 %}warning{% else %}danger{% endif %}">
+                            Overall performance
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-trophy fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Trend Charts Row -->
+<div class="row mb-4">
+    <!-- Long-term Trends -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Long-term Trends</h6>
+                <div class="dropdown no-arrow">
+                    <a class="dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-three-dots-vertical text-gray-400"></i>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right shadow">
+                        <a class="dropdown-item" href="#" onclick="exportChart('trendsChart')">
+                            <i class="bi bi-download me-2"></i>Export Chart
+                        </a>
+                        <a class="dropdown-item" href="#" onclick="refreshChart('trendsChart')">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Refresh Data
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="#" onclick="toggleTrendMetric('campaigns')">
+                            <i class="bi bi-envelope-paper me-2"></i>Toggle Campaigns
+                        </a>
+                        <a class="dropdown-item" href="#" onclick="toggleTrendMetric('clicks')">
+                            <i class="bi bi-cursor me-2"></i>Toggle Clicks
+                        </a>
+                        <a class="dropdown-item" href="#" onclick="toggleTrendMetric('credentials')">
+                            <i class="bi bi-shield-exclamation me-2"></i>Toggle Credentials
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-area">
+                    <canvas id="trendsChart" width="100%" height="300"></canvas>
+                </div>
+                <hr class="my-4">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <div class="h6 mb-0 font-weight-bold text-primary">
+                            {{ trends.avg_campaign_performance or '0' }}%
+                        </div>
+                        <div class="small text-muted">Avg Campaign Performance</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="h6 mb-0 font-weight-bold text-success">
+                            {{ trends.peak_activity_day or 'N/A' }}
+                        </div>
+                        <div class="small text-muted">Peak Activity Day</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="h6 mb-0 font-weight-bold text-info">
+                            {{ trends.total_training_hours or '0' }}h
+                        </div>
+                        <div class="small text-muted">Training Hours Saved</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Distribution -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Performance Distribution</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-pie pt-4 pb-2">
+                    <canvas id="performanceChart" width="100%" height="200"></canvas>
+                </div>
+                <div class="mt-4">
+                    {% for category, data in performance_distribution.items() %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="small">
+                            <i class="bi bi-circle-fill text-{% if category == 'excellent' %}success{% elif category == 'good' %}primary{% elif category == 'average' %}warning{% else %}danger{% endif %} me-2"></i>
+                            {{ category.title() }} ({{ data.range }})
+                        </div>
+                        <div class="small font-weight-bold">{{ data.count }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Statistics Tables -->
+<div class="row">
+    <!-- Campaign Statistics -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Campaign Statistics</h6>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="exportCampaignStats()">
+                    <i class="bi bi-download me-1"></i>Export
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>Campaign Type</th>
+                                <th>Count</th>
+                                <th>Avg Success</th>
+                                <th>Trend</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for campaign_type in campaign_statistics %}
+                            <tr>
+                                <td>
+                                    <i class="bi bi-{{ campaign_type.icon }} me-2"></i>
+                                    {{ campaign_type.name }}
+                                </td>
+                                <td>{{ campaign_type.count }}</td>
+                                <td>
+                                    <span class="badge bg-{% if campaign_type.success_rate >= 70 %}success{% elif campaign_type.success_rate >= 40 %}warning{% else %}danger{% endif %}">
+                                        {{ campaign_type.success_rate }}%
+                                    </span>
+                                </td>
+                                <td>
+                                    <i class="bi bi-arrow-{% if campaign_type.trend > 0 %}up text-success{% elif campaign_type.trend < 0 %}down text-danger{% else %}right text-muted{% endif %}"></i>
+                                    {{ campaign_type.trend }}%
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template Performance -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Template Performance</h6>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="exportTemplateStats()">
+                    <i class="bi bi-download me-1"></i>Export
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>Template</th>
+                                <th>Used</th>
+                                <th>Click Rate</th>
+                                <th>Effectiveness</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for template in template_performance %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('templates.view_template', template_id=template.id) }}">
+                                        {{ template.name[:20] }}{% if template.name|length > 20 %}...{% endif %}
+                                    </a>
+                                </td>
+                                <td>{{ template.usage_count }}</td>
+                                <td>{{ template.click_rate }}%</td>
+                                <td>
+                                    <div class="progress" style="height: 15px; width: 60px;">
+                                        <div class="progress-bar bg-{% if template.effectiveness >= 70 %}success{% elif template.effectiveness >= 40 %}warning{% else %}danger{% endif %}" 
+                                             style="width: {{ template.effectiveness }}%">
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Advanced Analytics -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Advanced Analytics</h6>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="generateReport()">
+                        <i class="bi bi-file-earmark-text me-1"></i>Generate Report
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-success" onclick="exportAllData()">
+                        <i class="bi bi-download me-1"></i>Export All Data
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="scheduleReport()">
+                        <i class="bi bi-calendar-plus me-1"></i>Schedule Report
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Geographic Distribution -->
+                    <div class="col-md-4 mb-4">
+                        <h6 class="font-weight-bold mb-3">Geographic Distribution</h6>
+                        {% for location in geographic_stats %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="small">
+                                <i class="bi bi-geo-alt me-2"></i>{{ location.country }}
+                            </div>
+                            <div>
+                                <span class="badge bg-primary">{{ location.count }}</span>
+                                <span class="small text-muted">{{ location.percentage }}%</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Time-based Analysis -->
+                    <div class="col-md-4 mb-4">
+                        <h6 class="font-weight-bold mb-3">Peak Activity Times</h6>
+                        {% for time_slot in time_analysis %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="small">
+                                <i class="bi bi-clock me-2"></i>{{ time_slot.period }}
+                            </div>
+                            <div>
+                                <div class="progress" style="width: 80px; height: 8px;">
+                                    <div class="progress-bar bg-info" style="width: {{ time_slot.activity_level }}%"></div>
+                                </div>
+                                <span class="small text-muted">{{ time_slot.activity_level }}%</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Device Statistics -->
+                    <div class="col-md-4 mb-4">
+                        <h6 class="font-weight-bold mb-3">Device Breakdown</h6>
+                        {% for device in device_stats %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="small">
+                                <i class="bi bi-{{ device.icon }} me-2"></i>{{ device.type }}
+                            </div>
+                            <div>
+                                <span class="badge bg-secondary">{{ device.count }}</span>
+                                <span class="small text-muted">{{ device.percentage }}%</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Date Range Modal -->
+<div class="modal fade" id="dateRangeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Custom Date Range</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="dateRangeForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="start_date" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="end_date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="applyDateRange()">Apply Range</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Statistics functionality
+let charts = {};
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeStatisticsCharts();
+    setupAutoRefresh();
+});
+
+function initializeStatisticsCharts() {
+    // Long-term Trends Chart
+    const trendsCtx = document.getElementById('trendsChart').getContext('2d');
+    charts.trends = new Chart(trendsCtx, {
+        type: 'line',
+        data: {
+            labels: {{ trends_data.labels | tojson }},
+            datasets: [{
+                label: 'Campaigns',
+                data: {{ trends_data.campaigns | tojson }},
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                fill: false,
+                tension: 0.4
+            }, {
+                label: 'Click Rate %',
+                data: {{ trends_data.click_rates | tojson }},
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                fill: false,
+                tension: 0.4,
+                yAxisID: 'y1'
+            }, {
+                label: 'Credentials Captured',
+                data: {{ trends_data.credentials | tojson }},
+                borderColor: '#ffc107',
+                backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                fill: false,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Performance Trends Over Time'
+                },
+                legend: {
+                    position: 'bottom'
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    max: 100,
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            }
+        }
+    });
+
+    // Performance Distribution Chart
+    const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+    charts.performance = new Chart(performanceCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Excellent (80-100%)', 'Good (60-79%)', 'Average (40-59%)', 'Poor (0-39%)'],
+            datasets: [{
+                data: {{ performance_chart_data | tojson }},
+                backgroundColor: ['#28a745', '#007bff', '#ffc107', '#dc3545'],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+function setupAutoRefresh() {
+    // Auto-refresh statistics every 2 minutes
+    setInterval(function() {
+        if (document.hasFocus()) {
+            refreshStatistics();
+        }
+    }, 120000);
+}
+
+function refreshStatistics() {
+    const params = new URLSearchParams(window.location.search);
+    fetch(`/admin/api/statistics?${params.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('Statistics updated:', data);
+            updateChartsData(data);
+        })
+        .catch(error => console.error('Failed to refresh statistics:', error));
+}
+
+function updateChartsData(data) {
+    if (data.trends_data && charts.trends) {
+        charts.trends.data.labels = data.trends_data.labels;
+        charts.trends.data.datasets[0].data = data.trends_data.campaigns;
+        charts.trends.data.datasets[1].data = data.trends_data.click_rates;
+        charts.trends.data.datasets[2].data = data.trends_data.credentials;
+        charts.trends.update();
+    }
+
+    if (data.performance_chart_data && charts.performance) {
+        charts.performance.data.datasets[0].data = data.performance_chart_data;
+        charts.performance.update();
+    }
+}
+
+function exportChart(chartName) {
+    if (charts[chartName]) {
+        const url = charts[chartName].toBase64Image();
+        const link = document.createElement('a');
+        link.download = `${chartName}_statistics.png`;
+        link.href = url;
+        link.click();
+    }
+}
+
+function refreshChart(chartName) {
+    refreshStatistics();
+}
+
+function toggleTrendMetric(metric) {
+    const chart = charts.trends;
+    const datasetIndex = metric === 'campaigns' ? 0 : metric === 'clicks' ? 1 : 2;
+    
+    if (chart.isDatasetVisible(datasetIndex)) {
+        chart.hide(datasetIndex);
+    } else {
+        chart.show(datasetIndex);
+    }
+}
+
+function showCustomDateRange() {
+    const modal = new bootstrap.Modal(document.getElementById('dateRangeModal'));
+    modal.show();
+}
+
+function applyDateRange() {
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    
+    if (!startDate || !endDate) {
+        alert('Please select both start and end dates');
+        return;
+    }
+    
+    if (new Date(startDate) > new Date(endDate)) {
+        alert('Start date must be before end date');
+        return;
+    }
+    
+    const params = new URLSearchParams();
+    params.set('start_date', startDate);
+    params.set('end_date', endDate);
+    
+    window.location.href = `${window.location.pathname}?${params.toString()}`;
+}
+
+function exportCampaignStats() {
+    exportTableData('Campaign Statistics', [
+        'Campaign Type', 'Count', 'Avg Success', 'Trend'
+    ], {{ campaign_statistics | tojson }});
+}
+
+function exportTemplateStats() {
+    exportTableData('Template Performance', [
+        'Template', 'Used', 'Click Rate', 'Effectiveness'
+    ], {{ template_performance | tojson }});
+}
+
+function exportTableData(title, headers, data) {
+    let csv = [headers.join(',')];
+    
+    data.forEach(row => {
+        const values = headers.map(header => {
+            const key = header.toLowerCase().replace(/\s+/g, '_');
+            return `"${(row[key] || '').toString().replace(/"/g, '""')}"`;
+        });
+        csv.push(values.join(','));
+    });
+    
+    const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `${title.toLowerCase().replace(/\s+/g, '_')}.csv`;
+    link.href = url;
+    link.click();
+    window.URL.revokeObjectURL(url);
+}
+
+function generateReport() {
+    const modal = document.createElement('div');
+    modal.innerHTML = `
+        <div class="modal fade" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Generate Statistics Report</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Report Format</label>
+                            <select class="form-select" id="reportFormat">
+                                <option value="pdf">PDF Report</option>
+                                <option value="excel">Excel Spreadsheet</option>
+                                <option value="html">HTML Report</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Include Sections</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="includeOverview" checked>
+                                <label class="form-check-label" for="includeOverview">Overview Statistics</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="includeTrends" checked>
+                                <label class="form-check-label" for="includeTrends">Trend Analysis</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="includeCampaigns" checked>
+                                <label class="form-check-label" for="includeCampaigns">Campaign Details</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="includeTemplates" checked>
+                                <label class="form-check-label" for="includeTemplates">Template Performance</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="downloadReport()">Generate Report</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    const bootstrapModal = new bootstrap.Modal(modal.querySelector('.modal'));
+    bootstrapModal.show();
+    
+    modal.addEventListener('hidden.bs.modal', () => {
+        document.body.removeChild(modal);
+    });
+}
+
+function downloadReport() {
+    // Simulate report generation
+    alert('Report generation started. You will receive an email when it\'s ready.');
+    bootstrap.Modal.getInstance(document.querySelector('.modal')).hide();
+}
+
+function exportAllData() {
+    if (confirm('This will export all statistical data. Continue?')) {
+        window.location.href = '/admin/api/statistics/export';
+    }
+}
+
+function scheduleReport() {
+    alert('Scheduled reporting feature coming soon!');
+}
+</script>
 {% endblock %}

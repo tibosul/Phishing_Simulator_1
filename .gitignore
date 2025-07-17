@@ -373,5 +373,6 @@ __pycache__/
 *.log
 .env
 venv/
+test_env/
 venv_*/
 .venv/
