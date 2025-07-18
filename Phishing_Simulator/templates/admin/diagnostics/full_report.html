@@ -1,0 +1,319 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Full Diagnostic Report{% endblock %}
+
+{% block extra_head %}
+<style>
+    .check-success { color: #28a745; }
+    .check-warning { color: #ffc107; }
+    .check-error { color: #dc3545; }
+    .service-section {
+        border-left: 4px solid #dee2e6;
+        margin-bottom: 2rem;
+    }
+    .service-section.healthy { border-left-color: #28a745; }
+    .service-section.warning { border-left-color: #ffc107; }
+    .service-section.error { border-left-color: #dc3545; }
+    .check-item {
+        padding: 0.75rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        margin-bottom: 0.5rem;
+    }
+    .check-item.success { background-color: #f8fff9; border-color: #28a745; }
+    .check-item.warning { background-color: #fffcf0; border-color: #ffc107; }
+    .check-item.error { background-color: #fff5f5; border-color: #dc3545; }
+    .json-view {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('diagnostics.index') }}">Diagnostics</a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">Full Report</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 text-primary">
+                        <i class="bi bi-clipboard-data me-2"></i>
+                        Full Diagnostic Report
+                    </h1>
+                    <p class="text-muted mb-0">Complete system health and configuration check</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('diagnostics.export_diagnostics') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-download me-1"></i>
+                        Export JSON
+                    </a>
+                    <button class="btn btn-primary" onclick="window.location.reload()">
+                        <i class="bi bi-arrow-clockwise me-1"></i>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if diagnostic_report %}
+    <!-- Overall Status -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    {% if diagnostic_report.overall_status == 'healthy' %}
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+                        <h4 class="text-success mt-2">All Systems Operational</h4>
+                    {% elif diagnostic_report.overall_status == 'warning' %}
+                        <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 3rem;"></i>
+                        <h4 class="text-warning mt-2">Some Issues Detected</h4>
+                    {% else %}
+                        <i class="bi bi-x-circle-fill text-danger" style="font-size: 3rem;"></i>
+                        <h4 class="text-danger mt-2">Critical Issues Found</h4>
+                    {% endif %}
+                    <p class="text-muted">
+                        Report generated: {{ diagnostic_report.timestamp }}
+                        {% if diagnostic_report.execution_time %}
+                        | Execution time: {{ "%.2f"|format(diagnostic_report.execution_time) }}s
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Details -->
+    <div class="row">
+        <div class="col-12">
+            <!-- Email Service -->
+            {% if diagnostic_report.email %}
+            <div class="service-section {{ diagnostic_report.email.status }}">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-envelope me-2"></i>
+                            Email Service
+                            {% if diagnostic_report.email.status == 'healthy' %}
+                                <span class="badge bg-success ms-2">Healthy</span>
+                            {% elif diagnostic_report.email.status == 'warning' %}
+                                <span class="badge bg-warning ms-2">Warning</span>
+                            {% else %}
+                                <span class="badge bg-danger ms-2">Error</span>
+                            {% endif %}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if diagnostic_report.email.checks %}
+                            {% for check in diagnostic_report.email.checks %}
+                            <div class="check-item {{ check.status }}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">
+                                            {% if check.status == 'success' %}
+                                                <i class="bi bi-check-circle check-success me-1"></i>
+                                            {% elif check.status == 'warning' %}
+                                                <i class="bi bi-exclamation-triangle check-warning me-1"></i>
+                                            {% else %}
+                                                <i class="bi bi-x-circle check-error me-1"></i>
+                                            {% endif %}
+                                            {{ check.name }}
+                                        </h6>
+                                        <p class="mb-0 small">{{ check.message }}</p>
+                                        {% if check.details %}
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                {% for key, value in check.details.items() %}
+                                                    <strong>{{ key.replace('_', ' ').title() }}:</strong> {{ value }}{% if not loop.last %} | {% endif %}
+                                                {% endfor %}
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                        
+                        {% if diagnostic_report.email.recommendations %}
+                        <div class="mt-3">
+                            <h6>Recommendations:</h6>
+                            <ul class="small">
+                                {% for recommendation in diagnostic_report.email.recommendations %}
+                                <li>{{ recommendation }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- SMS Service -->
+            {% if diagnostic_report.sms %}
+            <div class="service-section {{ diagnostic_report.sms.status }}">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-phone me-2"></i>
+                            SMS Service
+                            {% if diagnostic_report.sms.status == 'healthy' %}
+                                <span class="badge bg-success ms-2">Healthy</span>
+                            {% elif diagnostic_report.sms.status == 'warning' %}
+                                <span class="badge bg-warning ms-2">Warning</span>
+                            {% else %}
+                                <span class="badge bg-danger ms-2">Error</span>
+                            {% endif %}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if diagnostic_report.sms.checks %}
+                            {% for check in diagnostic_report.sms.checks %}
+                            <div class="check-item {{ check.status }}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">
+                                            {% if check.status == 'success' %}
+                                                <i class="bi bi-check-circle check-success me-1"></i>
+                                            {% elif check.status == 'warning' %}
+                                                <i class="bi bi-exclamation-triangle check-warning me-1"></i>
+                                            {% else %}
+                                                <i class="bi bi-x-circle check-error me-1"></i>
+                                            {% endif %}
+                                            {{ check.name }}
+                                        </h6>
+                                        <p class="mb-0 small">{{ check.message }}</p>
+                                        {% if check.details %}
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                {% for key, value in check.details.items() %}
+                                                    <strong>{{ key.replace('_', ' ').title() }}:</strong> {{ value }}{% if not loop.last %} | {% endif %}
+                                                {% endfor %}
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                        
+                        {% if diagnostic_report.sms.recommendations %}
+                        <div class="mt-3">
+                            <h6>Recommendations:</h6>
+                            <ul class="small">
+                                {% for recommendation in diagnostic_report.sms.recommendations %}
+                                <li>{{ recommendation }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Database Service -->
+            {% if diagnostic_report.database %}
+            <div class="service-section {{ diagnostic_report.database.status }}">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-database me-2"></i>
+                            Database Service
+                            {% if diagnostic_report.database.status == 'healthy' %}
+                                <span class="badge bg-success ms-2">Healthy</span>
+                            {% elif diagnostic_report.database.status == 'warning' %}
+                                <span class="badge bg-warning ms-2">Warning</span>
+                            {% else %}
+                                <span class="badge bg-danger ms-2">Error</span>
+                            {% endif %}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if diagnostic_report.database.checks %}
+                            {% for check in diagnostic_report.database.checks %}
+                            <div class="check-item {{ check.status }}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">
+                                            {% if check.status == 'success' %}
+                                                <i class="bi bi-check-circle check-success me-1"></i>
+                                            {% elif check.status == 'warning' %}
+                                                <i class="bi bi-exclamation-triangle check-warning me-1"></i>
+                                            {% else %}
+                                                <i class="bi bi-x-circle check-error me-1"></i>
+                                            {% endif %}
+                                            {{ check.name }}
+                                        </h6>
+                                        <p class="mb-0 small">{{ check.message }}</p>
+                                        {% if check.details %}
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                {% for key, value in check.details.items() %}
+                                                    <strong>{{ key.replace('_', ' ').title() }}:</strong> {{ value }}{% if not loop.last %} | {% endif %}
+                                                {% endfor %}
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Raw JSON View (Collapsible) -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <button class="btn btn-link p-0 text-decoration-none" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#rawJson" aria-expanded="false" aria-controls="rawJson">
+                            <i class="bi bi-code me-2"></i>
+                            Raw JSON Data
+                            <i class="bi bi-chevron-down ms-1"></i>
+                        </button>
+                    </h6>
+                </div>
+                <div class="collapse" id="rawJson">
+                    <div class="card-body">
+                        <pre class="json-view"><code>{{ diagnostic_report | tojson(indent=2) }}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Error State -->
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-danger" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Error:</strong> Unable to generate diagnostic report. Please try again.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

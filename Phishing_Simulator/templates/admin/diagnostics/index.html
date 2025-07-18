@@ -1,0 +1,264 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Service Diagnostics{% endblock %}
+
+{% block extra_head %}
+<style>
+    .service-status-card {
+        transition: all 0.3s ease;
+    }
+    .service-status-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .status-healthy { border-left: 4px solid #28a745; }
+    .status-warning { border-left: 4px solid #ffc107; }
+    .status-error { border-left: 4px solid #dc3545; }
+    .status-icon { font-size: 1.5rem; }
+    .test-btn { min-width: 120px; }
+    .refresh-btn { animation: pulse 2s infinite; }
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 text-primary">
+                        <i class="bi bi-heart-pulse me-2"></i>
+                        Service Diagnostics
+                    </h1>
+                    <p class="text-muted mb-0">Monitor and test SMS/Email service configuration</p>
+                </div>
+                <div>
+                    <button class="btn btn-outline-primary refresh-btn" onclick="refreshStatus()">
+                        <i class="bi bi-arrow-clockwise me-1"></i>
+                        Refresh Status
+                    </button>
+                    <a href="{{ url_for('diagnostics.full_diagnostics') }}" class="btn btn-primary">
+                        <i class="bi bi-clipboard-data me-1"></i>
+                        Full Diagnostics
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Status Overview -->
+    <div class="row mb-4">
+        {% if service_status.services %}
+            {% for service_name, service_info in service_status.services.items() %}
+            <div class="col-md-4 mb-3">
+                <div class="card service-status-card h-100 status-{{ service_info.status }}">
+                    <div class="card-body text-center">
+                        <div class="status-icon mb-2">
+                            {% if service_info.status == 'healthy' %}
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                            {% elif service_info.status == 'warning' %}
+                                <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                            {% else %}
+                                <i class="bi bi-x-circle-fill text-danger"></i>
+                            {% endif %}
+                        </div>
+                        <h5 class="card-title text-capitalize">{{ service_name }}</h5>
+                        <p class="card-text small">{{ service_info.message }}</p>
+                        {% if service_info.status == 'healthy' %}
+                            <span class="badge bg-success">Operational</span>
+                        {% elif service_info.status == 'warning' %}
+                            <span class="badge bg-warning">Warning</span>
+                        {% else %}
+                            <span class="badge bg-danger">Error</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-warning" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Unable to retrieve service status. Please try refreshing the page.
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-lightning-charge me-2"></i>
+                        Quick Tests
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex justify-content-between align-items-center p-3 border rounded">
+                                <div>
+                                    <h6 class="mb-1">Email Service Test</h6>
+                                    <p class="text-muted small mb-0">Send a test email to verify SMTP configuration</p>
+                                </div>
+                                <a href="{{ url_for('diagnostics.test_email') }}" class="btn btn-outline-primary test-btn">
+                                    <i class="bi bi-envelope me-1"></i>
+                                    Test Email
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex justify-content-between align-items-center p-3 border rounded">
+                                <div>
+                                    <h6 class="mb-1">SMS Service Test</h6>
+                                    <p class="text-muted small mb-0">Send a test SMS to verify provider configuration</p>
+                                </div>
+                                <a href="{{ url_for('diagnostics.test_sms') }}" class="btn btn-outline-primary test-btn">
+                                    <i class="bi bi-phone me-1"></i>
+                                    Test SMS
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Diagnostic Tools -->
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-gear me-2"></i>
+                        Configuration
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">View current configuration settings without exposing sensitive data.</p>
+                    <a href="{{ url_for('diagnostics.configuration') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-list-ul me-1"></i>
+                        View Configuration
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-wifi me-2"></i>
+                        Connectivity
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Test connectivity to external services and providers.</p>
+                    <a href="{{ url_for('diagnostics.connectivity') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-up-right-circle me-1"></i>
+                        Test Connectivity
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Options -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-download me-2"></i>
+                        Export & Reports
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Export diagnostic reports for analysis or troubleshooting.</p>
+                    <a href="{{ url_for('diagnostics.export_diagnostics') }}" class="btn btn-outline-info btn-sm me-2">
+                        <i class="bi bi-file-earmark-arrow-down me-1"></i>
+                        Export JSON Report
+                    </a>
+                    <a href="{{ url_for('diagnostics.api_full_diagnostics') }}" class="btn btn-outline-secondary btn-sm" target="_blank">
+                        <i class="bi bi-code me-1"></i>
+                        API View
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Last Updated -->
+    {% if diagnostic_timestamp %}
+    <div class="row mt-3">
+        <div class="col-12">
+            <p class="text-muted text-center small">
+                <i class="bi bi-clock me-1"></i>
+                Last updated: <span id="last-updated">{{ diagnostic_timestamp }}</span>
+            </p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function refreshStatus() {
+    const refreshBtn = document.querySelector('.refresh-btn');
+    const originalContent = refreshBtn.innerHTML;
+    
+    // Show loading state
+    refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1 spinner-border spinner-border-sm"></i> Refreshing...';
+    refreshBtn.disabled = true;
+    
+    // Fetch new status
+    fetch('{{ url_for("diagnostics.api_status") }}')
+        .then(response => response.json())
+        .then(data => {
+            // Update timestamp
+            const timestampElement = document.getElementById('last-updated');
+            if (timestampElement && data.timestamp) {
+                timestampElement.textContent = new Date(data.timestamp).toLocaleString();
+            }
+            
+            // Refresh the page to update status cards
+            setTimeout(() => {
+                location.reload();
+            }, 500);
+        })
+        .catch(error => {
+            console.error('Error refreshing status:', error);
+            alert('Failed to refresh status. Please try again.');
+        })
+        .finally(() => {
+            // Restore button state
+            refreshBtn.innerHTML = originalContent;
+            refreshBtn.disabled = false;
+        });
+}
+
+// Auto-refresh every 30 seconds
+setInterval(() => {
+    const lastUpdated = document.getElementById('last-updated');
+    if (lastUpdated) {
+        fetch('{{ url_for("diagnostics.api_status") }}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.timestamp) {
+                    lastUpdated.textContent = new Date(data.timestamp).toLocaleString();
+                }
+            })
+            .catch(error => console.log('Auto-refresh failed:', error));
+    }
+}, 30000);
+</script>
+{% endblock %}
