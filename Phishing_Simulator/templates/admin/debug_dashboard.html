@@ -1,0 +1,257 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Debug Dashboard - {{ super() }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-card {
+        border: 1px solid #e3e6f0;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        transition: transform 0.2s;
+    }
+    
+    .status-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .status-ok { border-left: 5px solid #28a745; }
+    .status-warning { border-left: 5px solid #ffc107; }
+    .status-error { border-left: 5px solid #dc3545; }
+    
+    .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .status-indicator.ok {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .status-indicator.warning {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .status-indicator.error {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-tools"></i> Debug Dashboard
+        </h1>
+        <div>
+            <a href="{{ url_for('debug.service_status_page') }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-heartbeat"></i> Service Status
+            </a>
+            <a href="{{ url_for('debug.test_interface') }}" class="btn btn-info btn-sm">
+                <i class="fas fa-flask"></i> Test Interface
+            </a>
+        </div>
+    </div>
+
+    <!-- Service Status Overview -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-tachometer-alt"></i> Service Overview
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div class="mb-2">
+                                <i class="fas fa-sms fa-2x {% if service_status.sms.status == 'ok' %}text-success{% elif service_status.sms.status == 'warning' %}text-warning{% else %}text-danger{% endif %}"></i>
+                            </div>
+                            <h5>SMS Service</h5>
+                            <span class="status-indicator {{ service_status.sms.status }}">
+                                {{ service_status.sms.status | title }}
+                            </span>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-2">
+                                <i class="fas fa-envelope fa-2x {% if service_status.email.status == 'ok' %}text-success{% elif service_status.email.status == 'warning' %}text-warning{% else %}text-danger{% endif %}"></i>
+                            </div>
+                            <h5>Email Service</h5>
+                            <span class="status-indicator {{ service_status.email.status }}">
+                                {{ service_status.email.status | title }}
+                            </span>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-2">
+                                <i class="fas fa-check-circle fa-2x {% if service_status.summary.services_working == 2 %}text-success{% elif service_status.summary.services_working == 1 %}text-warning{% else %}text-danger{% endif %}"></i>
+                            </div>
+                            <h5>Services Working</h5>
+                            <span class="h4">{{ service_status.summary.services_working }}/{{ service_status.summary.total_services }}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-2">
+                                <i class="fas fa-exclamation-triangle fa-2x {% if service_status.summary.issues_found == 0 %}text-success{% else %}text-warning{% endif %}"></i>
+                            </div>
+                            <h5>Issues Found</h5>
+                            <span class="h4">{{ service_status.summary.issues_found }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow status-card">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-rocket"></i> Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <a href="{{ url_for('debug.service_status_page') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-heartbeat text-primary mr-3"></i>
+                            <strong>Service Status</strong>
+                            <p class="mb-0 text-muted">Detailed view of all services and their configuration</p>
+                        </a>
+                        <a href="{{ url_for('debug.test_interface') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-flask text-success mr-3"></i>
+                            <strong>Test Interface</strong>
+                            <p class="mb-0 text-muted">Send test emails and SMS messages</p>
+                        </a>
+                        <a href="{{ url_for('debug.configuration_help') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-question-circle text-info mr-3"></i>
+                            <strong>Configuration Help</strong>
+                            <p class="mb-0 text-muted">Setup guides and troubleshooting tips</p>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card shadow status-card">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-cogs"></i> Configuration Summary
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h6><strong>Environment:</strong> {{ config_report.environment.flask_env | title }}</h6>
+                    <h6><strong>Debug Mode:</strong> {{ config_report.environment.debug_mode | title }}</h6>
+                    
+                    {% if config_report.recommendations %}
+                    <div class="alert alert-warning mt-3">
+                        <h6><i class="fas fa-exclamation-triangle"></i> Configuration Issues:</h6>
+                        <ul class="mb-0">
+                            {% for recommendation in config_report.recommendations[:3] %}
+                                <li>{{ recommendation }}</li>
+                            {% endfor %}
+                            {% if config_report.recommendations|length > 3 %}
+                                <li><em>... and {{ config_report.recommendations|length - 3 }} more</em></li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-success mt-3">
+                        <i class="fas fa-check-circle"></i> Configuration looks good!
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Details -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card shadow status-card status-{{ service_status.sms.status }}">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-sms"></i> SMS Service
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Provider:</strong> {{ service_status.sms.provider | title }}</p>
+                    <p><strong>Status:</strong> 
+                        <span class="status-indicator {{ service_status.sms.status }}">
+                            {{ service_status.sms.status | title }}
+                        </span>
+                    </p>
+                    
+                    {% if service_status.sms.configuration %}
+                        <p><strong>Configuration:</strong> {{ service_status.sms.configuration.message }}</p>
+                    {% endif %}
+                    
+                    {% if service_status.sms.recommendations %}
+                        <div class="alert alert-info">
+                            <small><strong>Recommendations:</strong></small>
+                            <ul class="mb-0">
+                                {% for rec in service_status.sms.recommendations[:2] %}
+                                    <li><small>{{ rec }}</small></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card shadow status-card status-{{ service_status.email.status }}">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-envelope"></i> Email Service
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Provider:</strong> {{ service_status.email.provider }}</p>
+                    <p><strong>Status:</strong> 
+                        <span class="status-indicator {{ service_status.email.status }}">
+                            {{ service_status.email.status | title }}
+                        </span>
+                    </p>
+                    
+                    {% if service_status.email.configuration %}
+                        <p><strong>Configuration:</strong> {{ service_status.email.configuration.message }}</p>
+                    {% endif %}
+                    
+                    {% if service_status.email.recommendations %}
+                        <div class="alert alert-info">
+                            <small><strong>Recommendations:</strong></small>
+                            <ul class="mb-0">
+                                {% for rec in service_status.email.recommendations[:2] %}
+                                    <li><small>{{ rec }}</small></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh every 30 seconds
+setTimeout(function() {
+    if (confirm('Refresh service status?')) {
+        window.location.reload();
+    }
+}, 30000);
+</script>
+{% endblock %}

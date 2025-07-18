@@ -739,22 +739,64 @@ class EmailService:
     def validate_email_config():
         """
         Validează configurația email din Flask config
+        
+        Returns:
+            tuple: (is_valid, error_message)
         """
         try:
-            required_configs = ['MAIL_SERVER', 'MAIL_USERNAME', 'MAIL_PASSWORD']
+            # Check required configurations
+            server = current_app.config.get('MAIL_SERVER')
+            username = current_app.config.get('MAIL_USERNAME')
+            password = current_app.config.get('MAIL_PASSWORD')
             
-            for config_key in required_configs:
-                if not current_app.config.get(config_key):
-                    return False, f"Missing configuration: {config_key}"
+            if not server:
+                return False, "Missing MAIL_SERVER configuration"
             
-            # Test conexiune SMTP
+            if not username:
+                return False, "Missing MAIL_USERNAME configuration"
+            
+            if not password:
+                return False, "Missing MAIL_PASSWORD configuration"
+            
+            # Validate email format for username
+            import re
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(email_pattern, username):
+                return False, f"Invalid MAIL_USERNAME format: {username}. Must be a valid email address"
+            
+            # Validate port
+            port = current_app.config.get('MAIL_PORT')
+            if port:
+                try:
+                    port = int(port)
+                    if port < 1 or port > 65535:
+                        return False, f"Invalid MAIL_PORT: {port}. Must be between 1 and 65535"
+                except ValueError:
+                    return False, f"Invalid MAIL_PORT: {port}. Must be a number"
+            
+            # Validate TLS/SSL configuration
+            use_tls = current_app.config.get('MAIL_USE_TLS', False)
+            use_ssl = current_app.config.get('MAIL_USE_SSL', False)
+            
+            if use_tls and use_ssl:
+                return False, "Cannot use both MAIL_USE_TLS and MAIL_USE_SSL. Choose one"
+            
+            # Port validation based on encryption
+            if port:
+                if use_ssl and port not in [465, 993, 995]:
+                    return False, f"Port {port} is unusual for SSL. Common SSL ports: 465 (SMTP), 993 (IMAP), 995 (POP3)"
+                
+                if use_tls and port not in [25, 587, 143, 110]:
+                    return False, f"Port {port} is unusual for TLS. Common TLS ports: 587 (SMTP), 143 (IMAP), 110 (POP3)"
+            
+            # Test actual SMTP connection
             try:
                 service = EmailService()
                 smtp = service._get_smtp_connection()
                 smtp.quit()
-                return True, "Email configuration is valid"
+                return True, "Email configuration is valid and SMTP connection successful"
             except Exception as e:
                 return False, f"SMTP connection failed: {str(e)}"
             
         except Exception as e:
-            return False, f"Email configuration error: {str(e)}"
+            return False, f"Email configuration validation error: {str(e)}"

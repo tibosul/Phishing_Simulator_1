@@ -496,13 +496,42 @@ class SMSService:
             tuple: (is_valid, error_message)
         """
         try:
-            required_configs = ['SMS_API_KEY', 'SMS_FROM_NUMBER']
+            # Check for basic required configurations
+            api_key = current_app.config.get('SMS_API_KEY')
+            from_number = current_app.config.get('SMS_FROM_NUMBER')
             
-            for config_key in required_configs:
-                if not current_app.config.get(config_key):
-                    return False, f"Missing configuration: {config_key}"
+            if not api_key:
+                return False, "Missing SMS_API_KEY configuration"
+            
+            if not from_number:
+                return False, "Missing SMS_FROM_NUMBER configuration"
+            
+            # Validate from number format
+            if not from_number.startswith('+'):
+                return False, "SMS_FROM_NUMBER must start with '+' (e.g., +1234567890)"
+            
+            # Detect provider and validate specific requirements
+            if 'twilio' in api_key.lower():
+                api_secret = current_app.config.get('SMS_API_SECRET')
+                if not api_secret:
+                    return False, "Twilio provider requires SMS_API_SECRET (Auth Token)"
+                
+                # Validate Twilio Account SID format (starts with AC)
+                if not api_key.startswith('AC'):
+                    return False, "Invalid Twilio Account SID format (should start with 'AC')"
+                
+            elif 'nexmo' in api_key.lower():
+                api_secret = current_app.config.get('SMS_API_SECRET')
+                if not api_secret:
+                    return False, "Nexmo/Vonage provider requires SMS_API_SECRET"
+            
+            # Additional validation for phone number format
+            import re
+            phone_pattern = r'^\+[1-9]\d{1,14}$'  # E.164 format
+            if not re.match(phone_pattern, from_number):
+                return False, f"Invalid SMS_FROM_NUMBER format: {from_number}. Use E.164 format (e.g., +1234567890)"
             
             return True, "SMS configuration is valid"
             
         except Exception as e:
-            return False, f"SMS configuration error: {str(e)}"
+            return False, f"SMS configuration validation error: {str(e)}"

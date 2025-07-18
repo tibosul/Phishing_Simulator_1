@@ -137,7 +137,7 @@ def register_blueprints(app):
     """Înregistrează toate blueprint-urile"""
     from routes import (
         campaigns_bp, dashboard_bp, templates_bp, 
-        targets_bp, webhook_bp, fake_revolut_bp
+        targets_bp, webhook_bp, fake_revolut_bp, debug_bp
     )
     
     # Admin routes
@@ -145,6 +145,9 @@ def register_blueprints(app):
     app.register_blueprint(campaigns_bp)
     app.register_blueprint(templates_bp)
     app.register_blueprint(targets_bp)
+    
+    # Debug routes
+    app.register_blueprint(debug_bp)
     
     # Webhook routes
     app.register_blueprint(webhook_bp)
