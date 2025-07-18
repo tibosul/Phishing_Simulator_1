@@ -8,6 +8,7 @@ Conține toate blueprint-urile Flask:
 - targets: Gestionarea țintelor ✓ (STUB)
 - webhook: Endpoint-uri pentru tracking ✓ (STUB)
 - fake_revolut: Site-ul fake Revolut ✓ (STUB)
+- diagnostics: Diagnostice pentru SMS/Email ✓ (IMPLEMENTED)
 """
 
 # Import toate blueprint-urile
@@ -17,6 +18,7 @@ from .templates import bp as templates_bp
 from .targets import bp as targets_bp
 from .webhook import bp as webhook_bp
 from .fake_revolut import bp as fake_revolut_bp
+from .diagnostics import bp as diagnostics_bp
 
 __all__ = [
     'campaigns_bp',
@@ -24,5 +26,6 @@ __all__ = [
     'templates_bp', 
     'targets_bp',
     'webhook_bp',
-    'fake_revolut_bp'
+    'fake_revolut_bp',
+    'diagnostics_bp'
 ]

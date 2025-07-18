@@ -158,6 +158,27 @@
                         <span class="badge bg-success ms-auto" id="health-status">●</span>
                     </a>
                 </li>
+                
+                <!-- Diagnostics -->
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('diagnostics.index') }}">
+                        <i class="bi bi-tools me-2"></i>
+                        Diagnostics
+                        <span class="badge ms-auto" id="diagnostic-status">
+                            {% if diagnostic_service_status %}
+                                {% if diagnostic_service_status.email.status == 'healthy' and diagnostic_service_status.sms.status == 'healthy' and diagnostic_service_status.database.status == 'healthy' %}
+                                    <span class="text-success">●</span>
+                                {% elif diagnostic_service_status.email.status == 'error' or diagnostic_service_status.sms.status == 'error' or diagnostic_service_status.database.status == 'error' %}
+                                    <span class="text-danger">●</span>
+                                {% else %}
+                                    <span class="text-warning">●</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">●</span>
+                            {% endif %}
+                        </span>
+                    </a>
+                </li>
             </ul>
         </div>
         

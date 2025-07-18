@@ -1,0 +1,274 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Test SMS Service{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('diagnostics.index') }}">Diagnostics</a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">Test SMS</li>
+                </ol>
+            </nav>
+            <h1 class="h3 text-primary">
+                <i class="bi bi-phone-vibrate me-2"></i>
+                Test SMS Service
+            </h1>
+            <p class="text-muted">Send a test SMS to verify provider configuration and template rendering</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Test Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-phone me-2"></i>
+                        Send Test SMS
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('diagnostics.test_sms') }}">
+                        <div class="mb-3">
+                            <label for="test_phone" class="form-label">
+                                Phone Number
+                                <span class="text-danger">*</span>
+                            </label>
+                            <input type="tel" class="form-control" id="test_phone" name="test_phone" 
+                                   placeholder="+40712345678" required
+                                   value="{{ request.form.get('test_phone', '') }}">
+                            <div class="form-text">The phone number where the test SMS will be sent (include country code)</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="template_content" class="form-label">SMS Template Content</label>
+                            <textarea class="form-control" id="template_content" name="template_content" rows="4" 
+                                      placeholder="Enter custom SMS template content...">{{ template_content or request.form.get('template_content', 'TEST: This is a test SMS from Phishing Simulator. Provider: {{company_name}}') }}</textarea>
+                            <div class="form-text">
+                                Available variables: {{target_name}}, {{target_first_name}}, {{tracking_link}}, {{company_name}}, {{current_date}}
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send me-1"></i>
+                                Send Test SMS
+                            </button>
+                            <a href="{{ url_for('diagnostics.index') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-1"></i>
+                                Back to Diagnostics
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Test Result -->
+            {% if test_result %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clipboard-check me-2"></i>
+                        Test Result
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if test_result.status == 'success' %}
+                        <div class="alert alert-success d-flex align-items-center" role="alert">
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                            <div>
+                                <strong>Success!</strong> {{ test_result.message }}
+                            </div>
+                        </div>
+                        {% if test_result.details %}
+                        <div class="mt-3">
+                            <h6>Details:</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Recipient:</strong> {{ test_result.details.recipient }}</li>
+                                <li><strong>Provider:</strong> {{ test_result.details.provider }}</li>
+                                <li><strong>Timestamp:</strong> {{ test_result.timestamp }}</li>
+                            </ul>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <div>
+                                <strong>Error:</strong> {{ test_result.message }}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Help & Info -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        About SMS Testing
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h6>What this test does:</h6>
+                    <ul class="small">
+                        <li>Validates SMS provider configuration</li>
+                        <li>Tests authentication with SMS provider</li>
+                        <li>Renders the SMS template</li>
+                        <li>Sends a real test SMS</li>
+                        <li>Logs the test event for auditing</li>
+                    </ul>
+
+                    <h6 class="mt-3">Supported Providers:</h6>
+                    <ul class="small">
+                        <li><strong>Twilio:</strong> Full API support</li>
+                        <li><strong>Nexmo/Vonage:</strong> Full API support</li>
+                        <li><strong>Mock:</strong> Development mode (logs only)</li>
+                    </ul>
+
+                    <h6 class="mt-3">Troubleshooting:</h6>
+                    <ul class="small">
+                        <li><strong>API errors:</strong> Check API credentials and quotas</li>
+                        <li><strong>Invalid phone:</strong> Ensure number includes country code</li>
+                        <li><strong>Message too long:</strong> Keep SMS under 160 characters</li>
+                        <li><strong>Delivery issues:</strong> Check provider delivery logs</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Current SMS Configuration -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-gear me-2"></i>
+                        SMS Configuration
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="sms-config-status">
+                        <div class="text-center">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <div class="small text-muted mt-1">Loading configuration...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Load SMS configuration status
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('{{ url_for("diagnostics.api_full_diagnostics") }}')
+        .then(response => response.json())
+        .then(data => {
+            const configDiv = document.getElementById('sms-config-status');
+            
+            if (data.sms && data.sms.configuration) {
+                const config = data.sms.configuration;
+                const status = data.sms.status;
+                
+                let statusBadge = '';
+                if (status === 'healthy') {
+                    statusBadge = '<span class="badge bg-success">Healthy</span>';
+                } else if (status === 'warning') {
+                    statusBadge = '<span class="badge bg-warning">Warning</span>';
+                } else {
+                    statusBadge = '<span class="badge bg-danger">Error</span>';
+                }
+                
+                // Get provider info
+                let provider = 'Unknown';
+                const checks = data.sms.checks || [];
+                const providerCheck = checks.find(check => check.name === 'SMS Provider Detection');
+                if (providerCheck && providerCheck.details) {
+                    provider = providerCheck.details.provider;
+                }
+                
+                configDiv.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small fw-bold">Status:</span>
+                        ${statusBadge}
+                    </div>
+                    <div class="small">
+                        <div class="row mb-1">
+                            <div class="col-4"><strong>Provider:</strong></div>
+                            <div class="col-8">${provider}</div>
+                        </div>
+                        <div class="row mb-1">
+                            <div class="col-4"><strong>API Key:</strong></div>
+                            <div class="col-8">${config.api_key_set ? '✓ Set' : '✗ Not set'}</div>
+                        </div>
+                        <div class="row mb-1">
+                            <div class="col-4"><strong>From Number:</strong></div>
+                            <div class="col-8">${config.from_number || 'Not set'}</div>
+                        </div>
+                        <div class="row mb-1">
+                            <div class="col-4"><strong>API Secret:</strong></div>
+                            <div class="col-8">${config.api_secret_set ? '✓ Set' : '✗ Not set'}</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                configDiv.innerHTML = `
+                    <div class="alert alert-warning small mb-0" role="alert">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Unable to load SMS configuration
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading SMS config:', error);
+            document.getElementById('sms-config-status').innerHTML = `
+                <div class="alert alert-danger small mb-0" role="alert">
+                    <i class="bi bi-x-circle me-1"></i>
+                    Error loading configuration
+                </div>
+            `;
+        });
+});
+
+// Character counter for SMS template
+document.getElementById('template_content').addEventListener('input', function() {
+    const content = this.value;
+    const length = content.length;
+    const maxLength = 160;
+    
+    // Remove existing counter
+    const existingCounter = document.getElementById('sms-char-counter');
+    if (existingCounter) {
+        existingCounter.remove();
+    }
+    
+    // Add character counter
+    const counter = document.createElement('div');
+    counter.id = 'sms-char-counter';
+    counter.className = `form-text ${length > maxLength ? 'text-danger' : length > 140 ? 'text-warning' : 'text-muted'}`;
+    counter.textContent = `${length}/${maxLength} characters`;
+    
+    if (length > maxLength) {
+        counter.textContent += ' (Message will be split into multiple SMS)';
+    }
+    
+    this.parentNode.appendChild(counter);
+});
+
+// Trigger character counter on page load
+document.getElementById('template_content').dispatchEvent(new Event('input'));
+</script>
+{% endblock %}

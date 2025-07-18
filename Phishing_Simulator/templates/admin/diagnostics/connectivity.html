@@ -1,0 +1,403 @@
+{% extends "admin/base.html" %}
+
+{% block title %}External Connectivity{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('diagnostics.index') }}">Diagnostics</a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">Connectivity</li>
+                </ol>
+            </nav>
+            <h1 class="h3 text-primary">
+                <i class="bi bi-wifi me-2"></i>
+                External Connectivity
+            </h1>
+            <p class="text-muted">Test connectivity to external services and providers</p>
+        </div>
+    </div>
+
+    {% if connectivity_result %}
+    <!-- External Services -->
+    {% if connectivity_result.external_services %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-cloud me-2"></i>
+                        External Services Connectivity
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if connectivity_result.external_services|length > 0 %}
+                        {% for service in connectivity_result.external_services %}
+                        <div class="d-flex align-items-center justify-content-between p-3 border rounded mb-3">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">
+                                    {% if service.status == 'success' %}
+                                        <i class="bi bi-check-circle text-success me-2"></i>
+                                    {% elif service.status == 'warning' %}
+                                        <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                                    {% else %}
+                                        <i class="bi bi-x-circle text-danger me-2"></i>
+                                    {% endif %}
+                                    {{ service.name }}
+                                </h6>
+                                <p class="text-muted small mb-0">{{ service.message }}</p>
+                                {% if service.details %}
+                                <div class="mt-1">
+                                    <small class="text-muted">
+                                        {% for key, value in service.details.items() %}
+                                            <strong>{{ key.replace('_', ' ').title() }}:</strong> {{ value }}{% if not loop.last %} | {% endif %}
+                                        {% endfor %}
+                                    </small>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="ms-3">
+                                {% if service.status == 'success' %}
+                                    <span class="badge bg-success">Connected</span>
+                                {% elif service.status == 'warning' %}
+                                    <span class="badge bg-warning">Warning</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Failed</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-info-circle text-muted" style="font-size: 2rem;"></i>
+                            <h5 class="text-muted mt-2">No External Services Configured</h5>
+                            <p class="text-muted">No external services are currently configured for connectivity testing.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <!-- Manual Connectivity Tests -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-router me-2"></i>
+                        Manual Connectivity Tests
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-light">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-envelope-at text-primary" style="font-size: 2rem;"></i>
+                                    <h6 class="mt-2">SMTP Connectivity</h6>
+                                    <p class="text-muted small">Test connection to your email provider's SMTP server</p>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="testSMTPConnectivity()">
+                                        <i class="bi bi-play me-1"></i>
+                                        Test SMTP
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-light">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-telephone-outbound text-primary" style="font-size: 2rem;"></i>
+                                    <h6 class="mt-2">SMS Provider Connectivity</h6>
+                                    <p class="text-muted small">Test connection to your SMS provider (Twilio/Nexmo)</p>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="testSMSConnectivity()">
+                                        <i class="bi bi-play me-1"></i>
+                                        Test SMS Provider
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Test Results Area -->
+                    <div id="connectivity-test-results" class="mt-4" style="display: none;">
+                        <div class="alert alert-info" role="alert">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm me-2" role="status">
+                                    <span class="visually-hidden">Testing...</span>
+                                </div>
+                                <span>Running connectivity test...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Network Information -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Network Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6>DNS Resolution</h6>
+                            <div id="dns-test">
+                                <button class="btn btn-outline-secondary btn-sm" onclick="testDNS()">
+                                    <i class="bi bi-search me-1"></i>
+                                    Test DNS
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Internet Connectivity</h6>
+                            <div id="internet-test">
+                                <button class="btn btn-outline-secondary btn-sm" onclick="testInternet()">
+                                    <i class="bi bi-globe me-1"></i>
+                                    Test Internet
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Proxy Detection</h6>
+                            <div id="proxy-test">
+                                <button class="btn btn-outline-secondary btn-sm" onclick="testProxy()">
+                                    <i class="bi bi-shield-check me-1"></i>
+                                    Check Proxy
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Troubleshooting Guide -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-question-circle me-2"></i>
+                        Connectivity Troubleshooting
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="troubleshootingAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="emailTroubleshooting">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#collapseEmail" aria-expanded="false" aria-controls="collapseEmail">
+                                    Email/SMTP Issues
+                                </button>
+                            </h2>
+                            <div id="collapseEmail" class="accordion-collapse collapse" aria-labelledby="emailTroubleshooting" 
+                                 data-bs-parent="#troubleshootingAccordion">
+                                <div class="accordion-body">
+                                    <h6>Common Issues:</h6>
+                                    <ul>
+                                        <li><strong>Connection timeout:</strong> Check firewall settings and ensure port 587/465/25 is open</li>
+                                        <li><strong>Authentication failed:</strong> Verify username and password, check for 2FA requirements</li>
+                                        <li><strong>TLS/SSL errors:</strong> Ensure correct encryption settings (TLS for port 587, SSL for port 465)</li>
+                                        <li><strong>Relay access denied:</strong> Make sure your IP is allowed to send emails through the provider</li>
+                                    </ul>
+                                    <h6>Testing Commands:</h6>
+                                    <code>telnet your-smtp-server.com 587</code> - Test basic connectivity<br>
+                                    <code>openssl s_client -connect your-smtp-server.com:587 -starttls smtp</code> - Test TLS
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="smsTroubleshooting">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#collapseSMS" aria-expanded="false" aria-controls="collapseSMS">
+                                    SMS Provider Issues
+                                </button>
+                            </h2>
+                            <div id="collapseSMS" class="accordion-collapse collapse" aria-labelledby="smsTroubleshooting" 
+                                 data-bs-parent="#troubleshootingAccordion">
+                                <div class="accordion-body">
+                                    <h6>Common Issues:</h6>
+                                    <ul>
+                                        <li><strong>API key invalid:</strong> Check API credentials in provider dashboard</li>
+                                        <li><strong>Insufficient credit:</strong> Verify account balance with your SMS provider</li>
+                                        <li><strong>Rate limiting:</strong> Check if you're exceeding API rate limits</li>
+                                        <li><strong>Region restrictions:</strong> Ensure your provider supports the target country</li>
+                                    </ul>
+                                    <h6>Provider-specific:</h6>
+                                    <strong>Twilio:</strong> Check Account SID and Auth Token<br>
+                                    <strong>Nexmo:</strong> Verify API Key and Secret<br>
+                                    <strong>Mock:</strong> Development mode, check console logs
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="networkTroubleshooting">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#collapseNetwork" aria-expanded="false" aria-controls="collapseNetwork">
+                                    Network & Firewall Issues
+                                </button>
+                            </h2>
+                            <div id="collapseNetwork" class="accordion-collapse collapse" aria-labelledby="networkTroubleshooting" 
+                                 data-bs-parent="#troubleshootingAccordion">
+                                <div class="accordion-body">
+                                    <h6>Required Outbound Ports:</h6>
+                                    <ul>
+                                        <li><strong>SMTP:</strong> 587 (TLS), 465 (SSL), 25 (Legacy)</li>
+                                        <li><strong>HTTPS APIs:</strong> 443 (Twilio, Nexmo, etc.)</li>
+                                        <li><strong>DNS:</strong> 53 (UDP/TCP)</li>
+                                    </ul>
+                                    <h6>Firewall Configuration:</h6>
+                                    <p>Ensure your server can make outbound connections to:</p>
+                                    <ul>
+                                        <li>Your email provider's SMTP servers</li>
+                                        <li>SMS provider API endpoints (api.twilio.com, rest.nexmo.com)</li>
+                                        <li>DNS servers for domain resolution</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function testSMTPConnectivity() {
+    showTestResult('Testing SMTP connectivity...', 'info');
+    
+    fetch('{{ url_for("diagnostics.api_full_diagnostics") }}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.email && data.email.checks) {
+                const smtpCheck = data.email.checks.find(check => check.name === 'SMTP Connectivity');
+                if (smtpCheck) {
+                    showTestResult(smtpCheck.message, smtpCheck.status);
+                } else {
+                    showTestResult('SMTP connectivity test not available', 'error');
+                }
+            } else {
+                showTestResult('Failed to retrieve SMTP connectivity data', 'error');
+            }
+        })
+        .catch(error => {
+            showTestResult('Error testing SMTP connectivity: ' + error.message, 'error');
+        });
+}
+
+function testSMSConnectivity() {
+    showTestResult('Testing SMS provider connectivity...', 'info');
+    
+    fetch('{{ url_for("diagnostics.api_full_diagnostics") }}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.sms && data.sms.checks) {
+                const smsCheck = data.sms.checks.find(check => check.name === 'SMS Provider Connectivity');
+                if (smsCheck) {
+                    showTestResult(smsCheck.message, smsCheck.status);
+                } else {
+                    showTestResult('SMS provider connectivity test not available', 'error');
+                }
+            } else {
+                showTestResult('Failed to retrieve SMS connectivity data', 'error');
+            }
+        })
+        .catch(error => {
+            showTestResult('Error testing SMS connectivity: ' + error.message, 'error');
+        });
+}
+
+function testDNS() {
+    const dnsDiv = document.getElementById('dns-test');
+    dnsDiv.innerHTML = '<div class="spinner-border spinner-border-sm me-2" role="status"></div>Testing...';
+    
+    // Simulate DNS test by trying to fetch from a known endpoint
+    fetch('https://dns.google/resolve?name=google.com&type=A')
+        .then(response => response.json())
+        .then(data => {
+            dnsDiv.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>DNS Resolution: OK</span>';
+        })
+        .catch(error => {
+            dnsDiv.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle me-1"></i>DNS Resolution: Failed</span>';
+        });
+}
+
+function testInternet() {
+    const internetDiv = document.getElementById('internet-test');
+    internetDiv.innerHTML = '<div class="spinner-border spinner-border-sm me-2" role="status"></div>Testing...';
+    
+    // Test internet connectivity by pinging a reliable endpoint
+    fetch('https://httpbin.org/get', { method: 'HEAD', mode: 'no-cors' })
+        .then(() => {
+            internetDiv.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Internet: Connected</span>';
+        })
+        .catch(error => {
+            internetDiv.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle me-1"></i>Internet: Disconnected</span>';
+        });
+}
+
+function testProxy() {
+    const proxyDiv = document.getElementById('proxy-test');
+    proxyDiv.innerHTML = '<div class="spinner-border spinner-border-sm me-2" role="status"></div>Checking...';
+    
+    // Simple proxy detection (this is basic, more sophisticated methods exist)
+    fetch('https://httpbin.org/ip')
+        .then(response => response.json())
+        .then(data => {
+            if (data.origin && data.origin.includes(',')) {
+                proxyDiv.innerHTML = '<span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Proxy: Detected</span>';
+            } else {
+                proxyDiv.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Proxy: None detected</span>';
+            }
+        })
+        .catch(error => {
+            proxyDiv.innerHTML = '<span class="text-muted"><i class="bi bi-question-circle me-1"></i>Proxy: Unable to determine</span>';
+        });
+}
+
+function showTestResult(message, status) {
+    const resultsDiv = document.getElementById('connectivity-test-results');
+    resultsDiv.style.display = 'block';
+    
+    let alertClass = 'alert-info';
+    let icon = 'bi-info-circle';
+    
+    if (status === 'success') {
+        alertClass = 'alert-success';
+        icon = 'bi-check-circle';
+    } else if (status === 'error' || status === 'failed') {
+        alertClass = 'alert-danger';
+        icon = 'bi-x-circle';
+    } else if (status === 'warning') {
+        alertClass = 'alert-warning';
+        icon = 'bi-exclamation-triangle';
+    }
+    
+    resultsDiv.innerHTML = `
+        <div class="alert ${alertClass}" role="alert">
+            <i class="bi ${icon} me-2"></i>
+            ${message}
+        </div>
+    `;
+}
+</script>
+{% endblock %}
