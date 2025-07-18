@@ -1,0 +1,600 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Service Status - {{ super() }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-card {
+        border: 1px solid #e3e6f0;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        transition: transform 0.2s;
+    }
+    
+    .status-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .status-ok { border-left: 5px solid #28a745; }
+    .status-warning { border-left: 5px solid #ffc107; }
+    .status-error { border-left: 5px solid #dc3545; }
+    .status-unknown { border-left: 5px solid #6c757d; }
+    
+    .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .status-indicator.ok {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .status-indicator.warning {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .status-indicator.error {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .status-indicator.unknown {
+        background-color: #e2e3e5;
+        color: #383d41;
+    }
+    
+    .config-item {
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 5px;
+        background-color: #f8f9fa;
+    }
+    
+    .config-item.configured {
+        border-left: 3px solid #28a745;
+    }
+    
+    .config-item.not-configured {
+        border-left: 3px solid #dc3545;
+    }
+    
+    .recommendations {
+        background-color: #e7f3ff;
+        border: 1px solid #b3d9ff;
+        border-radius: 5px;
+        padding: 15px;
+        margin-top: 15px;
+    }
+    
+    .test-controls {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+    
+    .connectivity-details {
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+    
+    .refresh-btn {
+        position: fixed;
+        top: 100px;
+        right: 30px;
+        z-index: 1000;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-cogs"></i> Service Status Dashboard
+        </h1>
+        <div>
+            <button class="btn btn-primary btn-sm refresh-btn" onclick="refreshStatus()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+            <a href="{{ url_for('debug.test_interface') }}" class="btn btn-info btn-sm">
+                <i class="fas fa-flask"></i> Test Interface
+            </a>
+            <a href="{{ url_for('debug.configuration_help') }}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-question-circle"></i> Help
+            </a>
+        </div>
+    </div>
+
+    <!-- Overall Status Summary -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-heartbeat"></i> Overall Service Health
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div class="mb-2">
+                                <i class="fas fa-server fa-2x text-primary"></i>
+                            </div>
+                            <h5>SMS Service</h5>
+                            <span class="status-indicator {{ sms_status.status }}">
+                                {% if sms_status.status == 'ok' %}
+                                    <i class="fas fa-check-circle mr-1"></i> Working
+                                {% elif sms_status.status == 'warning' %}
+                                    <i class="fas fa-exclamation-triangle mr-1"></i> Warning
+                                {% elif sms_status.status == 'error' %}
+                                    <i class="fas fa-times-circle mr-1"></i> Error
+                                {% else %}
+                                    <i class="fas fa-question-circle mr-1"></i> Unknown
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-2">
+                                <i class="fas fa-envelope fa-2x text-primary"></i>
+                            </div>
+                            <h5>Email Service</h5>
+                            <span class="status-indicator {{ email_status.status }}">
+                                {% if email_status.status == 'ok' %}
+                                    <i class="fas fa-check-circle mr-1"></i> Working
+                                {% elif email_status.status == 'warning' %}
+                                    <i class="fas fa-exclamation-triangle mr-1"></i> Warning
+                                {% elif email_status.status == 'error' %}
+                                    <i class="fas fa-times-circle mr-1"></i> Error
+                                {% else %}
+                                    <i class="fas fa-question-circle mr-1"></i> Unknown
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-2">
+                                <i class="fas fa-cog fa-2x text-primary"></i>
+                            </div>
+                            <h5>Configuration</h5>
+                            <span class="status-indicator {% if config_report.recommendations|length == 0 %}ok{% else %}warning{% endif %}">
+                                {% if config_report.recommendations|length == 0 %}
+                                    <i class="fas fa-check-circle mr-1"></i> Valid
+                                {% else %}
+                                    <i class="fas fa-exclamation-triangle mr-1"></i> Issues Found
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-2">
+                                <i class="fas fa-clock fa-2x text-primary"></i>
+                            </div>
+                            <h5>Last Check</h5>
+                            <small class="text-muted">
+                                {{ sms_status.timestamp[:19] | replace('T', ' ') }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- SMS Service Status -->
+        <div class="col-lg-6">
+            <div class="card shadow status-card status-{{ sms_status.status }}">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-sms"></i> SMS Service Status
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6><strong>Provider:</strong> {{ sms_status.provider | title }}</h6>
+                        <h6><strong>Status:</strong> 
+                            <span class="status-indicator {{ sms_status.status }}">
+                                {{ sms_status.status | title }}
+                            </span>
+                        </h6>
+                    </div>
+
+                    <!-- Configuration Details -->
+                    <h6><strong>Configuration:</strong></h6>
+                    <div class="configuration-details">
+                        {% if sms_status.configuration %}
+                            <div class="config-item {% if sms_status.configuration.details.api_key.configured %}configured{% else %}not-configured{% endif %}">
+                                <strong>API Key:</strong> 
+                                {% if sms_status.configuration.details.api_key.configured %}
+                                    <i class="fas fa-check text-success"></i> Configured ({{ sms_status.configuration.details.api_key.length }} chars)
+                                {% else %}
+                                    <i class="fas fa-times text-danger"></i> Not configured
+                                {% endif %}
+                            </div>
+                            
+                            <div class="config-item {% if sms_status.configuration.details.api_secret.configured %}configured{% else %}not-configured{% endif %}">
+                                <strong>API Secret:</strong>
+                                {% if sms_status.configuration.details.api_secret.configured %}
+                                    <i class="fas fa-check text-success"></i> Configured ({{ sms_status.configuration.details.api_secret.length }} chars)
+                                {% else %}
+                                    <i class="fas fa-times text-danger"></i> Not configured
+                                {% endif %}
+                            </div>
+                            
+                            <div class="config-item {% if sms_status.configuration.details.from_number.configured %}configured{% else %}not-configured{% endif %}">
+                                <strong>From Number:</strong>
+                                {% if sms_status.configuration.details.from_number.configured %}
+                                    <i class="fas fa-check text-success"></i> {{ sms_status.configuration.details.from_number.value }}
+                                {% else %}
+                                    <i class="fas fa-times text-danger"></i> Not configured
+                                {% endif %}
+                            </div>
+                            
+                            {% if sms_status.configuration.details.detected_provider %}
+                            <div class="config-item">
+                                <strong>Detected Provider:</strong> {{ sms_status.configuration.details.detected_provider }}
+                            </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <!-- Connectivity Details -->
+                    {% if sms_status.connectivity %}
+                    <div class="mt-3">
+                        <h6><strong>Connectivity:</strong></h6>
+                        <div class="connectivity-details">
+                            {% for key, value in sms_status.connectivity.items() %}
+                                <div><strong>{{ key | title }}:</strong> {{ value }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Recommendations -->
+                    {% if sms_status.recommendations %}
+                    <div class="recommendations">
+                        <h6><i class="fas fa-lightbulb"></i> Recommendations:</h6>
+                        <ul class="mb-0">
+                            {% for recommendation in sms_status.recommendations %}
+                                <li>{{ recommendation }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Service Status -->
+        <div class="col-lg-6">
+            <div class="card shadow status-card status-{{ email_status.status }}">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-envelope"></i> Email Service Status
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6><strong>Provider:</strong> {{ email_status.provider }}</h6>
+                        <h6><strong>Status:</strong> 
+                            <span class="status-indicator {{ email_status.status }}">
+                                {{ email_status.status | title }}
+                            </span>
+                        </h6>
+                    </div>
+
+                    <!-- Configuration Details -->
+                    <h6><strong>Configuration:</strong></h6>
+                    <div class="configuration-details">
+                        {% if email_status.configuration %}
+                            <div class="config-item {% if email_status.configuration.details.smtp_server.configured %}configured{% else %}not-configured{% endif %}">
+                                <strong>SMTP Server:</strong>
+                                {% if email_status.configuration.details.smtp_server.configured %}
+                                    <i class="fas fa-check text-success"></i> {{ email_status.configuration.details.smtp_server.value }}
+                                {% else %}
+                                    <i class="fas fa-times text-danger"></i> Not configured
+                                {% endif %}
+                            </div>
+                            
+                            <div class="config-item {% if email_status.configuration.details.smtp_port.configured %}configured{% else %}not-configured{% endif %}">
+                                <strong>SMTP Port:</strong>
+                                {% if email_status.configuration.details.smtp_port.configured %}
+                                    <i class="fas fa-check text-success"></i> {{ email_status.configuration.details.smtp_port.value }}
+                                {% else %}
+                                    <i class="fas fa-times text-danger"></i> Not configured
+                                {% endif %}
+                            </div>
+                            
+                            <div class="config-item {% if email_status.configuration.details.username.configured %}configured{% else %}not-configured{% endif %}">
+                                <strong>Username:</strong>
+                                {% if email_status.configuration.details.username.configured %}
+                                    <i class="fas fa-check text-success"></i> {{ email_status.configuration.details.username.value }}
+                                {% else %}
+                                    <i class="fas fa-times text-danger"></i> Not configured
+                                {% endif %}
+                            </div>
+                            
+                            <div class="config-item {% if email_status.configuration.details.password.configured %}configured{% else %}not-configured{% endif %}">
+                                <strong>Password:</strong>
+                                {% if email_status.configuration.details.password.configured %}
+                                    <i class="fas fa-check text-success"></i> Configured ({{ email_status.configuration.details.password.length }} chars)
+                                {% else %}
+                                    <i class="fas fa-times text-danger"></i> Not configured
+                                {% endif %}
+                            </div>
+                            
+                            <div class="config-item">
+                                <strong>Encryption:</strong>
+                                TLS: {{ email_status.configuration.details.use_tls.value | title }}, 
+                                SSL: {{ email_status.configuration.details.use_ssl.value | title }}
+                            </div>
+                            
+                            {% if email_status.configuration.details.detected_provider %}
+                            <div class="config-item">
+                                <strong>Detected Provider:</strong> {{ email_status.configuration.details.detected_provider }}
+                            </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <!-- Connectivity Details -->
+                    {% if email_status.connectivity %}
+                    <div class="mt-3">
+                        <h6><strong>Connectivity:</strong></h6>
+                        <div class="connectivity-details">
+                            {% for key, value in email_status.connectivity.items() %}
+                                <div><strong>{{ key | title }}:</strong> {{ value }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Recommendations -->
+                    {% if email_status.recommendations %}
+                    <div class="recommendations">
+                        <h6><i class="fas fa-lightbulb"></i> Recommendations:</h6>
+                        <ul class="mb-0">
+                            {% for recommendation in email_status.recommendations %}
+                                <li>{{ recommendation }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Report -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-file-alt"></i> Configuration Report
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><strong>Environment:</strong></h6>
+                            <div class="connectivity-details">
+                                <div><strong>Flask Environment:</strong> {{ config_report.environment.flask_env }}</div>
+                                <div><strong>Debug Mode:</strong> {{ config_report.environment.debug_mode | title }}</div>
+                                <div><strong>Config Source:</strong> {{ config_report.environment.config_source | title }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6><strong>Timestamp:</strong></h6>
+                            <div class="connectivity-details">
+                                <div>{{ config_report.timestamp[:19] | replace('T', ' ') }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if config_report.recommendations %}
+                    <div class="recommendations mt-3">
+                        <h6><i class="fas fa-exclamation-triangle"></i> Configuration Recommendations:</h6>
+                        <ul class="mb-0">
+                            {% for recommendation in config_report.recommendations %}
+                                <li>{{ recommendation }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Test Controls -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="test-controls">
+                <h5><i class="fas fa-flask"></i> Quick Tests</h5>
+                <p class="text-muted">Test your services with sample messages:</p>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="test-email">Test Email Address:</label>
+                            <div class="input-group">
+                                <input type="email" class="form-control" id="test-email" placeholder="your-email@example.com">
+                                <div class="input-group-append">
+                                    <button class="btn btn-primary" onclick="testEmail()">
+                                        <i class="fas fa-paper-plane"></i> Send Test Email
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="test-phone">Test Phone Number:</label>
+                            <div class="input-group">
+                                <input type="tel" class="form-control" id="test-phone" placeholder="+1234567890">
+                                <div class="input-group-append">
+                                    <button class="btn btn-primary" onclick="testSMS()">
+                                        <i class="fas fa-sms"></i> Send Test SMS
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="test-results" class="mt-3" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function refreshStatus() {
+        // Show loading state
+        const refreshBtn = document.querySelector('.refresh-btn');
+        const originalText = refreshBtn.innerHTML;
+        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+        refreshBtn.disabled = true;
+        
+        // Reload the page to get fresh status
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+    }
+    
+    function testEmail() {
+        const email = document.getElementById('test-email').value;
+        if (!email) {
+            showAlert('Please enter an email address', 'error');
+            return;
+        }
+        
+        showLoading('Sending test email...');
+        
+        fetch('/admin/debug/api/test-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                email: email,
+                template: 'security'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            if (data.success) {
+                showTestResult('Email test successful!', 'success', data.message);
+            } else {
+                showTestResult('Email test failed', 'error', data.message);
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            showTestResult('Email test error', 'error', error.message);
+        });
+    }
+    
+    function testSMS() {
+        const phone = document.getElementById('test-phone').value;
+        if (!phone) {
+            showAlert('Please enter a phone number', 'error');
+            return;
+        }
+        
+        showLoading('Sending test SMS...');
+        
+        fetch('/admin/debug/api/test-sms', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                phone: phone,
+                message: 'Test SMS from Phishing Simulator'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            if (data.success) {
+                showTestResult('SMS test successful!', 'success', data.message);
+            } else {
+                showTestResult('SMS test failed', 'error', data.message);
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            showTestResult('SMS test error', 'error', error.message);
+        });
+    }
+    
+    function showTestResult(title, type, message) {
+        const resultsDiv = document.getElementById('test-results');
+        const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+        const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+        
+        resultsDiv.innerHTML = `
+            <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                <i class="fas ${icon} mr-2"></i>
+                <strong>${title}</strong> ${message}
+                <button type="button" class="close" data-dismiss="alert">
+                    <span>&times;</span>
+                </button>
+            </div>
+        `;
+        resultsDiv.style.display = 'block';
+        
+        // Auto-hide after 10 seconds
+        setTimeout(() => {
+            resultsDiv.style.display = 'none';
+        }, 10000);
+    }
+    
+    function showLoading(message) {
+        const resultsDiv = document.getElementById('test-results');
+        resultsDiv.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-spinner fa-spin mr-2"></i> ${message}
+            </div>
+        `;
+        resultsDiv.style.display = 'block';
+    }
+    
+    function hideLoading() {
+        // Loading will be replaced by test result
+    }
+    
+    function showAlert(message, type) {
+        const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+        const resultsDiv = document.getElementById('test-results');
+        
+        resultsDiv.innerHTML = `
+            <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="close" data-dismiss="alert">
+                    <span>&times;</span>
+                </button>
+            </div>
+        `;
+        resultsDiv.style.display = 'block';
+    }
+</script>
+{% endblock %}

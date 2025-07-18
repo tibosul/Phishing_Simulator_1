@@ -17,6 +17,7 @@ from .templates import bp as templates_bp
 from .targets import bp as targets_bp
 from .webhook import bp as webhook_bp
 from .fake_revolut import bp as fake_revolut_bp
+from .debug import debug_bp
 
 __all__ = [
     'campaigns_bp',
@@ -24,5 +25,6 @@ __all__ = [
     'templates_bp', 
     'targets_bp',
     'webhook_bp',
-    'fake_revolut_bp'
+    'fake_revolut_bp',
+    'debug_bp'
 ]
